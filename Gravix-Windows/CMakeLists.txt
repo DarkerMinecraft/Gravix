@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(GravisWindows)
+project(GravixWindows)
+
+add_library(GravixWindows STATIC)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,4 +15,4 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
 )
 
-target_sources(GravisWindows PRIVATE ${SRC_FILES})
+target_sources(GravixWindows PRIVATE ${SRC_FILES})

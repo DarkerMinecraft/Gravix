@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(GravisVulkan)
+project(GravixVulkan)
+
+add_library(GravixVulkan STATIC)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,4 +15,4 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
 )
 
-target_sources(GravisVulkan PRIVATE ${SRC_FILES})
+target_sources(GravixVulkan PRIVATE ${SRC_FILES})

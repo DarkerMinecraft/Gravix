@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(Orbit)
 
+add_executable(Orbit)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-target_compile_definitions(Gravis PRIVATE 
+target_compile_definitions(Orbit PRIVATE 
     RESOURCES_PATH="$<IF:$<BOOL:${PRODUCTION_BUILD}>,./Resources/,${CMAKE_CURRENT_SOURCE_DIR}/Resources/>"
 )
 
@@ -19,4 +21,4 @@ file(GLOB_RECURSE SRC_FILES
 
 target_sources(Orbit PRIVATE ${SRC_FILES})
 
-target_link_libraries(Orbit PRIVATE Gravis)
+target_link_libraries(Orbit PRIVATE Gravix)

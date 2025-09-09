@@ -41,7 +41,7 @@ if (PRODUCTION_BUILD)
 endif()
 
 # === Add engine modules ===
-add_subdirectory(Gravis-Windows)
-add_subdirectory(Gravis-Vulkan)
-add_subdirectory(Gravis)
+add_subdirectory(Gravix-Windows)
+add_subdirectory(Gravix-Vulkan)
+add_subdirectory(Gravix)
 add_subdirectory(Orbit)
