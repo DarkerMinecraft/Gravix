@@ -1,47 +1,49 @@
-cmake_minimum_required(VERSION 3.16)
-project(GravixEngine)
+cmake_minimum_required(VERSION 3.20)
+project(Gravix VERSION 1.0.0 LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 20)
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Output directories
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+# Add custom cmake modules
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+include(GravixConfig)
 
-# === Supported Platforms ===
-set(SUPPORTED_PLATFORMS WINDOWS LINUX MAC)
+# Build options
+option(ENGINE_BUILD_VULKAN "Build with Vulkan support" ON)
+option(ENGINE_BUILD_D3D12 "Build with D3D12 support" ON)
+option(ENGINE_BUILD_AUDIO "Build with Audio support" ON)
+option(ENGINE_BUILD_PHYSICS "Build with Physics support" ON)
+option(ENGINE_BUILD_EDITOR "Build Editor" ON)
+option(ENGINE_BUILD_TESTS "Build Tests" OFF)
 
-# === Default to Windows if TARGET_PLATFORM is not defined ===
-if (NOT DEFINED TARGET_PLATFORM)
-    message(STATUS "TARGET_PLATFORM not specified — defaulting to WINDOWS")
-    set(TARGET_PLATFORM "WINDOWS")
+# Platform detection
+if(WIN32)
+    set(ENGINE_PLATFORM_WINDOWS TRUE)
+elseif(UNIX AND NOT APPLE)
+    set(ENGINE_PLATFORM_LINUX TRUE)
+elseif(APPLE)
+    set(ENGINE_PLATFORM_MACOS TRUE)
 endif()
 
-string(TOUPPER "${TARGET_PLATFORM}" TARGET_PLATFORM_UPPER)
+# Global compile definitions
+add_compile_definitions(
+    $<$<CONFIG:Debug>:ENGINE_DEBUG>
+    $<$<CONFIG:Release>:ENGINE_RELEASE>
+    $<$<BOOL:${ENGINE_PLATFORM_WINDOWS}>:ENGINE_PLATFORM_WINDOWS>
+    $<$<BOOL:${ENGINE_PLATFORM_LINUX}>:ENGINE_PLATFORM_LINUX>
+    $<$<BOOL:${ENGINE_PLATFORM_MACOS}>:ENGINE_PLATFORM_MACOS>
+)
 
-if (NOT TARGET_PLATFORM_UPPER IN_LIST SUPPORTED_PLATFORMS)
-    message(FATAL_ERROR "Unsupported platform: ${TARGET_PLATFORM_UPPER}")
-endif()
-
-# === Platform-specific macro ===
-if (TARGET_PLATFORM_UPPER STREQUAL "WINDOWS")
-    add_compile_definitions(PLATFORM_WINDOWS)
-elseif (TARGET_PLATFORM_UPPER STREQUAL "LINUX")
-    add_compile_definitions(PLATFORM_LINUX)
-elseif (TARGET_PLATFORM_UPPER STREQUAL "MAC")
-    add_compile_definitions(PLATFORM_MAC)
-endif()
-
-# === Final Build Define ===
-option(PRODUCTION_BUILD "Build for final game distribution" OFF)
-
-if (PRODUCTION_BUILD)
-    add_compile_definitions(PRODUCTION_BUILD)
-endif()
-
-# === Add engine modules ===
-add_subdirectory(Gravix-Windows)
-add_subdirectory(Gravix-Vulkan)
+# Add engine modules
 add_subdirectory(Gravix)
-add_subdirectory(Orbit)
+
+if(ENGINE_BUILD_EDITOR)
+    add_subdirectory(Orbit)
+endif()
+
+if(ENGINE_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(Tests)
+endif()

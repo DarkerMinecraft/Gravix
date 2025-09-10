@@ -1,29 +1,19 @@
-cmake_minimum_required(VERSION 3.16)
-project(Gravix)
+add_subdirectory(Core)
+add_subdirectory(Platform)
+add_subdirectory(Renderer)
 
-add_library(Gravix STATIC)
+if(ENGINE_BUILD_AUDIO)
+    #add_subdirectory(Audio)
+endif()
 
-target_precompile_headers(Gravix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/pch.h)
+# Create main engine library that links everything
+add_library(Gravix INTERFACE)
+add_library(Gravix::Engine ALIAS Gravix)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-target_compile_definitions(Gravix PRIVATE 
-    RESOURCES_PATH="$<IF:$<BOOL:${PRODUCTION_BUILD}>,./Resources/,${CMAKE_CURRENT_SOURCE_DIR}/Resources/>"
-)
-
-file(GLOB_RECURSE SRC_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
-)
-
-target_sources(Gravix PRIVATE ${SRC_FILES})
-
-target_link_libraries(Gravix PRIVATE 
-    GravixWindows 
-    GravixVulkan
+target_link_libraries(Gravix
+    INTERFACE
+        Gravix::Core
+        Gravix::Platform
+        Gravix::Renderer
+        #$<$<BOOL:${ENGINE_BUILD_AUDIO}>:Engine::Audio>
 )
