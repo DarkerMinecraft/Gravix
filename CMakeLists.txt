@@ -18,6 +18,9 @@ option(ENGINE_BUILD_PHYSICS "Build with Physics support" ON)
 option(ENGINE_BUILD_EDITOR "Build Editor" ON)
 option(ENGINE_BUILD_TESTS "Build Tests" OFF)
 
+# Fetch all dependencies
+include(FetchAllDependencies)
+
 # Platform detection
 if(WIN32)
     set(ENGINE_PLATFORM_WINDOWS TRUE)

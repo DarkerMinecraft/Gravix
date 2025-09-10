@@ -26,7 +26,7 @@ else()
     FetchContent_Declare(
         openal-soft
         GIT_REPOSITORY https://github.com/kcat/openal-soft.git
-        GIT_TAG        1.23.1  # Use a stable tag
+        GIT_TAG        origin/master
         GIT_SHALLOW    TRUE
     )
     
