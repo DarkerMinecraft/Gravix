@@ -1,38 +1,33 @@
-# Define source files for the Orbit editor
-set(ORBIT_SOURCES
-    src/main.cpp
-    
-)
+cmake_minimum_required(VERSION 3.20)
+project(Orbit)
 
+file(GLOB_RECURSE SRC_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
+)
 # Create the Orbit executable TARGET FIRST
-add_executable(Orbit ${ORBIT_SOURCES})
-
-# Set target properties
-set_target_properties(Orbit PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED ON
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-)
+add_executable(Orbit ${SRC_FILES})
 
 # NOW link libraries to the target (after it's been created)
 target_link_libraries(Orbit
     PRIVATE
-        Gravix::Engine    # Your main engine library
+        Gravix    # Your main engine library
 )
+
+if(MSVC)
+    target_compile_options(Orbit PRIVATE /utf-8)
+endif()
 
 # Include directories for the editor
 target_include_directories(Orbit
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
-# Add compile definitions for the editor
-target_compile_definitions(Orbit
+target_include_directories(Orbit
     PRIVATE
-        ORBIT_EDITOR=1
-        $<$<CONFIG:Debug>:ORBIT_DEBUG>
-        $<$<CONFIG:Release>:ORBIT_RELEASE>
+        ${CMAKE_SOURCE_DIR}/Gravix/Source/Core
+        ${CMAKE_SOURCE_DIR}/Gravix/Source/Renderer/Generic
 )
 
 # Copy assets if needed
@@ -78,10 +73,7 @@ elseif(APPLE)
     )
 endif()
 
-# Optional: Set up IDE folders
-set_target_properties(Orbit PROPERTIES FOLDER "Applications")
-
 # Debug information
 message(STATUS "Orbit Editor configured successfully")
 message(STATUS "  Output directory: ${CMAKE_BINARY_DIR}/bin")
-message(STATUS "  Engine dependency: Engine::GameEngine")
+message(STATUS "  Engine dependency: Gravix::Engine")
