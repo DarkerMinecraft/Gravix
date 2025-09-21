@@ -390,6 +390,8 @@ namespace Gravix
 
 	void WindowsWindow::Destroy()
 	{
+		m_Device.release();
+
 		DestroyWindow(m_Window);
 		UnregisterClassA("EngineWindowClass", GetModuleHandle(NULL));
 	}

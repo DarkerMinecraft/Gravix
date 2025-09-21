@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Events/Event.h"
+#include "Renderer/Generic/Device.h"
 
 namespace Gravix 
 {
@@ -40,6 +41,8 @@ namespace Gravix
 			virtual void SetCursorMode(CursorMode mode) = 0;
 
 			virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
+
+			virtual Device* GetDevice() = 0;
 
 			virtual void* GetWindowHandle() = 0;
 	};

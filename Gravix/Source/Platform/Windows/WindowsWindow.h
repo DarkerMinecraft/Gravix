@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/Window.h"
-#include "Renderer/Generic/Device.h"
 
 #include <windows.h>
 
@@ -34,6 +33,8 @@ namespace Gravix
 		virtual void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; }
 
 		virtual void* GetWindowHandle() override { return m_Window; }
+
+		virtual Device* GetDevice() override { return m_Device.get(); }
 
 		WindowData& GetWindowData() { return m_Data; }
 	private:

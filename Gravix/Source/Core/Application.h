@@ -13,6 +13,8 @@
 namespace Gravix
 {
 
+	class Scheduler;
+
 	struct ApplicationSpecification 
 	{
 		uint32_t Width = 1280;
@@ -41,12 +43,16 @@ namespace Gravix
         }
 
 		Window& GetWindow() { return *m_Window; }
+		Scheduler& GetScheduler() { return *m_Scheduler; }
+
 		static Application& Get() { return *s_Instance; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
 	private:
 		Scope<Window> m_Window;
+		Scope<Scheduler> m_Scheduler;
+
 		bool m_IsRunning = false;
 		bool m_IsMinimize = false;
 

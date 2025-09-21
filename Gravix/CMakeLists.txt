@@ -17,18 +17,27 @@ target_sources(Gravix PRIVATE ${SRC_FILES})
 
 find_package(Vulkan REQUIRED)
 
+if(ENGINE_USE_VULKAN)
+    add_compile_definitions(Gravix PRIVATE ENGINE_USE_VULKAN)
+endif()
+
 target_include_directories(Gravix 
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
+        ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui
     PRIVATE
         ${Vulkan_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src
         ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
+        ${CMAKE_SOURCE_DIR}/ThirdParties/enkiTS/src
 )
 
 target_link_libraries(Gravix
     PRIVATE
         ${Vulkan_LIBRARIES}
+        vk-bootstrap
+        enkiTS
+        ImGui
 )

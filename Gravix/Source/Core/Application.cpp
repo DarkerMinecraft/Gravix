@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Application.h"
 
+#include "Scheduler.h"
+
 namespace Gravix
 {
 	Application* Application::s_Instance = nullptr;
@@ -18,15 +20,14 @@ namespace Gravix
 		m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 
 		m_IsRunning = true;
-
-		EN_CORE_INFO("Application initialized successfully");
-
 		m_LastFrameTime = std::chrono::high_resolution_clock::now();
+
+		m_Scheduler = CreateScope<Scheduler>();
+		m_Scheduler->Init(4); // Initialize with 4 threads
 	}
 
 	Application::~Application()
 	{
-		EN_CORE_INFO("Shutting down Application...");
 	}
 
 	void Application::Run()
@@ -64,9 +65,7 @@ namespace Gravix
 	}
 
 	void Application::Shutdown()
-	{
-		EN_CORE_INFO("Application shutdown requested");
-		
+	{		
 		m_IsRunning = false;
 	}
 

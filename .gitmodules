@@ -10,3 +10,10 @@
 [submodule "ThirdParties/VulkanMemoryAllocator"]
 	path = ThirdParties/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "ThirdParties/enkiTS"]
+	path = ThirdParties/enkiTS
+	url = https://github.com/dougbinks/enkiTS.git
+[submodule "ThirdParties/ImGui"]
+	path = ThirdParties/ImGui
+	url = https://github.com/DarkerMinecraft/imgui.git
+	branch = docking

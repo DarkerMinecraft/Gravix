@@ -15,6 +15,8 @@ elseif(APPLE)
     set(ENGINE_PLATFORM_MACOS TRUE)
 endif()
 
+option(ENGINE_USE_VULKAN ON)
+
 # Global compile definitions
 add_compile_definitions(
     $<$<CONFIG:Debug>:ENGINE_DEBUG>
@@ -30,3 +32,10 @@ add_subdirectory(Orbit)
 
 add_subdirectory(ThirdParties/VkBootstrap)
 set_target_properties(vk-bootstrap PROPERTIES FOLDER "Dependencies")
+
+set(ENKITS_BUILD_EXAMPLES OFF)
+add_subdirectory(ThirdParties/enkiTS)
+set_target_properties(enkiTS PROPERTIES FOLDER "Dependencies")
+
+add_subdirectory(ThirdParties/ImGui)
+set_target_properties(ImGui PROPERTIES FOLDER "Dependencies")
