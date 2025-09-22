@@ -66,13 +66,13 @@ namespace fmt
 	};
 }
 
-#define EN_CORE_CRITICAL(...) ::Gravix::Log::GetCoreLogger()->critical(__VA_ARGS__);
-#define EN_CORE_ERROR(...) ::Gravix::Log::GetCoreLogger()->error(__VA_ARGS__);
-#define EN_CORE_WARN(...) ::Gravix::Log::GetCoreLogger()->warn(__VA_ARGS__);
-#define EN_CORE_INFO(...) ::Gravix::Log::GetCoreLogger()->info(__VA_ARGS__);
-#define EN_CORE_TRACE(...) ::Gravix::Log::GetCoreLogger()->trace(__VA_ARGS__);
+#define GX_CORE_CRITICAL(...) ::Gravix::Log::GetCoreLogger()->critical(__VA_ARGS__);
+#define GX_CORE_ERROR(...) ::Gravix::Log::GetCoreLogger()->error(__VA_ARGS__);
+#define GX_CORE_WARN(...) ::Gravix::Log::GetCoreLogger()->warn(__VA_ARGS__);
+#define GX_CORE_INFO(...) ::Gravix::Log::GetCoreLogger()->info(__VA_ARGS__);
+#define GX_CORE_TRACE(...) ::Gravix::Log::GetCoreLogger()->trace(__VA_ARGS__);
 
-#define EN_ERROR(...) ::Gravix::Log::GetClientLogger()->error(__VA_ARGS__);
-#define EN_WARN(...) ::Gravix::Log::GetClientLogger()->warn(__VA_ARGS__);
-#define EN_INFO(...) ::Gravix::Log::GetClientLogger()->info(__VA_ARGS__);
-#define EN_TRACE(...) ::Gravix::Log::GetClientLogger()->trace(__VA_ARGS__);
+#define GX_ERROR(...) ::Gravix::Log::GetClientLogger()->error(__VA_ARGS__);
+#define GX_WARN(...) ::Gravix::Log::GetClientLogger()->warn(__VA_ARGS__);
+#define GX_INFO(...) ::Gravix::Log::GetClientLogger()->info(__VA_ARGS__);
+#define GX_TRACE(...) ::Gravix::Log::GetClientLogger()->trace(__VA_ARGS__);

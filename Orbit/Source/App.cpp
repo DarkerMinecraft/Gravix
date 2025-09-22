@@ -3,11 +3,16 @@
 
 #include "AppLayer.h"
 
+#include <crtdbg.h>
+
 #ifdef ENGINE_PLATFORM_WINDOWS
 #ifdef ENGINE_DEBUG
 
 	int main()
 	{
+
+		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF);
+
 		Gravix::Log::Init();
 
 		Gravix::ApplicationSpecification appSpec;

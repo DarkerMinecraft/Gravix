@@ -29,7 +29,7 @@ namespace Gravix
 		// Initialize with specified number of threads (default to number of hardware threads)
 		void Init(uint32_t threadCount = std::thread::hardware_concurrency());
 
-		void CreateRunPinnedTaskLoop(const RunPinnedTaskLoop& runTask) { m_TaskScheduler.AddPinnedTask(runTask); }
+		//void CreateRunPinnedTaskLoop(const RunPinnedTaskLoop& runTask) { m_TaskScheduler.AddPinnedTask(runTask); }
 
 		enki::TaskScheduler& GetTaskScheduler() { return m_TaskScheduler; }
 	private:

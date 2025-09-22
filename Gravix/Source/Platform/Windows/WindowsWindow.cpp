@@ -307,11 +307,11 @@ namespace Gravix
 
 		if (hAppIcon)
 		{
-			EN_CORE_INFO("Successfully loaded custom application icon from resources");
+			GX_CORE_INFO("Successfully loaded custom application icon from resources");
 		}
 		else
 		{
-			EN_CORE_TRACE("Custom icon not found in resources, using default");
+			GX_CORE_TRACE("Custom icon not found in resources, using default");
 			// Fall back to default application icon
 			hAppIcon = LoadIcon(NULL, IDI_APPLICATION);
 			hSmallIcon = LoadIcon(NULL, IDI_APPLICATION);
@@ -334,7 +334,7 @@ namespace Gravix
 			DWORD error = GetLastError();
 			if (error != ERROR_CLASS_ALREADY_EXISTS)
 			{
-				EN_CORE_ERROR("Failed to register window class. Error: {}", error);
+				GX_CORE_ERROR("Failed to register window class. Error: {}", error);
 			}
 		}
 
@@ -367,7 +367,7 @@ namespace Gravix
 			&m_Data
 		);
 
-		EN_CORE_ASSERT(m_Window, "Could not create Win32 window!");
+		GX_CORE_ASSERT(m_Window, "Could not create Win32 window!");
 
 		// Additional step: Set the icon for the window instance
 		// This ensures the icon appears correctly in all contexts
@@ -385,15 +385,18 @@ namespace Gravix
 		m_Device = CreateScope<VulkanDevice>(DeviceProperties{ m_Data.Width, m_Data.Height, m_Window, false});
 		UpdateWindow(m_Window);
 
-		EN_CORE_INFO("Window created successfully with title: '{}'", m_Data.Title);
+		GX_CORE_INFO("Window created successfully with title: '{}'", m_Data.Title);
 	}
 
 	void WindowsWindow::Destroy()
 	{
-		m_Device.release();
+		if (m_Window == nullptr) return;
 
 		DestroyWindow(m_Window);
 		UnregisterClassA("EngineWindowClass", GetModuleHandle(NULL));
+
+		GX_CORE_INFO("Window destroyed successfully");
+		m_Window = nullptr;
 	}
 
 }

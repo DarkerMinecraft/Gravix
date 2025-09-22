@@ -4,15 +4,22 @@
 #include <utility>
 
 #ifdef ENGINE_DEBUG
-#define EN_ENABLE_ASSERTS
+#define GX_ENABLE_ASSERTS
 #endif
 
-#ifdef EN_ENABLE_ASSERTS
-#define EN_ASSERT(x, ...) {if(!(x)) { EN_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
-#define EN_CORE_ASSERT(x, ...) {if(!(x)) { EN_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
+#ifdef GX_ENABLE_ASSERTS
+#define GX_ASSERT(x, ...) {if(!(x)) { GX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
+#define GX_CORE_ASSERT(x, ...) {if(!(x)) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
+
+#define GX_STATIC_ASSERT(...) { GX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
+#define GX_STATIC_CORE_ASSERT(...) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
+
 #else 
-#define EN_ASSERT(x, ...)
-#define EN_CORE_ASSERT(x, ...)
+#define GX_ASSERT(x, ...)
+#define GX_CORE_ASSERT(x, ...)
+
+#define GX_ASSERT(...)
+#define GX_CORE_ASSERT(...)
 #endif
 
 
