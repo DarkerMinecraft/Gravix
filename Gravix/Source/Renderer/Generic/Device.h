@@ -20,12 +20,17 @@ namespace Gravix
 		DirectX12 = 2,
 	};
 
+	constexpr uint32_t FRAME_OVERLAP = 2;
+
 	class Device 
 	{
 	public:
 		virtual ~Device() = default;
 
-		virtual DeviceType GetType() const = 0;
+		virtual DeviceType GetType() const = 0; 
+
+		virtual void StartFrame() = 0;
+		virtual void EndFrame() = 0;
 	};
 
 }

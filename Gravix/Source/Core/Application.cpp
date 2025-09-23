@@ -24,6 +24,8 @@ namespace Gravix
 
 		m_Scheduler = CreateScope<Scheduler>();
 		m_Scheduler->Init(4); // Initialize with 4 threads
+
+		m_ImGuiRender = new ImGuiRender();
 	}
 
 	Application::~Application()
@@ -37,6 +39,8 @@ namespace Gravix
 
 		while (m_IsRunning)
 		{
+			m_Window->GetDevice()->StartFrame();
+
 			currentTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> elapsedTime = currentTime - m_LastFrameTime;
 			m_LastFrameTime = currentTime;
@@ -52,8 +56,10 @@ namespace Gravix
 					for(Ref<Layer> layer : m_LayerStack)
 						layer->OnRender();
 
+					//m_ImGuiRender->Begin();
 					for (Ref<Layer> layer : m_LayerStack)
 						layer->OnImGuiRender();
+					//m_ImGuiRender->End();
 				}
 
 			}
@@ -61,7 +67,11 @@ namespace Gravix
 			{
 				m_Window->OnUpdate();
 			}
+
+			m_Window->GetDevice()->EndFrame();
 		}
+
+		delete m_ImGuiRender;
 	}
 
 	void Application::Shutdown()
@@ -76,6 +86,7 @@ namespace Gravix
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 		dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(OnWindowResize));
 
+		m_ImGuiRender->OnEvent(event);
 		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
 		{
 			if (event.Handled) break;

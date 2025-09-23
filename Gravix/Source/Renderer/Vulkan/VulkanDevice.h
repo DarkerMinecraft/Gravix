@@ -12,6 +12,16 @@
 namespace Gravix 
 {
 
+	struct FrameData 
+	{
+		VkCommandPool CommandPool;
+		VkCommandBuffer CommandBuffer;
+
+		VkSemaphore SwapchainSemaphore, RenderSemaphore;
+		VkFence RenderFence;
+	};
+
+
 	class VulkanDevice : public Device
 	{
 	public:
@@ -20,12 +30,18 @@ namespace Gravix
 
 		virtual DeviceType GetType() const override { return DeviceType::Vulkan; }
 
-		void CreateImage();
+		virtual void StartFrame() override;
+		virtual void EndFrame() override;
 
+		VkInstance GetInstance() const { return m_Instance; }
 		VkDevice GetDevice() const { return m_Device; }
 		VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
+		VkQueue GetGraphicsQueue() const { return m_GraphicsQueue; }
 
-		VkDescriptorSet* GetGlobalDescriptorSets() const { return m_BindlessDescriptorSets; }
+		VkDescriptorSet* GetGlobalDescriptorSets() { return m_BindlessDescriptorSets; }
+		VkDescriptorPool GetGlobalDescriptorPool() const { return m_DescriptorPool; }
+
+		FrameData& GetCurrentFrameData() { return m_Frames[m_CurrentFrame % FRAME_OVERLAP]; }
 	private:
 		void InitVulkan(const DeviceProperties& properties);
 		void CreateSwapchain(uint32_t width, uint32_t height, bool vSync);
@@ -36,6 +52,8 @@ namespace Gravix
 		void CreateBindlessDescriptorSets();
 		void CreateBindlessLayout(uint32_t binding, VkDescriptorType type, uint32_t count,
 			VkShaderStageFlags stages, VkDescriptorSetLayout* layout);
+		void InitCommandBuffers();
+		void InitSyncStructures();
 	private:
 		VkInstance m_Instance;
 		VkDebugUtilsMessengerEXT m_DebugMessenger;
@@ -59,10 +77,17 @@ namespace Gravix
 
 		VkSwapchainKHR m_Swapchain;
 		VkFormat m_SwapchainImageFormat;
+		VkImageLayout m_SwapchainImageLayout; 
 
 		std::vector<VkImage> m_SwapchainImages;
 		std::vector<VkImageView> m_SwapchainImageViews;
 		VkExtent2D m_SwapchainExtent;
+
+		FrameData m_Frames[FRAME_OVERLAP];
+		uint32_t m_CurrentFrame = 0;
+
+		uint32_t m_SwapchainImageIndex = 0;
+		bool m_Vsync;
 
 #ifdef ENGINE_DEBUG
 		bool m_UseValidationLayer = true;

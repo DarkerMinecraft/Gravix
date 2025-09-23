@@ -2,6 +2,11 @@
 #include "VulkanDevice.h"
 #include "VulkanRenderCaps.h"
 
+#include "Utils/VulkanInitializers.h"
+#include "Core/Application.h"
+
+#include "Utils/VulkanUtils.h"
+
 #include <VkBootstrap.h>
 
 #define VMA_IMPLEMENTATION
@@ -11,44 +16,212 @@ namespace Gravix
 {
 	
 	VulkanDevice::VulkanDevice(const DeviceProperties& deviceProperties)
+		: m_Vsync(deviceProperties.VSync)
 	{
 		InitVulkan(deviceProperties);
 		CreateSwapchain(deviceProperties.Width, deviceProperties.Height, deviceProperties.VSync);
 		VulkanRenderCaps::Init(this);
+		InitCommandBuffers();
+		InitSyncStructures();
 		InitDescriptorPool();
 	}
 
 	VulkanDevice::~VulkanDevice()
 	{
-		vkDeviceWaitIdle(m_Device);
+		// Wait for all operations to complete before cleanup
+		if (m_Device != VK_NULL_HANDLE)
+		{
+			vkDeviceWaitIdle(m_Device);
+		}
 
-		// Destroy descriptor set layouts (must be done before destroying the pool)
+		// Clean up VulkanRenderCaps first - this might be creating/holding objects
+
+		// Clean up frame resources
+		for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
+		{
+			if (m_Frames[i].CommandPool != VK_NULL_HANDLE)
+			{
+				vkDestroyCommandPool(m_Device, m_Frames[i].CommandPool, nullptr);
+				m_Frames[i].CommandPool = VK_NULL_HANDLE;
+			}
+
+			if (m_Frames[i].SwapchainSemaphore != VK_NULL_HANDLE)
+			{
+				vkDestroySemaphore(m_Device, m_Frames[i].SwapchainSemaphore, nullptr);
+				m_Frames[i].SwapchainSemaphore = VK_NULL_HANDLE;
+			}
+
+			if (m_Frames[i].RenderSemaphore != VK_NULL_HANDLE)
+			{
+				vkDestroySemaphore(m_Device, m_Frames[i].RenderSemaphore, nullptr);
+				m_Frames[i].RenderSemaphore = VK_NULL_HANDLE;
+			}
+
+			if (m_Frames[i].RenderFence != VK_NULL_HANDLE)
+			{
+				vkDestroyFence(m_Device, m_Frames[i].RenderFence, nullptr);
+				m_Frames[i].RenderFence = VK_NULL_HANDLE;
+			}
+		}
+
+		// Destroy bindless descriptor set layouts (must be done before destroying the pool)
 		if (m_BindlessStorageBufferLayout != VK_NULL_HANDLE)
+		{
 			vkDestroyDescriptorSetLayout(m_Device, m_BindlessStorageBufferLayout, nullptr);
+			m_BindlessStorageBufferLayout = VK_NULL_HANDLE;
+		}
 
 		if (m_BindlessSampledImageLayout != VK_NULL_HANDLE)
+		{
 			vkDestroyDescriptorSetLayout(m_Device, m_BindlessSampledImageLayout, nullptr);
+			m_BindlessSampledImageLayout = VK_NULL_HANDLE;
+		}
 
 		if (m_BindlessStorageImageLayout != VK_NULL_HANDLE)
+		{
 			vkDestroyDescriptorSetLayout(m_Device, m_BindlessStorageImageLayout, nullptr);
+			m_BindlessStorageImageLayout = VK_NULL_HANDLE;
+		}
 
 		if (m_BindlessSamplerLayout != VK_NULL_HANDLE)
+		{
 			vkDestroyDescriptorSetLayout(m_Device, m_BindlessSamplerLayout, nullptr);
+			m_BindlessSamplerLayout = VK_NULL_HANDLE;
+		}
 
 		// Destroy descriptor pool (this automatically frees all descriptor sets)
 		if (m_DescriptorPool != VK_NULL_HANDLE)
+		{
 			vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
+			m_DescriptorPool = VK_NULL_HANDLE;
+		}
 
-		vmaDestroyAllocator(m_Allocator);
+		// Destroy VMA allocator before destroying the device
+		if (m_Allocator != VK_NULL_HANDLE)
+		{
+			vmaDestroyAllocator(m_Allocator);
+			m_Allocator = VK_NULL_HANDLE;
+		}
 
+		// Destroy swapchain
 		DestroySwapchain();
 
-		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-		vkDestroyDevice(m_Device, nullptr);
+		// Destroy surface
+		if (m_Surface != VK_NULL_HANDLE)
+		{
+			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+			m_Surface = VK_NULL_HANDLE;
+		}
 
-		if (m_UseValidationLayer)
+		// Destroy device
+		if (m_Device != VK_NULL_HANDLE)
+		{
+			vkDestroyDevice(m_Device, nullptr);
+			m_Device = VK_NULL_HANDLE;
+		}
+
+		// Destroy debug messenger
+		if (m_UseValidationLayer && m_DebugMessenger != VK_NULL_HANDLE)
+		{
 			vkb::destroy_debug_utils_messenger(m_Instance, m_DebugMessenger);
-		vkDestroyInstance(m_Instance, nullptr);
+			m_DebugMessenger = VK_NULL_HANDLE;
+		}
+
+		// Destroy instance
+		if (m_Instance != VK_NULL_HANDLE)
+		{
+			vkDestroyInstance(m_Instance, nullptr);
+			m_Instance = VK_NULL_HANDLE;
+		}
+	}
+
+	void VulkanDevice::StartFrame()
+	{
+		vkWaitForFences(m_Device, 1, &GetCurrentFrameData().RenderFence, true, UINT64_MAX);
+		vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
+
+		vkDeviceWaitIdle(m_Device);
+
+		// Wait on SwapchainSemaphore when acquiring
+		VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX,
+			GetCurrentFrameData().SwapchainSemaphore, nullptr, &m_SwapchainImageIndex);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+		{
+			GX_CORE_CRITICAL("Failed to acquire swapchain image!");
+			return;
+		}
+
+		//begin the command buffer recording
+		vkResetCommandBuffer(GetCurrentFrameData().CommandBuffer, 0);
+
+		VkCommandBufferBeginInfo beginInfo = VulkanInitializers::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		vkBeginCommandBuffer(GetCurrentFrameData().CommandBuffer, &beginInfo);
+
+		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		//transition the swapchain image to a color attachment
+		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex],
+			m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
+
+	void VulkanDevice::EndFrame()
+	{
+		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		//end the command buffer recording
+		vkEndCommandBuffer(GetCurrentFrameData().CommandBuffer);
+
+		VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(GetCurrentFrameData().CommandBuffer);
+
+		VkSemaphoreSubmitInfo waitInfo = VulkanInitializers::SemaphoreSubmitInfo(
+			VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+			GetCurrentFrameData().SwapchainSemaphore);  // Wait on image acquisition
+
+		VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
+			VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+			GetCurrentFrameData().RenderSemaphore);
+
+		VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
+
+		//submit command buffer to the queue and execute it.
+		// _renderFence will now block until the graphic commands finish execution
+		vkQueueSubmit2(m_GraphicsQueue, 1, &submit, GetCurrentFrameData().RenderFence);
+
+		//prepare present
+		// this will put the image we just rendered to into the visible window.
+		// we want to wait on the _renderSemaphore for that, 
+		// as its necessary that drawing commands have finished before the image is displayed to the user
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.pNext = nullptr;
+		presentInfo.pSwapchains = &m_Swapchain;
+		presentInfo.swapchainCount = 1;
+
+		presentInfo.pWaitSemaphores = &GetCurrentFrameData().RenderSemaphore;
+		presentInfo.waitSemaphoreCount = 1;
+
+		presentInfo.pImageIndices = &m_SwapchainImageIndex;
+
+		VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
+		if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+		{
+			RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+		}
+		else if (result != VK_SUCCESS)
+		{
+			GX_CORE_CRITICAL("Failed to present swapchain image!");
+			return;
+		}
+
+		//increase the number of frames drawn
+		m_CurrentFrame++;
 	}
 
 	void VulkanDevice::InitVulkan(const DeviceProperties& properties)
@@ -136,6 +309,9 @@ namespace Gravix
 		allocatorInfo.instance = m_Instance;
 		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_4;
 		vmaCreateAllocator(&allocatorInfo, &m_Allocator);
+
+		m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+		m_GraphicsQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 	}
 
 	void VulkanDevice::CreateSwapchain(uint32_t width, uint32_t height, bool vSync)
@@ -335,4 +511,33 @@ namespace Gravix
 			throw std::runtime_error("Failed to create bindless descriptor set layout");
 		}
 	}
+
+	void VulkanDevice::InitCommandBuffers()
+	{
+		VkCommandPoolCreateInfo commandPoolInfo = VulkanInitializers::CommandPoolCreateInfo(m_GraphicsQueueFamilyIndex, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+		for (uint32_t i = 0; i < FRAME_OVERLAP; i++) 
+		{
+			vkCreateCommandPool(m_Device, &commandPoolInfo, nullptr, &m_Frames[i].CommandPool);
+
+			// allocate the default command buffer that we will use for rendering
+			VkCommandBufferAllocateInfo cmdAllocInfo = VulkanInitializers::CommandBufferAllocateInfo(m_Frames[i].CommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+			vkAllocateCommandBuffers(m_Device, &cmdAllocInfo, &m_Frames[i].CommandBuffer);
+		}
+	}
+
+	void VulkanDevice::InitSyncStructures()
+	{
+		VkFenceCreateInfo fenceCreateInfo = VulkanInitializers::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+		VkSemaphoreCreateInfo semaphoreCreateInfo = VulkanInitializers::SemaphoreCreateInfo();
+
+		for (uint32_t i = 0; i < FRAME_OVERLAP; i++) 
+		{
+			vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_Frames[i].RenderFence);
+
+			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].SwapchainSemaphore);
+			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].RenderSemaphore);
+		}
+	}
+
 }

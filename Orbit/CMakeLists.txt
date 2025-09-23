@@ -12,6 +12,7 @@ add_executable(Orbit ${SRC_FILES})
 target_link_libraries(Orbit
     PRIVATE
         Gravix    # Your main engine library
+        ImGui
 )
 
 if(MSVC)
@@ -28,6 +29,8 @@ target_include_directories(Orbit
     PRIVATE
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Core
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Renderer/Generic
+        ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
+        ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
 )
 
 # Copy assets if needed

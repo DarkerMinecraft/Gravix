@@ -2,10 +2,10 @@
 
 #include "Core.h"
 #include "Window.h"
+#include "Layer.h"
 
 #include "Events/WindowEvents.h"
-
-#include "Layer.h"
+#include "Renderer/ImGuiRender.h"
 
 #include <chrono>
 #include <filesystem>
@@ -52,6 +52,8 @@ namespace Gravix
 	private:
 		Scope<Window> m_Window;
 		Scope<Scheduler> m_Scheduler;
+
+		ImGuiRender* m_ImGuiRender = nullptr;
 
 		bool m_IsRunning = false;
 		bool m_IsMinimize = false;
