@@ -2,6 +2,10 @@
 
 #include "Core/Layer.h"
 
+#include "Framebuffer.h"
+
+#include <glm/glm.hpp>
+
 namespace Orbit 
 {
 
@@ -17,6 +21,11 @@ namespace Orbit
 		virtual void OnRender() override;
 
 		virtual void OnImGuiRender() override;
+	private:
+		void DrawViewportUI();
+	private:
+		Ref<Gravix::Framebuffer> m_MainFramebuffer;
+		glm::vec2 m_ViewportSize = {1280.f, 1080.f};
 	};
 
 }

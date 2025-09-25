@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Framebuffer.h"
+
+#include <vector>
+
 namespace Gravix 
 {
 
@@ -31,6 +35,11 @@ namespace Gravix
 
 		virtual void StartFrame() = 0;
 		virtual void EndFrame() = 0;
+
+		void RegisterFramebuffer(Ref<Framebuffer> framebuffer) { m_Framebuffers.push_back(framebuffer); }
+		std::vector<Ref<Framebuffer>>& GetFramebuffers() { return m_Framebuffers; }
+	private:
+		std::vector<Ref<Framebuffer>> m_Framebuffers;
 	};
 
 }

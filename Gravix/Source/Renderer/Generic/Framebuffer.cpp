@@ -15,7 +15,12 @@ namespace Gravix
 		switch (device->GetType())
 		{
 			case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return nullptr;
-			case DeviceType::Vulkan:  return CreateRef<VulkanFramebuffer>(device, spec);
+			case DeviceType::Vulkan: {
+				Ref<VulkanFramebuffer> framebuffer = CreateRef<VulkanFramebuffer>(device, spec);
+				device->RegisterFramebuffer(framebuffer);
+
+				return framebuffer;
+			}
 		}
 		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
 		return nullptr;

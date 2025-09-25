@@ -7,12 +7,21 @@
 namespace Gravix 
 {
 
-	struct AllocatedImage 
+	struct AllocatedImage
 	{
 		VkImage Image;
-		VmaAllocation Allocation;
 		VkImageView ImageView;
-		VkFormat Format;
+		VmaAllocation Allocation;
+		VkExtent3D ImageExtent;
+		VkFormat ImageFormat;
+		VkImageLayout ImageLayout;
+	};
+
+	struct AllocatedBuffer 
+	{
+		VkBuffer Buffer;
+		VmaAllocation Allocation;
+		VmaAllocationInfo Info;
 	};
 
 }

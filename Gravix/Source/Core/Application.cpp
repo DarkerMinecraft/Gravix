@@ -30,6 +30,7 @@ namespace Gravix
 
 	Application::~Application()
 	{
+		
 	}
 
 	void Application::Run()
@@ -56,10 +57,10 @@ namespace Gravix
 					for(Ref<Layer> layer : m_LayerStack)
 						layer->OnRender();
 
-					//m_ImGuiRender->Begin();
+					m_ImGuiRender->Begin();
 					for (Ref<Layer> layer : m_LayerStack)
 						layer->OnImGuiRender();
-					//m_ImGuiRender->End();
+					m_ImGuiRender->End();
 				}
 
 			}

@@ -15,7 +15,7 @@
 
 		Gravix::Log::Init();
 
-		Gravix::ApplicationSpecification appSpec;
+		Gravix::ApplicationSpecification appSpec{};
 		appSpec.Width = 1280;
 		appSpec.Height = 720;
 		appSpec.Title = "Orbit";

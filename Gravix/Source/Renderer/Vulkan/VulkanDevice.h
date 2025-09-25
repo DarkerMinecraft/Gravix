@@ -6,6 +6,8 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
+#include "Utils/VulkanTypes.h"
+
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
@@ -33,6 +35,15 @@ namespace Gravix
 		virtual void StartFrame() override;
 		virtual void EndFrame() override;
 
+		AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool useSamples = false, bool mipmapped = false);
+		AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+		void DestroyImage(const AllocatedImage& img) { vkDestroyImageView(m_Device, img.ImageView, nullptr); vmaDestroyImage(m_Allocator, img.Image, img.Allocation); }
+
+		AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+		void DestroyBuffer(const AllocatedBuffer& buffer) { vmaDestroyBuffer(m_Allocator, buffer.Buffer, buffer.Allocation); }
+
+		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
+
 		VkInstance GetInstance() const { return m_Instance; }
 		VkDevice GetDevice() const { return m_Device; }
 		VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
@@ -40,6 +51,12 @@ namespace Gravix
 
 		VkDescriptorSet* GetGlobalDescriptorSets() { return m_BindlessDescriptorSets; }
 		VkDescriptorPool GetGlobalDescriptorPool() const { return m_DescriptorPool; }
+
+		VkImageView GetCurrentSwapchainImageView() const { return m_SwapchainImageViews[m_SwapchainImageIndex]; }
+		VkImage GetCurrentSwapchainImage() const { return m_SwapchainImages[m_SwapchainImageIndex]; }
+		VkImageLayout GetCurrentSwapchainImageLayout() const { return m_SwapchainImageLayout; }
+		VkExtent2D GetSwapchainExtent() const { return m_SwapchainExtent; }
+		void SetCurrentSwapchainImageLayout(VkImageLayout layout) { m_SwapchainImageLayout = layout; }
 
 		FrameData& GetCurrentFrameData() { return m_Frames[m_CurrentFrame % FRAME_OVERLAP]; }
 	private:
@@ -65,6 +82,13 @@ namespace Gravix
 
 		VkQueue m_GraphicsQueue;
 		uint32_t m_GraphicsQueueFamilyIndex;
+
+		VkQueue m_TransferQueue;
+		uint32_t m_TransferQueueFamilyIndex;
+
+		VkFence m_ImmediateFence;
+		VkCommandBuffer m_ImmediateCommandBuffer;
+		VkCommandPool m_ImmediateCommandPool;
 
 		VkDescriptorPool m_DescriptorPool;
 		VkDescriptorSetLayout m_BindlessStorageBufferLayout;

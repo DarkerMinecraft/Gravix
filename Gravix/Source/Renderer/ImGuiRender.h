@@ -18,6 +18,6 @@ namespace Gravix
 		void Init();
 		void SetDarkThemeColors();
 	private:
-		bool m_BlockEvents = true;
+		bool m_BlockEvents = false;
 	};
 }

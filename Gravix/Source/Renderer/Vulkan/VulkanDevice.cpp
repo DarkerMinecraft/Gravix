@@ -62,6 +62,9 @@ namespace Gravix
 			}
 		}
 
+		vkDestroyCommandPool(m_Device, m_ImmediateCommandPool, nullptr);
+		vkDestroyFence(m_Device, m_ImmediateFence, nullptr);
+
 		// Destroy bindless descriptor set layouts (must be done before destroying the pool)
 		if (m_BindlessStorageBufferLayout != VK_NULL_HANDLE)
 		{
@@ -222,6 +225,145 @@ namespace Gravix
 		m_CurrentFrame++;
 	}
 
+	AllocatedImage VulkanDevice::CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool useSamples /*= false*/, bool mipmapped /*= false*/)
+	{
+		AllocatedImage newImage;
+		newImage.ImageFormat = format;
+		newImage.ImageExtent = size;
+
+		VkImageCreateInfo imgInfo = VulkanInitializers::ImageCreateInfo(format, usage, useSamples ? VulkanRenderCaps::GetSampleCount() : VK_SAMPLE_COUNT_1_BIT, size);
+		if (mipmapped) {
+			imgInfo.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
+		}
+
+		// always allocate images on dedicated GPU memory
+		VmaAllocationCreateInfo allocinfo{};
+		allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		// allocate and create the image
+		vmaCreateImage(m_Allocator, &imgInfo, &allocinfo, &newImage.Image, &newImage.Allocation, nullptr);
+
+		// if the format is a depth format, we will need to have it use the correct
+		// aspect flag
+		VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+		if (format == VK_FORMAT_D32_SFLOAT) {
+			aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+
+		// build a image-view for the image
+		VkImageViewCreateInfo viewInfo = VulkanInitializers::ImageViewCreateInfo(format, newImage.Image, aspectFlag);
+		viewInfo.subresourceRange.levelCount = imgInfo.mipLevels;
+
+		vkCreateImageView(m_Device, &viewInfo, nullptr, &newImage.ImageView);
+
+		newImage.ImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		return newImage;
+	}
+
+	AllocatedImage VulkanDevice::CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped /*= false*/)
+	{
+		size_t dataSize = size.depth * size.width * size.height * 4;
+		AllocatedBuffer uploadbuffer = CreateBuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		memcpy(uploadbuffer.Info.pMappedData, data, dataSize);
+
+		AllocatedImage newImage = CreateImage(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, false, mipmapped);
+
+		ImmediateSubmit([&](VkCommandBuffer cmd) {
+			VulkanUtils::TransitionImage(cmd, newImage.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+			VkBufferImageCopy copyRegion = {};
+			copyRegion.bufferOffset = 0;
+			copyRegion.bufferRowLength = 0;
+			copyRegion.bufferImageHeight = 0;
+
+			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			copyRegion.imageSubresource.mipLevel = 0;
+			copyRegion.imageSubresource.baseArrayLayer = 0;
+			copyRegion.imageSubresource.layerCount = 1;
+			copyRegion.imageExtent = size;
+
+			// copy the buffer into the image
+			vkCmdCopyBufferToImage(cmd, uploadbuffer.Buffer, newImage.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+				&copyRegion);
+
+			VulkanUtils::TransitionImage(cmd, newImage.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			});
+
+		DestroyBuffer(uploadbuffer);
+		newImage.ImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		return newImage;
+	}
+
+	AllocatedBuffer VulkanDevice::CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
+	{
+		VkBufferCreateInfo bufferInfo = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferInfo.pNext = nullptr;
+		bufferInfo.size = allocSize;
+		bufferInfo.usage = usage;
+
+		VmaAllocationCreateInfo vmaallocInfo = {};
+		vmaallocInfo.usage = memoryUsage;
+		vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		AllocatedBuffer newBuffer;
+
+		// allocate the buffer
+		vmaCreateBuffer(m_Allocator, &bufferInfo, &vmaallocInfo, &newBuffer.Buffer, &newBuffer.Allocation,
+			&newBuffer.Info);
+
+		return newBuffer;
+	}
+
+	void VulkanDevice::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function)
+	{
+		vkWaitForFences(m_Device, 1, &m_ImmediateFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(m_Device, 1, &m_ImmediateFence);
+
+		VkCommandBuffer cmd = m_ImmediateCommandBuffer;
+
+		VkResult result = vkResetCommandBuffer(cmd, 0);
+		if (result != VK_SUCCESS) {
+			GX_CORE_ERROR("Failed to reset immediate command buffer: {}", static_cast<int>(result));
+			return;
+		}
+
+		VkCommandBufferBeginInfo cmdBeginInfo = VulkanInitializers::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		result = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
+		if (result != VK_SUCCESS) 
+		{
+			GX_CORE_ERROR("Failed to begin immediate command buffer: {}", static_cast<int>(result));
+			return;
+		}
+
+		function(cmd);
+
+		result = vkEndCommandBuffer(cmd);
+		if (result != VK_SUCCESS) 
+		{
+			GX_CORE_ERROR("Failed to end immediate command buffer: {}", static_cast<int>(result));
+			return;
+		}
+
+		VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(cmd);
+		VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, nullptr, nullptr);
+
+		result = vkQueueSubmit2(m_GraphicsQueue, 1, &submit, m_ImmediateFence);
+		if (result != VK_SUCCESS) 
+		{
+			GX_CORE_ERROR("Failed to submit immediate command buffer: {}", static_cast<int>(result));
+			return;
+		}
+
+		result = vkWaitForFences(m_Device, 1, &m_ImmediateFence, VK_TRUE, UINT64_MAX);
+		if (result != VK_SUCCESS)
+		{
+			GX_CORE_ERROR("Failed to wait for immediate fence: {}", static_cast<int>(result));
+		}
+	}
+
 	void VulkanDevice::InitVulkan(const DeviceProperties& properties)
 	{
 		vkb::InstanceBuilder builder;
@@ -310,6 +452,9 @@ namespace Gravix
 
 		m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 		m_GraphicsQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+		m_TransferQueue = vkbDevice.get_queue(vkb::QueueType::transfer).value();
+		m_TransferQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::transfer).value();
 	}
 
 	void VulkanDevice::CreateSwapchain(uint32_t width, uint32_t height, bool vSync)
@@ -530,6 +675,11 @@ namespace Gravix
 			VkCommandBufferAllocateInfo cmdAllocInfo = VulkanInitializers::CommandBufferAllocateInfo(m_Frames[i].CommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
 			vkAllocateCommandBuffers(m_Device, &cmdAllocInfo, &m_Frames[i].CommandBuffer);
 		}
+
+		vkCreateCommandPool(m_Device, &commandPoolInfo, nullptr, &m_ImmediateCommandPool);
+
+		VkCommandBufferAllocateInfo cmdAllocInfo = VulkanInitializers::CommandBufferAllocateInfo(m_ImmediateCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+		vkAllocateCommandBuffers(m_Device, &cmdAllocInfo, &m_ImmediateCommandBuffer);
 	}
 
 	void VulkanDevice::InitSyncStructures()
@@ -544,6 +694,8 @@ namespace Gravix
 			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].SwapchainSemaphore);
 			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].RenderSemaphore);
 		}
+
+		vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_ImmediateFence);
 	}
 
 }

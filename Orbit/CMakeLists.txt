@@ -31,6 +31,7 @@ target_include_directories(Orbit
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Renderer/Generic
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
+        ${CMAKE_SOURCE_DIR}/ThirdParties/glm
 )
 
 # Copy assets if needed

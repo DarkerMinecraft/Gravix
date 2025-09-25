@@ -7,9 +7,9 @@
 namespace Gravix 
 {
 
-	Command::Command(const std::string& debugName)
+	Command::Command(Ref<Framebuffer> framebuffer, uint32_t presentIndex, bool shouldCopy)
 	{
-		Initialize(debugName);
+		Initialize(framebuffer, presentIndex, shouldCopy);
 	}
 
 	Command::~Command()
@@ -17,14 +17,32 @@ namespace Gravix
 		delete m_Impl;
 	}
 
-	void Command::Initialize(const std::string& debugName)
+	void Command::BeginRendering()
+	{
+		if(m_Impl)
+			m_Impl->BeginRendering();
+	}
+
+	void Command::DrawImGui()
+	{
+		if(m_Impl)
+			m_Impl->DrawImGui();
+	}
+
+	void Command::EndRendering()
+	{
+		if(m_Impl)
+			m_Impl->EndRendering();
+	}
+
+	void Command::Initialize(Ref<Framebuffer> framebuffer, uint32_t presentIndex, bool shouldCopy)
 	{
 		Device* device = Application::Get().GetWindow().GetDevice();
 
 		switch (device->GetType())
 		{
 		case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return;
-		case DeviceType::Vulkan:  m_Impl = new VulkanCommandImpl(debugName); return;
+		case DeviceType::Vulkan:  m_Impl = new VulkanCommandImpl(device, framebuffer, presentIndex, shouldCopy); return;
 		}
 		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
 		return;

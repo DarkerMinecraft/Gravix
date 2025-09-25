@@ -24,6 +24,12 @@ namespace Gravix
 		VulkanDevice* device = static_cast<VulkanDevice*>(app.GetWindow().GetDevice());
 
 		vkDeviceWaitIdle(device->GetDevice());
+		for (auto& framebuffer : device->GetFramebuffers())
+		{
+			framebuffer->DestroyImGuiDescriptors();
+		}
+		device->GetFramebuffers().clear();
+
 		ImGui_ImplWin32_Shutdown();
 		ImGui_ImplVulkan_Shutdown();
 		ImGui::DestroyContext();
@@ -38,18 +44,11 @@ namespace Gravix
 
 	void ImGuiRender::End()
 	{
-		Application& app = Application::Get();
-		VulkanDevice* device = static_cast<VulkanDevice*>(app.GetWindow().GetDevice());
+		Command cmd;
 
-		Command cmd("ImGui");
-
-		/*
-		cmd.Start();
 		cmd.BeginRendering();
 		cmd.DrawImGui();
 		cmd.EndRendering();
-		cmd.Finish();
-		*/
 
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
