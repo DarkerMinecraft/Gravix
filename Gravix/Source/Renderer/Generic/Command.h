@@ -12,6 +12,15 @@ namespace Gravix
 		Command(Ref<Framebuffer> framebuffer = nullptr, uint32_t presentIndex = 0, bool shouldCopy = true);
 		virtual ~Command();
 
+		void SetActiveMaterial(Material* material);
+		void SetActiveMaterial(Ref<Material> material) { SetActiveMaterial(material.get()); }
+
+		void BindResource(uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler = false);
+		void BindResource(uint32_t binding, Ref<Framebuffer> buffer, uint32_t index, bool sampler = false) { BindResource(binding, buffer.get(), index, sampler); }
+
+		void BindMaterial(void* pushConstants = nullptr);
+		void Dispatch();
+
 		void BeginRendering();
 		void DrawImGui();
 		void EndRendering();

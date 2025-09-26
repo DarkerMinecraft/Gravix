@@ -7,6 +7,7 @@
 #endif
 
 #include "Utils/VulkanTypes.h"
+#include "Utils/ShaderCompiler.h"
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -35,6 +36,8 @@ namespace Gravix
 		virtual void StartFrame() override;
 		virtual void EndFrame() override;
 
+		ShaderCompiler& GetShaderCompiler() { return *m_ShaderCompiler; }
+
 		AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool useSamples = false, bool mipmapped = false);
 		AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 		void DestroyImage(const AllocatedImage& img) { vkDestroyImageView(m_Device, img.ImageView, nullptr); vmaDestroyImage(m_Allocator, img.Image, img.Allocation); }
@@ -50,6 +53,8 @@ namespace Gravix
 		VkQueue GetGraphicsQueue() const { return m_GraphicsQueue; }
 
 		VkDescriptorSet* GetGlobalDescriptorSets() { return m_BindlessDescriptorSets; }
+		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_BindlessDescriptorSets[index]; }
+		std::vector<VkDescriptorSetLayout>& GetGlobalDescriptorSetLayouts() { return m_BindlessSetLayouts; }
 		VkDescriptorPool GetGlobalDescriptorPool() const { return m_DescriptorPool; }
 
 		VkImageView GetCurrentSwapchainImageView() const { return m_SwapchainImageViews[m_SwapchainImageIndex]; }
@@ -67,8 +72,7 @@ namespace Gravix
 
 		void InitDescriptorPool();
 		void CreateBindlessDescriptorSets();
-		void CreateBindlessLayout(uint32_t binding, VkDescriptorType type, uint32_t count,
-			VkShaderStageFlags stages, VkDescriptorSetLayout* layout);
+		void CreateBindlessLayout(VkDescriptorType type, uint32_t count, VkShaderStageFlags stages, VkDescriptorSetLayout* layout);
 		void InitCommandBuffers();
 		void InitSyncStructures();
 	private:
@@ -79,6 +83,8 @@ namespace Gravix
 		VkSurfaceKHR m_Surface;
 		
 		VmaAllocator m_Allocator;
+
+		ShaderCompiler* m_ShaderCompiler;
 
 		VkQueue m_GraphicsQueue;
 		uint32_t m_GraphicsQueueFamilyIndex;
@@ -95,6 +101,7 @@ namespace Gravix
 		VkDescriptorSetLayout m_BindlessSampledImageLayout;
 		VkDescriptorSetLayout m_BindlessStorageImageLayout;
 		VkDescriptorSetLayout m_BindlessSamplerLayout;
+		std::vector<VkDescriptorSetLayout> m_BindlessSetLayouts;
 		VkDescriptorSet m_BindlessDescriptorSets[4]; // 0: Storage Buffers, 1: Sampled Images, 2: Storage Images, 3: Samplers
 
 		VkPipelineLayout m_PipelineLayout;

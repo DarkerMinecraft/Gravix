@@ -24,6 +24,7 @@ endif()
 target_include_directories(Gravix 
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/
+
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui
@@ -32,6 +33,7 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src
         ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/enkiTS/src
+        ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include
 )
 
 target_link_libraries(Gravix
@@ -40,4 +42,5 @@ target_link_libraries(Gravix
         vk-bootstrap
         enkiTS
         ImGui
+        slang
 )

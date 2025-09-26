@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Core/Layer.h"
+#include "Layer.h"
 
 #include "Framebuffer.h"
+#include "Material.h"
 
 #include <glm/glm.hpp>
 
@@ -25,6 +26,8 @@ namespace Orbit
 		void DrawViewportUI();
 	private:
 		Ref<Gravix::Framebuffer> m_MainFramebuffer;
+		Ref<Gravix::Material> m_GradientMaterial;
+
 		glm::vec2 m_ViewportSize = {1280.f, 1080.f};
 	};
 

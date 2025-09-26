@@ -17,6 +17,30 @@ namespace Gravix
 		delete m_Impl;
 	}
 
+	void Command::SetActiveMaterial(Material* material)
+	{
+		if(m_Impl)
+			m_Impl->SetActiveMaterial(material);
+	}
+
+	void Command::BindResource(uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler /*= false*/)
+	{
+		if(m_Impl)
+			m_Impl->BindResource(binding, buffer, index, sampler);
+	}
+
+	void Command::BindMaterial(void* pushConstants /*= nullptr*/)
+	{
+		if(m_Impl)
+			m_Impl->BindMaterial(pushConstants);
+	}
+
+	void Command::Dispatch()
+	{
+		if(m_Impl)
+			m_Impl->Dispatch();
+	}
+
 	void Command::BeginRendering()
 	{
 		if(m_Impl)

@@ -39,3 +39,21 @@ set_target_properties(enkiTS PROPERTIES FOLDER "Dependencies")
 
 add_subdirectory(ThirdParties/ImGui)
 set_target_properties(ImGui PROPERTIES FOLDER "Dependencies")
+
+set(SLANG_ENABLE_GFX OFF CACHE BOOL "" FORCE)             # Disable gfx integration
+set(SLANG_ENABLE_SLANGD OFF CACHE BOOL "" FORCE)          # Disable language server
+set(SLANG_ENABLE_TESTS OFF CACHE BOOL "" FORCE)           # Disable tests
+set(SLANG_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)        # Disable samples/examples
+set(SLANG_ENABLE_SLANGRT ON CACHE BOOL "" FORCE)          # Enable runtime (reflection, compiler core)
+
+add_subdirectory(ThirdParties/Slang)
+set_target_properties(slang PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(slang-glslang PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(slang-rt PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(core PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(slangc PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(slang-common-objects PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(compiler-core PROPERTIES FOLDER "Slang/Dependencies")
+set_target_properties(slangi PROPERTIES FOLDER "Slang/Dependencies")
+
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Orbit)

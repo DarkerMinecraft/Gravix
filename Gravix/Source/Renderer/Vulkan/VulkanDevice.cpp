@@ -24,10 +24,14 @@ namespace Gravix
 		InitCommandBuffers();
 		InitSyncStructures();
 		InitDescriptorPool();
+
+		m_ShaderCompiler = new ShaderCompiler();
 	}
 
 	VulkanDevice::~VulkanDevice()
 	{
+		delete m_ShaderCompiler;
+
 		// Wait for all operations to complete before cleanup
 		if (m_Device != VK_NULL_HANDLE)
 		{
@@ -89,6 +93,8 @@ namespace Gravix
 			vkDestroyDescriptorSetLayout(m_Device, m_BindlessSamplerLayout, nullptr);
 			m_BindlessSamplerLayout = VK_NULL_HANDLE;
 		}
+
+		m_BindlessSetLayouts.clear();
 
 		// Destroy descriptor pool (this automatically frees all descriptor sets)
 		if (m_DescriptorPool != VK_NULL_HANDLE)
@@ -584,60 +590,62 @@ namespace Gravix
 
 	void VulkanDevice::CreateBindlessDescriptorSets()
 	{
+		// Query max bindless counts
 		uint32_t maxSamplers = VulkanRenderCaps::GetRecommendedBindlessSamplers();
 		uint32_t maxSampledImages = VulkanRenderCaps::GetRecommendedBindlessSampledImages();
 		uint32_t maxStorageImages = VulkanRenderCaps::GetRecommendedBindlessStorageImages();
 		uint32_t maxStorageBuffers = VulkanRenderCaps::GetRecommendedBindlessStorageBuffers();
 
-		// Create layouts as before...
-		CreateBindlessLayout(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxStorageBuffers,
-			VK_SHADER_STAGE_ALL, &m_BindlessStorageBufferLayout);
-		CreateBindlessLayout(1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, maxSampledImages,
-			VK_SHADER_STAGE_ALL, &m_BindlessSampledImageLayout);
-		CreateBindlessLayout(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, maxStorageImages,
-			VK_SHADER_STAGE_ALL, &m_BindlessStorageImageLayout);
-		CreateBindlessLayout(3, VK_DESCRIPTOR_TYPE_SAMPLER, maxSamplers,
-			VK_SHADER_STAGE_ALL, &m_BindlessSamplerLayout);
+		// Create bindless layouts: each set holds 1 type with max descriptors
+		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxStorageBuffers, VK_SHADER_STAGE_ALL, &m_BindlessStorageBufferLayout);
+		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, maxSampledImages, VK_SHADER_STAGE_ALL, &m_BindlessSampledImageLayout);
+		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, maxStorageImages, VK_SHADER_STAGE_ALL, &m_BindlessStorageImageLayout);
+		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_SAMPLER, maxSamplers, VK_SHADER_STAGE_ALL, &m_BindlessSamplerLayout);
 
-		VkDescriptorSetLayout layouts[] = {
-			m_BindlessStorageBufferLayout,
-			m_BindlessSampledImageLayout,
-			m_BindlessStorageImageLayout,
-			m_BindlessSamplerLayout
+		m_BindlessSetLayouts = {
+			m_BindlessStorageBufferLayout,   // set 0
+			m_BindlessSampledImageLayout,    // set 1
+			m_BindlessStorageImageLayout,    // set 2
+			m_BindlessSamplerLayout          // set 3
 		};
 
-		// Specify actual descriptor counts for variable bindings
+		// Variable counts for allocation
 		uint32_t variableCounts[] = { maxStorageBuffers, maxSampledImages, maxStorageImages, maxSamplers };
 
-		VkDescriptorSetVariableDescriptorCountAllocateInfo variableInfo = {};
+		VkDescriptorSetVariableDescriptorCountAllocateInfo variableInfo{};
 		variableInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
 		variableInfo.descriptorSetCount = 4;
 		variableInfo.pDescriptorCounts = variableCounts;
 
-		VkDescriptorSetAllocateInfo allocInfo = {};
+		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.pNext = &variableInfo;  // Add this!
+		allocInfo.pNext = &variableInfo;
 		allocInfo.descriptorPool = m_DescriptorPool;
 		allocInfo.descriptorSetCount = 4;
-		allocInfo.pSetLayouts = layouts;
+		allocInfo.pSetLayouts = m_BindlessSetLayouts.data();
 
-		VkResult result = vkAllocateDescriptorSets(m_Device, &allocInfo, m_BindlessDescriptorSets);
-		if (result != VK_SUCCESS) {
-			GX_CORE_ERROR("Failed to allocate bindless descriptor sets! Error: {0}", static_cast<int>(result));
-			throw std::runtime_error("Failed to allocate bindless descriptor sets");
+		if (vkAllocateDescriptorSets(m_Device, &allocInfo, m_BindlessDescriptorSets) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate bindless descriptor sets!");
 		}
+
+		GX_CORE_INFO("Bindless descriptor sets created with max bindings:");
+		GX_CORE_INFO("   Storage Buffers: {0}", maxStorageBuffers);
+		GX_CORE_INFO("   Sampled Images:  {0}", maxSampledImages);
+		GX_CORE_INFO("   Storage Images:  {0}", maxStorageImages);
+		GX_CORE_INFO("   Samplers:        {0}", maxSamplers);
 	}
 
-	void VulkanDevice::CreateBindlessLayout(uint32_t binding, VkDescriptorType type, uint32_t count, VkShaderStageFlags stages, VkDescriptorSetLayout* layout)
+
+	void VulkanDevice::CreateBindlessLayout(VkDescriptorType type, uint32_t count, VkShaderStageFlags stages, VkDescriptorSetLayout* layout)
 	{
 		VkDescriptorSetLayoutBinding bindlessBinding = {};
-		bindlessBinding.binding = binding;
+		bindlessBinding.binding = 0; // ALWAYS 0 inside the set
 		bindlessBinding.descriptorType = type;
 		bindlessBinding.descriptorCount = count;
 		bindlessBinding.stageFlags = stages;
 		bindlessBinding.pImmutableSamplers = nullptr;
 
-		// Enable bindless features
 		VkDescriptorBindingFlags bindingFlags =
 			VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
 			VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
@@ -655,13 +663,12 @@ namespace Gravix
 		layoutInfo.bindingCount = 1;
 		layoutInfo.pBindings = &bindlessBinding;
 
-		VkResult result = vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, layout);
-		if (result != VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, layout) != VK_SUCCESS)
 		{
-			GX_CORE_ERROR("Failed to create bindless descriptor set layout! Error: {0}", static_cast<int>(result));
-			throw std::runtime_error("Failed to create bindless descriptor set layout");
+			throw std::runtime_error("Failed to create bindless descriptor set layout!");
 		}
 	}
+	
 
 	void VulkanDevice::InitCommandBuffers()
 	{

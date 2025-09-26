@@ -13,7 +13,9 @@ namespace Orbit
 		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8 };
 
 		m_MainFramebuffer = Gravix::Framebuffer::Create(fbSpec);
-		m_MainFramebuffer->SetClearColor(0, { 1.0f, 0.0f, 0.0f, 1.0f });
+		//m_MainFramebuffer->SetClearColor(0, { 1.0f, 0.0f, 0.0f, 1.0f });
+
+		m_GradientMaterial = Gravix::Material::Create("Gradient", "Assets/shaders/gradient.slang");
 	}
 
 	AppLayer::~AppLayer()
@@ -35,8 +37,10 @@ namespace Orbit
 	{
 		Gravix::Command cmd(m_MainFramebuffer, 0, false);
 
-		cmd.BeginRendering();
-		cmd.EndRendering();
+		cmd.SetActiveMaterial(m_GradientMaterial);
+		cmd.BindResource(0, m_MainFramebuffer, 0);
+		cmd.BindMaterial();
+		cmd.Dispatch();
 	}
 
 	void AppLayer::OnImGuiRender()
@@ -99,6 +103,7 @@ namespace Orbit
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin("Viewport");
 		ImVec2 avail = ImGui::GetContentRegionAvail();
+
 		m_ViewportSize = { avail.x, avail.y };
 
 		ImGui::Image(m_MainFramebuffer->GetColorAttachmentID(0), avail);

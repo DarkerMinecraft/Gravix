@@ -30,6 +30,24 @@ namespace Gravix
 		}
 	}
 
+	void VulkanCommandImpl::BindResource(uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler)
+	{
+		if(m_BoundMaterial != nullptr && buffer != nullptr)
+			m_BoundMaterial->BindResource(m_CommandBuffer, binding, buffer, index, sampler);
+	}
+
+	void VulkanCommandImpl::BindMaterial(void* pushConstants)
+	{
+		if (m_BoundMaterial != nullptr)
+			m_BoundMaterial->Bind(m_CommandBuffer, pushConstants);
+	}
+
+	void VulkanCommandImpl::Dispatch()
+	{
+		if(m_BoundMaterial != nullptr && m_TargetFramebuffer != nullptr)
+			m_BoundMaterial->Dispatch(m_CommandBuffer, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
+	}
+
 	void VulkanCommandImpl::BeginRendering()
 	{
 		if (m_TargetFramebuffer == nullptr)
