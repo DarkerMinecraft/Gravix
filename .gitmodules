@@ -17,3 +17,6 @@
 	path = ThirdParties/ImGui
 	url = https://github.com/DarkerMinecraft/imgui.git
 	branch = docking
+[submodule "ThirdParties/Slang"]
+	path = ThirdParties/Slang
+	url = https://github.com/shader-slang/slang.git
