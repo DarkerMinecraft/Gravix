@@ -3,6 +3,8 @@
 
 #include "VulkanDevice.h"
 
+#include "VulkanMeshBuffer.h"
+
 #include "Utils/VulkanInitializers.h"
 #include "Utils/VulkanUtils.h"
 
@@ -70,6 +72,24 @@ namespace Gravix
 			m_TargetFramebuffer->TransitionToBeginRendering(m_CommandBuffer);
 			vkCmdBeginRendering(m_CommandBuffer, &renderInfo);
 		}
+	}
+
+	void VulkanCommandImpl::BindMesh(MeshBuffer* mesh)
+	{
+		VulkanMeshBuffer* vulkanMesh = static_cast<VulkanMeshBuffer*>(mesh);
+		if (vulkanMesh == nullptr)
+			return;
+		vulkanMesh->Bind(m_CommandBuffer);
+	}
+
+	void VulkanCommandImpl::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+	{
+		vkCmdDraw(m_CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+	}
+
+	void VulkanCommandImpl::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+	{
+		vkCmdDrawIndexed(m_CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
 	void VulkanCommandImpl::DrawImGui()

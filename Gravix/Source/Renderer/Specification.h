@@ -9,7 +9,7 @@ namespace Gravix
 	enum class VertexFormat { Float, Float2, Float3, Float4, Int, Int2, Int3, Int4 };
 	enum class Topology { TriangleList, TriangleStrip, LineList, LineStrip, PointList };
 	enum class DescriptorType { UniformBuffer, StorageBuffer, SampledImage, StorageImage };
-	enum class ShaderStage { Vertex, Fragment, Compute, Geometry, All };
+	enum class ShaderStage { Vertex, Fragment, Compute, Geometry, None, All };
 	enum class Cull { None, Front, Back };
 	enum class Fill { Solid, Wireframe };
 	enum class CompareOp { Never, Less, Equal, LessOrEqual, Greater, NotEqual, GreaterOrEqual, Always };

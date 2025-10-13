@@ -4,6 +4,7 @@
 
 #include "Framebuffer.h"
 #include "Material.h"
+#include "Reflections/DynamicStruct.h"
 
 #include <glm/glm.hpp>
 
@@ -26,7 +27,11 @@ namespace Orbit
 		void DrawViewportUI();
 	private:
 		Ref<Gravix::Framebuffer> m_MainFramebuffer;
+
 		Ref<Gravix::Material> m_GradientMaterial;
+		Ref<Gravix::Material> m_GradientColorMaterial;
+
+		Gravix::DynamicStruct m_GradientColor;
 
 		glm::vec2 m_ViewportSize = {1280.f, 1080.f};
 	};

@@ -76,22 +76,16 @@ namespace Gravix
 			m_BindlessStorageBufferLayout = VK_NULL_HANDLE;
 		}
 
-		if (m_BindlessSampledImageLayout != VK_NULL_HANDLE)
+		if (m_BindlessCombinedImageSamplerLayout != VK_NULL_HANDLE)
 		{
-			vkDestroyDescriptorSetLayout(m_Device, m_BindlessSampledImageLayout, nullptr);
-			m_BindlessSampledImageLayout = VK_NULL_HANDLE;
+			vkDestroyDescriptorSetLayout(m_Device, m_BindlessCombinedImageSamplerLayout, nullptr);
+			m_BindlessCombinedImageSamplerLayout = VK_NULL_HANDLE;
 		}
 
 		if (m_BindlessStorageImageLayout != VK_NULL_HANDLE)
 		{
 			vkDestroyDescriptorSetLayout(m_Device, m_BindlessStorageImageLayout, nullptr);
 			m_BindlessStorageImageLayout = VK_NULL_HANDLE;
-		}
-
-		if (m_BindlessSamplerLayout != VK_NULL_HANDLE)
-		{
-			vkDestroyDescriptorSetLayout(m_Device, m_BindlessSamplerLayout, nullptr);
-			m_BindlessSamplerLayout = VK_NULL_HANDLE;
 		}
 
 		m_BindlessSetLayouts.clear();
@@ -421,8 +415,14 @@ namespace Gravix
 		features12.descriptorBindingStorageImageUpdateAfterBind = true;
 		features12.descriptorBindingUniformBufferUpdateAfterBind = true;
 		features12.runtimeDescriptorArray = true;
+		features12.scalarBlockLayout = true;  // ADD THIS - fixes struct alignment issue
+
+		//Vulkan 1.1 features (ADD THIS ENTIRE SECTION)
+		VkPhysicalDeviceVulkan11Features features11{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+		features11.shaderDrawParameters = true;  // Fixes the DrawParameters capability error
 
 		VkPhysicalDeviceFeatures features{};
+		features.samplerAnisotropy = VK_TRUE;  // Fix the sampler warning too
 
 		//We want a gpu that can write to the win32 surface and supports vulkan 1.4 with the correct features
 		vkb::PhysicalDeviceSelector selector{ instRet.value() };
@@ -434,6 +434,7 @@ namespace Gravix
 			.set_required_features_14(features14)
 			.set_required_features_13(features13)
 			.set_required_features_12(features12)
+			.set_required_features_11(features11)
 			.set_required_features(features)
 			.set_surface(m_Surface)
 			.select()
@@ -454,6 +455,7 @@ namespace Gravix
 		allocatorInfo.device = m_Device;
 		allocatorInfo.instance = m_Instance;
 		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_4;
+		allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 		vmaCreateAllocator(&allocatorInfo, &m_Allocator);
 
 		m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
@@ -596,32 +598,33 @@ namespace Gravix
 		uint32_t maxStorageImages = VulkanRenderCaps::GetRecommendedBindlessStorageImages();
 		uint32_t maxStorageBuffers = VulkanRenderCaps::GetRecommendedBindlessStorageBuffers();
 
+		// For combined image samplers, take the smaller of samplers/images (safe bound)
+		uint32_t maxCombinedImageSamplers = std::min(maxSamplers, maxSampledImages);
+
 		// Create bindless layouts: each set holds 1 type with max descriptors
 		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, maxStorageBuffers, VK_SHADER_STAGE_ALL, &m_BindlessStorageBufferLayout);
-		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, maxSampledImages, VK_SHADER_STAGE_ALL, &m_BindlessSampledImageLayout);
+		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxCombinedImageSamplers, VK_SHADER_STAGE_ALL, &m_BindlessCombinedImageSamplerLayout);
 		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, maxStorageImages, VK_SHADER_STAGE_ALL, &m_BindlessStorageImageLayout);
-		CreateBindlessLayout(VK_DESCRIPTOR_TYPE_SAMPLER, maxSamplers, VK_SHADER_STAGE_ALL, &m_BindlessSamplerLayout);
 
 		m_BindlessSetLayouts = {
-			m_BindlessStorageBufferLayout,   // set 0
-			m_BindlessSampledImageLayout,    // set 1
-			m_BindlessStorageImageLayout,    // set 2
-			m_BindlessSamplerLayout          // set 3
+			m_BindlessStorageBufferLayout,       // set 0
+			m_BindlessCombinedImageSamplerLayout,// set 1
+			m_BindlessStorageImageLayout         // set 2
 		};
 
 		// Variable counts for allocation
-		uint32_t variableCounts[] = { maxStorageBuffers, maxSampledImages, maxStorageImages, maxSamplers };
+		uint32_t variableCounts[] = { maxStorageBuffers, maxCombinedImageSamplers, maxStorageImages };
 
 		VkDescriptorSetVariableDescriptorCountAllocateInfo variableInfo{};
 		variableInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
-		variableInfo.descriptorSetCount = 4;
+		variableInfo.descriptorSetCount = 3;
 		variableInfo.pDescriptorCounts = variableCounts;
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.pNext = &variableInfo;
 		allocInfo.descriptorPool = m_DescriptorPool;
-		allocInfo.descriptorSetCount = 4;
+		allocInfo.descriptorSetCount = 3;
 		allocInfo.pSetLayouts = m_BindlessSetLayouts.data();
 
 		if (vkAllocateDescriptorSets(m_Device, &allocInfo, m_BindlessDescriptorSets) != VK_SUCCESS)
@@ -630,10 +633,9 @@ namespace Gravix
 		}
 
 		GX_CORE_INFO("Bindless descriptor sets created with max bindings:");
-		GX_CORE_INFO("   Storage Buffers: {0}", maxStorageBuffers);
-		GX_CORE_INFO("   Sampled Images:  {0}", maxSampledImages);
-		GX_CORE_INFO("   Storage Images:  {0}", maxStorageImages);
-		GX_CORE_INFO("   Samplers:        {0}", maxSamplers);
+		GX_CORE_INFO("   Storage Buffers:        {0}", maxStorageBuffers);
+		GX_CORE_INFO("   Combined Image Samplers:{0}", maxCombinedImageSamplers);
+		GX_CORE_INFO("   Storage Images:         {0}", maxStorageImages);
 	}
 
 

@@ -20,3 +20,6 @@
 [submodule "ThirdParties/Slang"]
 	path = ThirdParties/Slang
 	url = https://github.com/shader-slang/slang.git
+[submodule "ThirdParties/stb"]
+	path = ThirdParties/stb
+	url = https://github.com/nothings/stb.git

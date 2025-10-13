@@ -40,12 +40,18 @@ namespace Gravix
 
 		void TransitionToBeginRendering(VkCommandBuffer cmd);
 
+		uint32_t GetDepthAttachmentIndex() const { return m_DepthAttachmentIndex; }
+
 		std::vector<VkRenderingAttachmentInfo> GetColorAttachments() { return m_ColorAttachments; };
 		VkRenderingAttachmentInfo* GetDepthAttachment() { return m_DepthAttachmentIndex == -1 ? nullptr : &m_DepthAttachment; }
 
 		AllocatedImage GetImage(uint32_t index) const { return m_Attachments[index].Image; }
 		VkFormat GetImageFormat(uint32_t index) const { return m_Attachments[index].Format; }
 		VkSampler GetImageSampler(uint32_t index) const { return m_Attachments[index].Sampler; }
+
+		std::vector<VkFormat> GetColorAttachmentFormats() const;
+
+		bool IsUsingSamples() const { return m_UseSamples; }
 	private:
 		void Init(const FramebufferSpecification& spec);
 		void CreateImage(uint32_t index, uint32_t width, uint32_t height);

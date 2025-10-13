@@ -98,9 +98,8 @@ namespace Gravix
 
 		VkDescriptorPool m_DescriptorPool;
 		VkDescriptorSetLayout m_BindlessStorageBufferLayout;
-		VkDescriptorSetLayout m_BindlessSampledImageLayout;
+		VkDescriptorSetLayout m_BindlessCombinedImageSamplerLayout;
 		VkDescriptorSetLayout m_BindlessStorageImageLayout;
-		VkDescriptorSetLayout m_BindlessSamplerLayout;
 		std::vector<VkDescriptorSetLayout> m_BindlessSetLayouts;
 		VkDescriptorSet m_BindlessDescriptorSets[4]; // 0: Storage Buffers, 1: Sampled Images, 2: Storage Images, 3: Samplers
 

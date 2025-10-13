@@ -47,6 +47,24 @@ namespace Gravix
 			m_Impl->BeginRendering();
 	}
 
+	void Command::BindMesh(MeshBuffer* mesh)
+	{
+		if(m_Impl)
+			m_Impl->BindMesh(mesh);
+	}
+
+	void Command::Draw(uint32_t vertexCount, uint32_t instanceCount /*= 1*/, uint32_t firstVertex /*= 0*/, uint32_t firstInstance /*= 0*/)
+	{
+		if(m_Impl)
+			m_Impl->Draw(vertexCount, instanceCount, firstVertex, firstInstance);
+	}
+
+	void Command::DrawIndexed(uint32_t indexCount, uint32_t instanceCount /*= 1*/, uint32_t firstIndex /*= 0*/, int32_t vertexOffset /*= 0*/, uint32_t firstInstance /*= 0*/)
+	{
+		if(m_Impl)
+			m_Impl->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	}
+
 	void Command::DrawImGui()
 	{
 		if(m_Impl)

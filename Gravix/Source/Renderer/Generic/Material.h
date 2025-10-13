@@ -3,6 +3,8 @@
 #include "Renderer/Specification.h"
 #include "Renderer/Generic/Framebuffer.h"
 
+#include "Reflections/DynamicStruct.h"
+
 #include <string>
 #include <filesystem>
 
@@ -11,8 +13,8 @@ namespace Gravix
 
 	struct MaterialSpecification 
 	{
-		const std::string DebugName; 
-		const std::filesystem::path ShaderFilePath;
+		std::string DebugName;
+		std::filesystem::path ShaderFilePath;
 
 		Blending BlendingMode;
 
@@ -33,6 +35,10 @@ namespace Gravix
 	{
 	public:
 		virtual ~Material() = default;
+
+		virtual DynamicStruct GetPushConstantStruct() = 0;
+		virtual DynamicStruct GetMaterialStruct() = 0;
+		virtual DynamicStruct GetVertexStruct() = 0;
 
 		static Ref<Material> Create(const MaterialSpecification& spec);
 		static Ref<Material> Create(const std::string& debugName, const std::filesystem::path& shaderFilePath);

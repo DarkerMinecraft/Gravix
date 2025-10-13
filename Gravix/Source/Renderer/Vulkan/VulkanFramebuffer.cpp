@@ -127,6 +127,20 @@ namespace Gravix
 		}
 	}
 
+	std::vector<VkFormat> VulkanFramebuffer::GetColorAttachmentFormats() const
+	{
+		std::vector<VkFormat> formats;
+		for (uint32_t i = 0; i < m_Attachments.size(); i++)
+		{
+			if (i == m_DepthAttachmentIndex)
+				continue;
+
+			formats.push_back(m_Attachments[i].Format);
+		}
+
+		return formats;
+	}
+
 	void VulkanFramebuffer::Init(const FramebufferSpecification& spec)
 	{
 		if (m_Width == 0 || m_Height == 0)

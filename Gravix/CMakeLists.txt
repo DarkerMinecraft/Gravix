@@ -34,6 +34,7 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/enkiTS/src
         ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include
+        ${CMAKE_SOURCE_DIR}/ThirdParties/stb/
 )
 
 target_link_libraries(Gravix

@@ -1,8 +1,10 @@
 #include "AppLayer.h"
 
 #include "Command.h"
+#include "Renderer2D.h"
 
 #include <imgui.h>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace Orbit 
 {
@@ -16,11 +18,20 @@ namespace Orbit
 		//m_MainFramebuffer->SetClearColor(0, { 1.0f, 0.0f, 0.0f, 1.0f });
 
 		m_GradientMaterial = Gravix::Material::Create("Gradient", "Assets/shaders/gradient.slang");
+		m_GradientColorMaterial = Gravix::Material::Create("GradientColor", "Assets/shaders/gradient_color.slang");
+
+		Gravix::Renderer2D::Init();
+
+		m_GradientColor = m_GradientColorMaterial->GetPushConstantStruct();
+
+		// Purple Dream
+		m_GradientColor.Set("topColor", glm::vec4(0.7f, 0.4f, 1.0f, 1.0f));    // Light purple
+		m_GradientColor.Set("bottomColor", glm::vec4(0.9f, 0.4f, 0.7f, 1.0f)); // Pink-purple
 	}
 
 	AppLayer::~AppLayer()
 	{
-
+		Gravix::Renderer2D::Destroy();
 	}
 
 	void AppLayer::OnEvent(Gravix::Event& event)
@@ -37,9 +48,9 @@ namespace Orbit
 	{
 		Gravix::Command cmd(m_MainFramebuffer, 0, false);
 
-		cmd.SetActiveMaterial(m_GradientMaterial);
+		cmd.SetActiveMaterial(m_GradientColorMaterial);
 		cmd.BindResource(0, m_MainFramebuffer, 0);
-		cmd.BindMaterial();
+		cmd.BindMaterial(m_GradientColor.Data());
 		cmd.Dispatch();
 	}
 
@@ -94,6 +105,10 @@ namespace Orbit
 		}
 
 		DrawViewportUI();
+		ImGui::Begin("Gradient Color");
+		ImGui::ColorEdit4("Top Color", glm::value_ptr(m_GradientColor.Get<glm::vec4>("topColor")));
+		ImGui::ColorEdit4("Bottom Color", glm::value_ptr(m_GradientColor.Get<glm::vec4>("bottomColor")));
+		ImGui::End();
 
 		ImGui::End();
 	}
