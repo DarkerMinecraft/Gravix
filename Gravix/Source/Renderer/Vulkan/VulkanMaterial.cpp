@@ -271,16 +271,18 @@ namespace Gravix
 			break;
 		}
 
+
+		VkFrontFace frontFace = spec.FrontFaceWinding == FrontFace::Clockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		switch (spec.CullMode)
 		{
 		case Cull::Back:
-			builder.SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+			builder.SetCullMode(VK_CULL_MODE_BACK_BIT, frontFace);
 			break;
 		case Cull::Front:
-			builder.SetCullMode(VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+			builder.SetCullMode(VK_CULL_MODE_FRONT_BIT, frontFace);
 			break;
 		case Cull::None:
-			builder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+			builder.SetCullMode(VK_CULL_MODE_NONE, frontFace);
 			break;
 		}
 

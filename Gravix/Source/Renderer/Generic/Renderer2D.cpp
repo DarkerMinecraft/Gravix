@@ -5,10 +5,10 @@
 #include "Renderer/Generic/Texture.h"
 #include "Renderer/Generic/MeshBuffer.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
-	struct Renderer2DData 
+	struct Renderer2DData
 	{
 		const uint32_t MaxQuads = 10000;
 		const uint32_t MaxVertices = MaxQuads * 4;
@@ -21,12 +21,20 @@ namespace Gravix
 		DynamicStruct PushConstants;
 		std::vector<DynamicStruct> QuadVertexBuffer;
 
+		static constexpr std::array<glm::vec2, 4> QuadTextureCoords = 
+		{
+			glm::vec2(0.0f, 0.0f),  // Vertex 0: bottom-left
+			glm::vec2(1.0f, 0.0f),  // Vertex 1: bottom-right
+			glm::vec2(1.0f, 1.0f),  // Vertex 2: top-right
+			glm::vec2(0.0f, 1.0f)   // Vertex 3: top-left
+		};
+
 		uint32_t QuadIndexCount = 0;
 	};
 
 	static Renderer2DData* s_Data;
 
-	void Renderer2D::Init(Ref<Framebuffer> renderTarget) 
+	void Renderer2D::Init(Ref<Framebuffer> renderTarget)
 	{
 		s_Data = new Renderer2DData();
 		// Create a 1x1 white texture
@@ -82,13 +90,15 @@ namespace Gravix
 	{
 		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
-		for(int i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++)
 		{
-			vertex.Set<glm::vec3>("position", position + glm::vec3(
+			glm::vec3 finalPos = position + glm::vec3(
 				(i == 0 || i == 3) ? 0.0f : size.x,
 				(i == 0 || i == 1) ? 0.0f : size.y,
-				0.0f));
-			vertex.Set<glm::vec2>("uv", glm::vec2((i == 1 || i == 2) ? 1.0f : 0.0f, (i >= 2) ? 1.0f : 0.0f));
+				0.0f);
+
+			vertex.Set<glm::vec3>("position", finalPos);
+			vertex.Set<glm::vec2>("uv", s_Data->QuadTextureCoords[i]);
 			vertex.Set<glm::vec4>("color", color);
 			vertex.Set<float>("texIndex", 0);
 			vertex.Set<float>("tilingFactor", 1);
@@ -99,10 +109,11 @@ namespace Gravix
 		s_Data->QuadIndexCount += 6;
 	}
 
+
 	void Renderer2D::EndScene(Command& cmd)
 	{
-		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 		s_Data->QuadMesh->SetVertices(s_Data->QuadVertexBuffer);
+		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 
 		Flush(cmd);
 	}
@@ -112,7 +123,7 @@ namespace Gravix
 		cmd.BindMaterial(s_Data->PushConstants.Data());
 		cmd.BeginRendering();
 		cmd.BindMesh(s_Data->QuadMesh);
-		cmd.DrawIndexed(s_Data->QuadMesh->GetIndexCount());
+		cmd.DrawIndexed(s_Data->QuadIndexCount);
 		cmd.EndRendering();
 	}
 

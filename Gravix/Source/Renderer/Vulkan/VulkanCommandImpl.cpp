@@ -48,18 +48,6 @@ namespace Gravix
 	{
 		if (m_BoundMaterial != nullptr)
 			m_BoundMaterial->Bind(m_CommandBuffer, pushConstants);
-
-		if (m_TargetFramebuffer != nullptr) 
-		{
-			SetViewport(0, 0, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
-			SetScissor(0, 0, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
-		}
-		else 
-		{
-			VkExtent2D extent = m_Device->GetSwapchainExtent();
-			SetViewport(0, 0, extent.width, extent.height);
-			SetScissor(0, 0, extent.width, extent.height);
-		}
 	}
 
 	void VulkanCommandImpl::Dispatch()
@@ -101,6 +89,10 @@ namespace Gravix
 			VkRenderingInfo renderInfo = VulkanInitializers::RenderingInfo(m_Device->GetSwapchainExtent(), &colorAttachment);
 
 			vkCmdBeginRendering(m_CommandBuffer, &renderInfo);
+
+			VkExtent2D extent = m_Device->GetSwapchainExtent();
+			SetViewport(0, 0, extent.width, extent.height);
+			SetScissor(0, 0, extent.width, extent.height);
 		}
 		else
 		{
@@ -111,6 +103,9 @@ namespace Gravix
 
 			m_TargetFramebuffer->TransitionToBeginRendering(m_CommandBuffer);
 			vkCmdBeginRendering(m_CommandBuffer, &renderInfo);
+
+			SetViewport(0, 0, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
+			SetScissor(0, 0, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
 		}
 	}
 

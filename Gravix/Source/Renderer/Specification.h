@@ -14,6 +14,7 @@ namespace Gravix
 	enum class Fill { Solid, Wireframe };
 	enum class CompareOp { Never, Less, Equal, LessOrEqual, Greater, NotEqual, GreaterOrEqual, Always };
 	enum class Blending { None, Alphablend, Additive };
+	enum class FrontFace { Clockwise, CounterClockwise };
 
 	enum class ShaderDataType
 	{

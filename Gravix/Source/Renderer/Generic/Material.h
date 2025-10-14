@@ -19,14 +19,13 @@ namespace Gravix
 		Blending BlendingMode;
 
 		bool EnableDepthTest = false;
-		bool EnableCulling = false;
-		Cull CullMode = Cull::Back;
+		Cull CullMode = Cull::None;
+		FrontFace FrontFaceWinding = FrontFace::CounterClockwise;
 		Fill FillMode = Fill::Solid;
 
 		Topology GraphicsTopology = Topology::TriangleList;
 
 		float LineWidth = 1.0f;
-		size_t PushConstantSize = 0;
 
 		Ref<Framebuffer> RenderTarget;
 	};

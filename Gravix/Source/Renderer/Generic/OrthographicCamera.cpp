@@ -15,12 +15,15 @@ namespace Gravix
 	{
 		if (width != m_ProjWidth || height != m_ProjHeight)
 		{
+			GX_CORE_INFO("Updating orthographic camera projection matrix to width: {0}, height: {1}", width, height);
+
 			m_ProjWidth = width;
 			m_ProjHeight = height;
 
 			// Use a normalized coordinate system (-1 to +1 range)
 			float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 			m_ProjectionMatrix = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
+
 			m_ViewProjMatrix = m_ProjectionMatrix * m_ViewMatrix;
 		}
 	}

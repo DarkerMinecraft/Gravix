@@ -76,6 +76,8 @@ namespace Gravix
 
 		m_VertexCount = vertices.size();
 		m_BaseVertex = 0;
+
+		UpdateVertexBufferAddress();
 	}
 
 	void VulkanMeshBuffer::SetIndices(std::span<uint32_t> indices)
