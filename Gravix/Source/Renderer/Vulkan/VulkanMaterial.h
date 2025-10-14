@@ -21,11 +21,14 @@ namespace Gravix
 		virtual DynamicStruct GetMaterialStruct() override { return DynamicStruct(m_Reflection.GetReflectedStruct("Material")); }
 		virtual DynamicStruct GetVertexStruct() override { return DynamicStruct(m_Reflection.GetReflectedStruct("Vertex")); }
 
+		virtual ReflectedStruct GetReflectedStruct(const std::string& name) override { return m_Reflection.GetReflectedStruct(name); }
+
 		void Bind(VkCommandBuffer cmd, void* pushConstants);
 		void Dispatch(VkCommandBuffer cmd, uint32_t width, uint32_t height);
 
 		void BindResource(VkCommandBuffer cmd, uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler);
 		void BindResource(VkCommandBuffer cmd, uint32_t binding, Texture2D* texture);
+		void BindResource(VkCommandBuffer cmd, uint32_t binding, uint32_t index, Texture2D* texture);
 	private:
 		void CreateMaterial(const MaterialSpecification& spec);
 		void CreateMaterial(const std::string& debugName, const std::filesystem::path& shaderFilePath);

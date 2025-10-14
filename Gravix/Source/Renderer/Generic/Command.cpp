@@ -29,6 +29,12 @@ namespace Gravix
 			m_Impl->BindResource(binding, buffer, index, sampler);
 	}
 
+	void Command::BindResource(uint32_t binding, uint32_t index, Texture2D* texture)
+	{
+		if(m_Impl)
+			m_Impl->BindResource(binding, index, texture);
+	}
+
 	void Command::BindMaterial(void* pushConstants /*= nullptr*/)
 	{
 		if(m_Impl)

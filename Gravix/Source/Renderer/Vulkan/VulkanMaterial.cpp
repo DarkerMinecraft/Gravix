@@ -119,6 +119,15 @@ namespace Gravix
 		writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
 	}
 
+	void VulkanMaterial::BindResource(VkCommandBuffer cmd, uint32_t binding, uint32_t index, Texture2D* texture)
+	{
+		VulkanTexture2D* tex = static_cast<VulkanTexture2D*>(texture);
+		DescriptorWriter writer(m_Device->GetGlobalDescriptorSetLayouts()[1], m_Device->GetGlobalDescriptorPool());
+
+		writer.WriteImage(binding, index, tex->GetVkImageView(), tex->GetVkSampler(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
+	}
+
 	void VulkanMaterial::CreateMaterial(const MaterialSpecification& spec)
 	{
 		SpinShader(spec.ShaderFilePath);

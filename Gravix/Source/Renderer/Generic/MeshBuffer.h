@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Reflections/DynamicStruct.h"	
+#include "Reflections/ReflectedStruct.h"	
 
 namespace Gravix 
 {
@@ -18,13 +19,12 @@ namespace Gravix
 		virtual void SetIndices(std::span<uint32_t> indices) = 0;
 
 		// Dynamic batch mode - rebuild every frame
-		virtual void BeginBatch() = 0;
 		virtual void AppendVertices(const std::vector<DynamicStruct>& vertices) = 0;
 		virtual void AppendIndices(std::span<uint32_t> indices) = 0;
-		virtual void EndBatch() = 0;
 
 		// Management
 		virtual void Clear() = 0;
+		virtual void ClearVertices() = 0;
 
 		// Query
 		virtual size_t GetVertexCount() const = 0;
@@ -35,7 +35,7 @@ namespace Gravix
 		// Vertex buffer device address
 		virtual uint64_t GetVertexBufferAddress() const = 0;
 
-		static Ref<MeshBuffer> Create();
+		static Ref<MeshBuffer> Create(ReflectedStruct vertexLayout, uint32_t initialVertices, uint32_t initialIndices);
 	};
 
 }

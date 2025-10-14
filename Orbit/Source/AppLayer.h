@@ -5,6 +5,7 @@
 #include "Framebuffer.h"
 #include "Material.h"
 #include "Reflections/DynamicStruct.h"
+#include "OrthographicCamera.h"
 
 #include <glm/glm.hpp>
 
@@ -33,7 +34,9 @@ namespace Orbit
 
 		Gravix::DynamicStruct m_GradientColor;
 
-		glm::vec2 m_ViewportSize = {1280.f, 1080.f};
+		Gravix::OrthographicCamera m_Camera;
+
+		glm::vec2 m_ViewportSize = {1260, 1080};
 	};
 
 }

@@ -57,6 +57,8 @@ namespace Gravix
 		std::vector<VkDescriptorSetLayout>& GetGlobalDescriptorSetLayouts() { return m_BindlessSetLayouts; }
 		VkDescriptorPool GetGlobalDescriptorPool() const { return m_DescriptorPool; }
 
+		VkDescriptorPool GetImGuiDescriptorPool() { return m_ImGuiDescriptorPool; }
+
 		VkImageView GetCurrentSwapchainImageView() const { return m_SwapchainImageViews[m_SwapchainImageIndex]; }
 		VkImage GetCurrentSwapchainImage() const { return m_SwapchainImages[m_SwapchainImageIndex]; }
 		VkImageLayout GetCurrentSwapchainImageLayout() const { return m_SwapchainImageLayout; }
@@ -73,6 +75,7 @@ namespace Gravix
 		void InitDescriptorPool();
 		void CreateBindlessDescriptorSets();
 		void CreateBindlessLayout(VkDescriptorType type, uint32_t count, VkShaderStageFlags stages, VkDescriptorSetLayout* layout);
+		void CreateImGuiPool();
 		void InitCommandBuffers();
 		void InitSyncStructures();
 	private:
@@ -102,6 +105,8 @@ namespace Gravix
 		VkDescriptorSetLayout m_BindlessStorageImageLayout;
 		std::vector<VkDescriptorSetLayout> m_BindlessSetLayouts;
 		VkDescriptorSet m_BindlessDescriptorSets[4]; // 0: Storage Buffers, 1: Sampled Images, 2: Storage Images, 3: Samplers
+
+		VkDescriptorPool m_ImGuiDescriptorPool;
 
 		VkPipelineLayout m_PipelineLayout;
 

@@ -10,11 +10,11 @@
 
 #include <backends/imgui_impl_vulkan.h>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	VulkanCommandImpl::VulkanCommandImpl(Device* device, Ref<Framebuffer> targetFrameBuffer, uint32_t presentIndex, bool shouldCopy)
-		: m_Device(static_cast<VulkanDevice*>(device)), m_CommandBuffer(static_cast<VulkanDevice*>(device)->GetCurrentFrameData().CommandBuffer), m_TargetFramebuffer(static_cast<VulkanFramebuffer*>(targetFrameBuffer.get())), 
+		: m_Device(static_cast<VulkanDevice*>(device)), m_CommandBuffer(static_cast<VulkanDevice*>(device)->GetCurrentFrameData().CommandBuffer), m_TargetFramebuffer(static_cast<VulkanFramebuffer*>(targetFrameBuffer.get())),
 		m_PresentIndex(presentIndex), m_ShouldCopy(shouldCopy)
 	{
 		if (m_TargetFramebuffer != nullptr)
@@ -25,7 +25,7 @@ namespace Gravix
 	{
 		if (m_ShouldCopy)
 			CopyToSwapchain();
-		else 
+		else
 		{
 			if (m_TargetFramebuffer != nullptr)
 				m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -34,20 +34,60 @@ namespace Gravix
 
 	void VulkanCommandImpl::BindResource(uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler)
 	{
-		if(m_BoundMaterial != nullptr && buffer != nullptr)
+		if (m_BoundMaterial != nullptr && buffer != nullptr)
 			m_BoundMaterial->BindResource(m_CommandBuffer, binding, buffer, index, sampler);
+	}
+
+	void VulkanCommandImpl::BindResource(uint32_t binding, uint32_t index, Texture2D* texture)
+	{
+		if(m_BoundMaterial != nullptr && texture != nullptr)
+			m_BoundMaterial->BindResource(m_CommandBuffer, binding, index, texture);
 	}
 
 	void VulkanCommandImpl::BindMaterial(void* pushConstants)
 	{
 		if (m_BoundMaterial != nullptr)
 			m_BoundMaterial->Bind(m_CommandBuffer, pushConstants);
+
+		if (m_TargetFramebuffer != nullptr) 
+		{
+			SetViewport(0, 0, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
+			SetScissor(0, 0, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
+		}
+		else 
+		{
+			VkExtent2D extent = m_Device->GetSwapchainExtent();
+			SetViewport(0, 0, extent.width, extent.height);
+			SetScissor(0, 0, extent.width, extent.height);
+		}
 	}
 
 	void VulkanCommandImpl::Dispatch()
 	{
-		if(m_BoundMaterial != nullptr && m_TargetFramebuffer != nullptr)
+		if (m_BoundMaterial != nullptr && m_TargetFramebuffer != nullptr)
 			m_BoundMaterial->Dispatch(m_CommandBuffer, m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight());
+	}
+
+	void VulkanCommandImpl::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+	{
+		VkViewport viewport{};
+		viewport.x = x;
+		viewport.y = y;
+		viewport.width = static_cast<float>(width);
+		viewport.height = static_cast<float>(height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		vkCmdSetViewport(m_CommandBuffer, 0, 1, &viewport);
+	}
+
+	void VulkanCommandImpl::SetScissor(uint32_t offsetX, uint32_t offsetY, uint32_t width, uint32_t height)
+	{
+		VkRect2D scissor{};
+		scissor.offset = { static_cast<int32_t>(offsetX), static_cast<int32_t>(offsetY) };
+		scissor.extent = { width, height };
+
+		vkCmdSetScissor(m_CommandBuffer, 0, 1, &scissor);
 	}
 
 	void VulkanCommandImpl::BeginRendering()
@@ -62,7 +102,7 @@ namespace Gravix
 
 			vkCmdBeginRendering(m_CommandBuffer, &renderInfo);
 		}
-		else 
+		else
 		{
 			std::vector<VkRenderingAttachmentInfo> colorAttachments = m_TargetFramebuffer->GetColorAttachments();
 			VkRenderingAttachmentInfo* depthAttachment = m_TargetFramebuffer->GetDepthAttachment();
@@ -109,7 +149,7 @@ namespace Gravix
 
 	void VulkanCommandImpl::CopyToSwapchain()
 	{
-		if(m_TargetFramebuffer == nullptr)
+		if (m_TargetFramebuffer == nullptr)
 			return;
 
 		m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -117,7 +157,7 @@ namespace Gravix
 		VkImageLayout swapchainImageLayout = m_Device->GetCurrentSwapchainImageLayout();
 		if (swapchainImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			VulkanUtils::TransitionImage(m_CommandBuffer, m_Device->GetCurrentSwapchainImage(), swapchainImageLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		
+
 		VulkanUtils::CopyImageToImage(m_CommandBuffer, m_TargetFramebuffer->GetImage(m_PresentIndex).Image, m_Device->GetCurrentSwapchainImage(), { m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight() }, m_Device->GetSwapchainExtent());
 
 		VulkanUtils::TransitionImage(m_CommandBuffer, m_Device->GetCurrentSwapchainImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, swapchainImageLayout);

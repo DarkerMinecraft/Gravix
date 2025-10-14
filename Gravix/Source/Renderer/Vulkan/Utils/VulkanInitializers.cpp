@@ -181,7 +181,7 @@ namespace Gravix
 		renderInfo.layerCount = 1;
 		renderInfo.colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size());
 		renderInfo.pColorAttachments = colorAttachments.data();
-		renderInfo.pDepthAttachment = depthAttachment;
+		renderInfo.pDepthAttachment = depthAttachment;	
 		renderInfo.pStencilAttachment = nullptr;
 
 		return renderInfo;

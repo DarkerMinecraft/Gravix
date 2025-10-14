@@ -40,6 +40,8 @@ namespace Gravix
 		virtual DynamicStruct GetMaterialStruct() = 0;
 		virtual DynamicStruct GetVertexStruct() = 0;
 
+		virtual ReflectedStruct GetReflectedStruct(const std::string& name) = 0;
+
 		static Ref<Material> Create(const MaterialSpecification& spec);
 		static Ref<Material> Create(const std::string& debugName, const std::filesystem::path& shaderFilePath);
 	};

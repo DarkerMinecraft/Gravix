@@ -15,12 +15,11 @@ namespace Orbit
 		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8 };
 
 		m_MainFramebuffer = Gravix::Framebuffer::Create(fbSpec);
-		//m_MainFramebuffer->SetClearColor(0, { 1.0f, 0.0f, 0.0f, 1.0f });
 
 		m_GradientMaterial = Gravix::Material::Create("Gradient", "Assets/shaders/gradient.slang");
 		m_GradientColorMaterial = Gravix::Material::Create("GradientColor", "Assets/shaders/gradient_color.slang");
 
-		Gravix::Renderer2D::Init();
+		Gravix::Renderer2D::Init(m_MainFramebuffer);
 
 		m_GradientColor = m_GradientColorMaterial->GetPushConstantStruct();
 
@@ -42,6 +41,7 @@ namespace Orbit
 	void AppLayer::OnUpdate(float deltaTime)
 	{
 		m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
+		m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
 	}
 
 	void AppLayer::OnRender()
@@ -52,6 +52,11 @@ namespace Orbit
 		cmd.BindResource(0, m_MainFramebuffer, 0);
 		cmd.BindMaterial(m_GradientColor.Data());
 		cmd.Dispatch();
+
+		Gravix::Renderer2D::BeginScene(cmd, m_Camera.GetViewProjMatrix());
+		Gravix::Renderer2D::DrawQuad({-1.0f, 0.0f}, {0.8f, 0.8f}, {0.8f, 0.2f, 0.3f, 1.0f});
+		Gravix::Renderer2D::DrawQuad({ 0.5f, 0.5f }, { 0.5f, 0.75f }, { 0.2f, 0.3f, 0.8f, 1.0f });
+		Gravix::Renderer2D::EndScene(cmd);
 	}
 
 	void AppLayer::OnImGuiRender()

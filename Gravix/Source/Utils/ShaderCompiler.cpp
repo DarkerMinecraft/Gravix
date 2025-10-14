@@ -583,7 +583,7 @@ namespace Gravix
 				rbo.Count);
 		}
 	}
-
+	
 	void ShaderCompiler::ExtractStructs(slang::ProgramLayout* layout, ShaderReflection* reflection)
 	{
 		GX_CORE_INFO("--- Reflecting Structs ---");
@@ -674,9 +674,10 @@ namespace Gravix
 			// Extract struct inline
 			ReflectedStruct reflectedStruct;
 			reflectedStruct.Name = structName;
-			reflectedStruct.Size = typeLayout->getSize();
 
 			uint32_t fieldCount = typeLayout->getFieldCount();
+			size_t calculatedSize = 0;
+
 			for (uint32_t i = 0; i < fieldCount; ++i)
 			{
 				slang::VariableLayoutReflection* field = typeLayout->getFieldByIndex(i);
@@ -691,19 +692,27 @@ namespace Gravix
 				auto fieldType = fieldTypeLayout->getType();
 				if (!fieldType) continue;
 
+				// Calculate tightly-packed offset (no padding)
+				size_t fieldSize = CalculateTypeSize(fieldType);
+
 				ReflectedStructMember member;
 				member.Name = fieldName;
-				member.Offset = field->getOffset();
-				member.Size = CalculateTypeSize(fieldType);
+				member.Offset = calculatedSize;  // Use calculated offset, not Slang's padded offset
+				member.Size = fieldSize;
 
 				reflectedStruct.Members.push_back(member);
 
-				GX_CORE_TRACE("    Member: '{0}', Offset: {1}, Size: {2}",
-					member.Name, member.Offset, member.Size);
+				GX_CORE_TRACE("    Member: '{0}', Offset: {1}, Size: {2} (Slang offset: {3})",
+					member.Name, member.Offset, member.Size, field->getOffset());
+
+				calculatedSize += fieldSize;
 			}
 
-			GX_CORE_INFO("  Extracted Struct: '{0}', Size: {1}, Members: {2}",
-				reflectedStruct.Name, reflectedStruct.Size, reflectedStruct.Members.size());
+			// Use tightly-packed size for vertex buffers, not Slang's padded size
+			reflectedStruct.Size = calculatedSize;
+
+			GX_CORE_INFO("  Extracted Struct: '{0}', Size: {1} (tightly packed), Slang Size: {2} (padded), Members: {3}",
+				reflectedStruct.Name, reflectedStruct.Size, typeLayout->getSize(), reflectedStruct.Members.size());
 
 			reflection->AddReflectedStruct(structNameStr, reflectedStruct);
 

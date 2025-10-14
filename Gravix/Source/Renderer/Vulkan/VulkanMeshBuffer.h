@@ -13,17 +13,14 @@ namespace Gravix
 			size_t maxVertices, size_t maxIndices = 0);
 		~VulkanMeshBuffer() override;
 
-		// Static mesh mode
 		void SetVertices(const std::vector<DynamicStruct>& vertices) override;
 		void SetIndices(std::span<uint32_t> indices) override;
 
-		// Dynamic batch mode
-		void BeginBatch() override;
 		void AppendVertices(const std::vector<DynamicStruct>& vertices) override;
 		void AppendIndices(std::span<uint32_t> indices) override;
-		void EndBatch() override;
 
 		// Management
+		void ClearVertices() override;
 		void Clear() override;
 
 		// Query
@@ -66,6 +63,9 @@ namespace Gravix
 		// Capacity
 		size_t m_MaxVertices;
 		size_t m_MaxIndices;
+
+		size_t m_VertexCapacity;
+		size_t m_IndexCapacity;
 
 		// Usage tracking
 		bool m_IsStatic = false;

@@ -102,7 +102,7 @@ namespace Gravix
 		initInfo.PhysicalDevice = device->GetPhysicalDevice();
 		initInfo.Device = device->GetDevice();
 		initInfo.Queue = device->GetGraphicsQueue();
-		initInfo.DescriptorPool = device->GetGlobalDescriptorPool();
+		initInfo.DescriptorPool = device->GetImGuiDescriptorPool();
 		initInfo.MinImageCount = 3;
 		initInfo.ImageCount = 3;
 		initInfo.UseDynamicRendering = true;

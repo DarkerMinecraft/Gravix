@@ -17,10 +17,16 @@ namespace Gravix
 		virtual ~VulkanCommandImpl();
 
 		virtual void SetActiveMaterial(Material* material) override { m_BoundMaterial = static_cast<VulkanMaterial*>(material); }
+
 		virtual void BindResource(uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler) override;
+		virtual void BindResource(uint32_t binding, uint32_t index, Texture2D* texture) override;
+		virtual void BindResource(uint32_t binding, Texture2D* texture) override { BindResource(binding, 0, texture); }
 
 		virtual void BindMaterial(void* pushConstants) override;
 		virtual void Dispatch() override;
+
+		virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
+		virtual void SetScissor(uint32_t offsetX, uint32_t offsetY, uint32_t width, uint32_t height) override;
 
 		virtual void BeginRendering() override;
 

@@ -1,8 +1,9 @@
 #pragma once
 
 #include "ReflectedStruct.h"
+#include <cstring>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	class DynamicStruct
@@ -26,7 +27,7 @@ namespace Gravix
 			if (it == m_FieldOffsets.end())
 				throw std::runtime_error("Field not found: " + field);
 
-			*reinterpret_cast<T*>(m_Data.data() + it->second) = value;
+			std::memcpy(m_Data.data() + it->second, &value, sizeof(T));
 		}
 
 		template<typename T>

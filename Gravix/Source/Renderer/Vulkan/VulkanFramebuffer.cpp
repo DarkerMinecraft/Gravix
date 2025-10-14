@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "VulkanFramebuffer.h"
 
 #include "Utils/VulkanInitializers.h"
@@ -28,16 +28,28 @@ namespace Gravix
 	void VulkanFramebuffer::StartFramebuffer(VkCommandBuffer cmd)
 	{
 		TransitionToLayout(cmd, VK_IMAGE_LAYOUT_GENERAL);
-		for (auto& [index, clearColor] : m_ClearColors)
+		
+		m_ColorAttachments.clear();  // Clear and rebuild
+		for (uint32_t i = 0; i < m_Attachments.size(); ++i)
 		{
-			VkClearValue clearValue{};
-			clearValue.color = { {clearColor.r, clearColor.g, clearColor.b, clearColor.a} };
+			if (i == m_DepthAttachmentIndex)
+				continue;  // Skip depth attachment
 
-			m_ColorAttachments[index] = VulkanInitializers::AttachmentInfo(
-				m_Attachments[index].Image.ImageView,
-				&clearValue,
-				m_Attachments[index].Layout
-			);
+			VkClearValue* pClearValue = nullptr;
+			VkClearValue clearValue{};
+
+			if (m_ClearColors.contains(i))
+			{
+				glm::vec4 color = m_ClearColors[i];
+				clearValue.color = { {color.r, color.g, color.b, color.a} };
+				pClearValue = &clearValue;
+			}
+
+			m_ColorAttachments.push_back(VulkanInitializers::AttachmentInfo(
+				m_Attachments[i].Image.ImageView,
+				pClearValue,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			));
 		}
 	}
 

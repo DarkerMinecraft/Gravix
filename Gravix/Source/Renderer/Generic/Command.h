@@ -18,6 +18,12 @@ namespace Gravix
 		void BindResource(uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler = false);
 		void BindResource(uint32_t binding, Ref<Framebuffer> buffer, uint32_t index, bool sampler = false) { BindResource(binding, buffer.get(), index, sampler); }
 
+		void BindResource(uint32_t binding, uint32_t index, Texture2D* texture);
+		void BindResource(uint32_t binding, uint32_t index, Ref<Texture2D> texture) { BindResource(binding, index, texture.get()); }
+
+		void BindResource(uint32_t binding, Texture2D* texture) { BindResource(binding, 0, texture); }
+		void BindResource(uint32_t binding, Ref<Texture2D> texture) { BindResource(binding, 0, texture.get()); }
+
 		void BindMaterial(void* pushConstants = nullptr);
 		void Dispatch();
 
