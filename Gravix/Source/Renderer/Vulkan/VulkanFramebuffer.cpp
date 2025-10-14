@@ -125,6 +125,13 @@ namespace Gravix
 		attachment.Layout = newLayout;
 	}
 
+	void VulkanFramebuffer::TransitionDepthToShaderRead(VkCommandBuffer cmd)
+	{
+		if (m_DepthAttachmentIndex == -1) return;
+		
+		TransitionToLayout(cmd, m_DepthAttachmentIndex, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL);
+	}
+
 	void VulkanFramebuffer::TransitionToBeginRendering(VkCommandBuffer cmd)
 	{
 		for(uint32_t i = 0; i < m_Attachments.size(); i++)

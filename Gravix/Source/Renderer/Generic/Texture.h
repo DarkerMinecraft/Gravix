@@ -2,6 +2,8 @@
 
 #include "Renderer/Specification.h"
 
+#include "Core/UUID.h"
+
 #include <filesystem>
 
 namespace Gravix
@@ -30,6 +32,10 @@ namespace Gravix
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
 		virtual uint32_t GetMipLevels() const = 0;
+
+		virtual UUID GetUUID() = 0;
+
+		virtual bool operator==(const Texture& other) const = 0;
 	};
 
 	class Texture2D : public Texture

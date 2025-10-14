@@ -12,7 +12,7 @@ namespace Orbit
 	AppLayer::AppLayer()
 	{
 		Gravix::FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8 };
+		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8, Gravix::FramebufferTextureFormat::DEPTH24STENCIL8 };
 
 		m_MainFramebuffer = Gravix::Framebuffer::Create(fbSpec);
 
@@ -26,6 +26,12 @@ namespace Orbit
 		// Purple Dream
 		m_GradientColor.Set("topColor", glm::vec4(0.7f, 0.4f, 1.0f, 1.0f));    // Light purple
 		m_GradientColor.Set("bottomColor", glm::vec4(0.9f, 0.4f, 0.7f, 1.0f)); // Pink-purple
+
+		Gravix::TextureSpecification texSpec{};
+		texSpec.DebugName = "Checkerboard";
+		m_CheckerboardTexture = Gravix::Texture2D::Create("Assets/textures/Checkerboard.png", texSpec);
+		texSpec.DebugName = "ChernoLogo";
+		m_LogoTexture = Gravix::Texture2D::Create("Assets/textures/ChernoLogo.png", texSpec);
 	}
 
 	AppLayer::~AppLayer()
@@ -58,9 +64,9 @@ namespace Orbit
 		cmd.Dispatch();
 
 		Gravix::Renderer2D::BeginScene(cmd, m_Camera.GetViewProjMatrix());
-		//Gravix::Renderer2D::DrawQuad({ -1.0f, 0.0f }, { 0.8f, 0.8f }, { 0.8f, 0.2f, 0.3f, 1.0f });
-		Gravix::Renderer2D::DrawQuad({ 0.0f, 0.0f }, { 0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f });
-		//Gravix::Renderer2D::DrawQuad({ 0.5f, 0.5f }, { 0.5f, 0.75f }, { 0.2f, 0.3f, 0.8f, 1.0f });
+		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ -1.0f, 0.0f, 0.0f }, { 0.8f, 0.8f }, { 0.8f, 0.2f, 0.3f, 1.0f }));
+		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.5f, 0.5f, 0.0f }, { 0.5f, 0.75f }, { 0.2f, 0.3f, 0.8f, 1.0f }));
+		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.0f, 0.0f, -0.2f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_CheckerboardTexture, 2.0f));
 		Gravix::Renderer2D::EndScene(cmd);
 	}
 

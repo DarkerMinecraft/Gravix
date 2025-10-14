@@ -53,7 +53,7 @@ namespace Gravix
 			m_Impl->BeginRendering();
 	}
 
-	void Command::BindMesh(MeshBuffer* mesh)
+	void Command::BindMesh(Mesh* mesh)
 	{
 		if(m_Impl)
 			m_Impl->BindMesh(mesh);

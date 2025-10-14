@@ -1,9 +1,11 @@
 #include "pch.h"
 #include "Renderer2D.h"
 
+#include "Core/UUID.h"
+
 #include "Renderer/Generic/Material.h"
 #include "Renderer/Generic/Texture.h"
-#include "Renderer/Generic/MeshBuffer.h"
+#include "Renderer/Generic/Mesh.h"
 
 namespace Gravix
 {
@@ -13,10 +15,11 @@ namespace Gravix
 		const uint32_t MaxQuads = 10000;
 		const uint32_t MaxVertices = MaxQuads * 4;
 		const uint32_t MaxIndices = MaxQuads * 6;
+		static const uint32_t MaxTextureSlots = 32; // TODO: RenderCaps
 
 		Ref<Material> TexturedMaterial;
 		Ref<Texture2D> WhiteTexture;
-		Ref<MeshBuffer> QuadMesh;
+		Ref<Mesh> QuadMesh;
 
 		DynamicStruct PushConstants;
 		std::vector<DynamicStruct> QuadVertexBuffer;
@@ -39,6 +42,8 @@ namespace Gravix
 		};
 
 		uint32_t QuadIndexCount = 0;
+		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
+		uint32_t TextureSlotIndex = 1; // 0 = white texture
 	};
 
 	static Renderer2DData* s_Data;
@@ -55,15 +60,14 @@ namespace Gravix
 		matSpec.DebugName = "DefaultTexturedMaterial";
 		matSpec.ShaderFilePath = "Assets/shaders/texture.slang";
 		matSpec.RenderTarget = renderTarget;
+		matSpec.EnableDepthTest = true;
 
 		s_Data->TexturedMaterial = Material::Create(matSpec);
 
 		s_Data->PushConstants = s_Data->TexturedMaterial->GetPushConstantStruct();
+		s_Data->QuadMesh = Mesh::Create(s_Data->TexturedMaterial->GetVertexSize());
 
-		s_Data->QuadMesh = MeshBuffer::Create(s_Data->TexturedMaterial->GetReflectedStruct("Vertex"), s_Data->MaxVertices, s_Data->MaxIndices);
-
-		std::vector<uint32_t> indicesVec(s_Data->MaxIndices);
-		std::span<uint32_t> indices(indicesVec);
+		std::vector<uint32_t> indices(s_Data->MaxIndices);
 		uint32_t offset = 0;
 		for (uint32_t i = 0; i < s_Data->MaxIndices; i += 6)
 		{
@@ -81,41 +85,63 @@ namespace Gravix
 		}
 
 		s_Data->QuadMesh->SetIndices(indices);
+
+		memset(s_Data->TextureSlots.data(), 0, s_Data->TextureSlots.size() * sizeof(uint32_t));
 	}
 
 	void Renderer2D::BeginScene(Command& cmd, const glm::mat4& viewProjection)
 	{
+		s_Data->TextureSlotIndex = 1; 
 		s_Data->QuadIndexCount = 0;
 		s_Data->QuadVertexBuffer.clear();
-		s_Data->QuadMesh->ClearVertices();
 
 		cmd.SetActiveMaterial(s_Data->TexturedMaterial);
-		cmd.BindResource(0, 0, s_Data->WhiteTexture);
+		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
 
 		s_Data->PushConstants.Set("viewProjMatrix", viewProjection);
 	}
 
-	void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color)
+	void Renderer2D::DrawQuad(const QuadVertex& quadVertex)
 	{
 		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
+		float textureIndex = 0.0f;
+		if (quadVertex.Texture != nullptr) 
+		{
+			for (uint32_t i = 1; i < s_Data->TextureSlotIndex; i++)
+			{
+				if (*s_Data->TextureSlots[i].get() == *quadVertex.Texture.get())
+				{
+					textureIndex = (float)i;
+					break;
+				}
+			}
+
+			if (textureIndex == 0.0)
+			{
+				textureIndex = (float)s_Data->TextureSlotIndex;
+				s_Data->TextureSlots[s_Data->TextureSlotIndex] = quadVertex.Texture;
+				s_Data->TextureSlotIndex++;
+			}
+		}
+
 		// Calculate half extents for centering
-		float halfWidth = size.x * 0.5f;
-		float halfHeight = size.y * 0.5f;
+		float halfWidth = quadVertex.Size.x * 0.5f;
+		float halfHeight = quadVertex.Size.y * 0.5f;
 
 		for (int i = 0; i < 4; i++)
 		{
 			// Calculate vertex position relative to center
-			glm::vec3 finalPos = position + glm::vec3(
+			glm::vec3 finalPos = quadVertex.Position + glm::vec3(
 				s_Data->QuadVertexOffsets[i].x * halfWidth,
 				s_Data->QuadVertexOffsets[i].y * halfHeight,
 				0.0f);
 
 			vertex.Set<glm::vec3>("position", finalPos);
 			vertex.Set<glm::vec2>("uv", s_Data->QuadTextureCoords[i]);
-			vertex.Set<glm::vec4>("color", color);
-			vertex.Set<float>("texIndex", 0);
-			vertex.Set<float>("tilingFactor", 1);
+			vertex.Set<glm::vec4>("color", quadVertex.Color);
+			vertex.Set<float>("texIndex", textureIndex);
+			vertex.Set<float>("tilingFactor", quadVertex.TilingFactor);
 
 			s_Data->QuadVertexBuffer.push_back(vertex);
 		}
@@ -129,13 +155,16 @@ namespace Gravix
 		s_Data->QuadMesh->SetVertices(s_Data->QuadVertexBuffer);
 		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 
+		for(uint32_t i = 0; i < s_Data->TextureSlotIndex; i++)
+			cmd.BindResource(0, i, s_Data->TextureSlots[i]);
+
 		Flush(cmd);
 	}
 
 	void Renderer2D::Flush(Command& cmd)
 	{
-		cmd.BindMaterial(s_Data->PushConstants.Data());
 		cmd.BeginRendering();
+		cmd.BindMaterial(s_Data->PushConstants.Data());
 		cmd.BindMesh(s_Data->QuadMesh);
 		cmd.DrawIndexed(s_Data->QuadIndexCount);
 		cmd.EndRendering();

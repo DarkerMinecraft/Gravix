@@ -198,7 +198,7 @@ namespace Gravix
 		renderInfo.colorAttachmentCount = 1;
 		renderInfo.pColorAttachments = colorAttachment;
 		renderInfo.pDepthAttachment = depthAttachment;
-		renderInfo.pStencilAttachment = nullptr;
+		renderInfo.pStencilAttachment = depthAttachment;
 
 		return renderInfo;
 	}

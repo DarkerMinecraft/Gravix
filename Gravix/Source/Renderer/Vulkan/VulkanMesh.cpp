@@ -1,20 +1,14 @@
 #include "pch.h"
-#include "VulkanMeshBuffer.h"
+#include "VulkanMesh.h"
 
 namespace Gravix
 {
-	VulkanMeshBuffer::VulkanMeshBuffer(Device* device, ReflectedStruct vertexLayout,
-		size_t initialVertices, size_t initialIndices)
+	VulkanMesh::VulkanMesh(Device* device, size_t vertexSize)
 		: m_Device(static_cast<VulkanDevice*>(device))
-		, m_VertexLayout(vertexLayout)
-		, m_VertexStride(vertexLayout.GetSize())
-		, m_VertexCapacity(initialVertices)
-		, m_IndexCapacity(initialIndices > 0 ? initialIndices : initialVertices * 2)
+		, m_VertexSize(vertexSize)
 	{
-		// Create initial vertex buffer - GPU only with transfer destination
-		size_t vertexBufferSize = m_VertexStride * m_VertexCapacity;
 		m_VertexBuffer = m_Device->CreateBuffer(
-			vertexBufferSize,
+			m_VertexSize * m_VertexCapacity,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -22,32 +16,30 @@ namespace Gravix
 			VMA_MEMORY_USAGE_GPU_ONLY
 		);
 
-		UpdateVertexBufferAddress();
-
-		// Create initial index buffer - GPU only with transfer destination
-		size_t indexBufferSize = sizeof(uint32_t) * m_IndexCapacity;
 		m_IndexBuffer = m_Device->CreateBuffer(
-			indexBufferSize,
+			sizeof(uint32_t) * m_IndexCapacity,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VMA_MEMORY_USAGE_GPU_ONLY
 		);
+
+		UpdateVertexBufferAddress();
 	}
 
-	VulkanMeshBuffer::~VulkanMeshBuffer()
+	VulkanMesh::~VulkanMesh()
 	{
 		m_Device->DestroyBuffer(m_VertexBuffer);
 		m_Device->DestroyBuffer(m_IndexBuffer);
 	}
 
-	void VulkanMeshBuffer::SetVertices(const std::vector<DynamicStruct>& vertices)
+	void VulkanMesh::SetVertices(const std::vector<DynamicStruct>& vertices)
 	{
 		if (vertices.empty())
 			return;
 
 		EnsureVertexCapacity(vertices.size());
 
-		size_t dataSize = vertices.size() * m_VertexStride;
+		size_t dataSize = vertices.size() * m_VertexSize;
 
 		// Create staging buffer
 		AllocatedBuffer staging = m_Device->CreateBuffer(
@@ -60,7 +52,7 @@ namespace Gravix
 		uint8_t* stagingPtr = static_cast<uint8_t*>(staging.Info.pMappedData);
 		for (size_t i = 0; i < vertices.size(); i++)
 		{
-			memcpy(stagingPtr + i * m_VertexStride, vertices[i].Data(), m_VertexStride);
+			memcpy(stagingPtr + i * m_VertexSize, vertices[i].Data(), m_VertexSize);
 		}
 
 		// Transfer staging buffer to GPU buffer
@@ -73,14 +65,9 @@ namespace Gravix
 			});
 
 		m_Device->DestroyBuffer(staging);
-
-		m_VertexCount = vertices.size();
-		m_BaseVertex = 0;
-
-		UpdateVertexBufferAddress();
 	}
 
-	void VulkanMeshBuffer::SetIndices(std::span<uint32_t> indices)
+	void VulkanMesh::SetIndices(std::vector<uint32_t> indices)
 	{
 		if (indices.empty())
 			return;
@@ -111,102 +98,9 @@ namespace Gravix
 		m_Device->DestroyBuffer(staging);
 
 		m_IndexCount = indices.size();
-		m_BaseVertex = 0;
 	}
 
-	void VulkanMeshBuffer::ClearVertices()
-	{
-		m_VertexCount = 0;
-		m_BaseVertex = 0;
-	}
-
-	void VulkanMeshBuffer::Clear()
-	{
-		m_VertexCount = 0;
-		m_IndexCount = 0;
-		m_BaseVertex = 0;
-	}
-
-	void VulkanMeshBuffer::AppendVertices(const std::vector<DynamicStruct>& vertices)
-	{
-		if (vertices.empty())
-			return;
-
-		size_t requiredVertices = m_VertexCount + vertices.size();
-		EnsureVertexCapacity(requiredVertices);
-
-		size_t dataSize = vertices.size() * m_VertexStride;
-		size_t dstOffset = m_VertexCount * m_VertexStride;
-
-		// Create staging buffer
-		AllocatedBuffer staging = m_Device->CreateBuffer(
-			dataSize,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VMA_MEMORY_USAGE_CPU_ONLY
-		);
-
-		// Copy vertex data to staging buffer
-		uint8_t* stagingPtr = static_cast<uint8_t*>(staging.Info.pMappedData);
-		for (size_t i = 0; i < vertices.size(); i++)
-		{
-			memcpy(stagingPtr + i * m_VertexStride, vertices[i].Data(), m_VertexStride);
-		}
-
-		// Transfer staging buffer to GPU buffer at offset
-		m_Device->ImmediateSubmit([&](VkCommandBuffer cmd) {
-			VkBufferCopy copyRegion{};
-			copyRegion.srcOffset = 0;
-			copyRegion.dstOffset = dstOffset;
-			copyRegion.size = dataSize;
-			vkCmdCopyBuffer(cmd, staging.Buffer, m_VertexBuffer.Buffer, 1, &copyRegion);
-			});
-
-		m_Device->DestroyBuffer(staging);
-
-		m_VertexCount += vertices.size();
-	}
-
-	void VulkanMeshBuffer::AppendIndices(std::span<uint32_t> indices)
-	{
-		if (indices.empty())
-			return;
-
-		size_t requiredIndices = m_IndexCount + indices.size();
-		EnsureIndexCapacity(requiredIndices);
-
-		size_t dataSize = indices.size() * sizeof(uint32_t);
-		size_t dstOffset = m_IndexCount * sizeof(uint32_t);
-
-		// Create staging buffer
-		AllocatedBuffer staging = m_Device->CreateBuffer(
-			dataSize,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VMA_MEMORY_USAGE_CPU_ONLY
-		);
-
-		// Copy index data with base vertex offset
-		uint32_t* stagingPtr = static_cast<uint32_t*>(staging.Info.pMappedData);
-		for (size_t i = 0; i < indices.size(); i++)
-		{
-			stagingPtr[i] = indices[i] + static_cast<uint32_t>(m_BaseVertex);
-		}
-
-		// Transfer staging buffer to GPU buffer at offset
-		m_Device->ImmediateSubmit([&](VkCommandBuffer cmd) {
-			VkBufferCopy copyRegion{};
-			copyRegion.srcOffset = 0;
-			copyRegion.dstOffset = dstOffset;
-			copyRegion.size = dataSize;
-			vkCmdCopyBuffer(cmd, staging.Buffer, m_IndexBuffer.Buffer, 1, &copyRegion);
-			});
-
-		m_Device->DestroyBuffer(staging);
-
-		m_IndexCount += indices.size();
-		m_BaseVertex = m_VertexCount;
-	}
-
-	void VulkanMeshBuffer::Bind(VkCommandBuffer cmdBuffer)
+	void VulkanMesh::Bind(VkCommandBuffer cmdBuffer)
 	{
 		if (m_IndexCount > 0)
 		{
@@ -214,7 +108,7 @@ namespace Gravix
 		}
 	}
 
-	void VulkanMeshBuffer::EnsureVertexCapacity(size_t requiredVertices)
+	void VulkanMesh::EnsureVertexCapacity(size_t requiredVertices)
 	{
 		if (requiredVertices <= m_VertexCapacity)
 			return;
@@ -224,7 +118,7 @@ namespace Gravix
 		if (newCapacity < m_VertexCapacity * 3 / 2)
 			newCapacity = m_VertexCapacity * 3 / 2;
 
-		size_t newBufferSize = m_VertexStride * newCapacity;
+		size_t newBufferSize = m_VertexSize * newCapacity;
 
 		// Create new larger buffer
 		AllocatedBuffer newBuffer = m_Device->CreateBuffer(
@@ -239,24 +133,26 @@ namespace Gravix
 		// Copy existing data if any
 		if (m_VertexCount > 0)
 		{
-			m_Device->ImmediateSubmit([&](VkCommandBuffer cmd) {
+			m_Device->ImmediateSubmit([&](VkCommandBuffer cmd) 
+			{
 				VkBufferCopy copyRegion{};
 				copyRegion.srcOffset = 0;
 				copyRegion.dstOffset = 0;
-				copyRegion.size = m_VertexCount * m_VertexStride;
+				copyRegion.size = m_VertexCount * m_VertexSize;
 				vkCmdCopyBuffer(cmd, m_VertexBuffer.Buffer, newBuffer.Buffer, 1, &copyRegion);
-				});
+			});
 		}
 
 		// Destroy old buffer and update
 		m_Device->DestroyBuffer(m_VertexBuffer);
+
 		m_VertexBuffer = newBuffer;
 		m_VertexCapacity = newCapacity;
 
 		UpdateVertexBufferAddress();
 	}
 
-	void VulkanMeshBuffer::EnsureIndexCapacity(size_t requiredIndices)
+	void VulkanMesh::EnsureIndexCapacity(size_t requiredIndices)
 	{
 		if (requiredIndices <= m_IndexCapacity)
 			return;
@@ -279,13 +175,14 @@ namespace Gravix
 		// Copy existing data if any
 		if (m_IndexCount > 0)
 		{
-			m_Device->ImmediateSubmit([&](VkCommandBuffer cmd) {
+			m_Device->ImmediateSubmit([&](VkCommandBuffer cmd) 
+			{
 				VkBufferCopy copyRegion{};
 				copyRegion.srcOffset = 0;
 				copyRegion.dstOffset = 0;
 				copyRegion.size = m_IndexCount * sizeof(uint32_t);
 				vkCmdCopyBuffer(cmd, m_IndexBuffer.Buffer, newBuffer.Buffer, 1, &copyRegion);
-				});
+			});
 		}
 
 		// Destroy old buffer and update
@@ -294,7 +191,7 @@ namespace Gravix
 		m_IndexCapacity = newCapacity;
 	}
 
-	void VulkanMeshBuffer::UpdateVertexBufferAddress()
+	void VulkanMesh::UpdateVertexBufferAddress()
 	{
 		VkBufferDeviceAddressInfo addressInfo{};
 		addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;

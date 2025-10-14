@@ -32,6 +32,14 @@ namespace Gravix
 
 	void VulkanTexture2D::LoadFromFile(const std::filesystem::path& path)
 	{
+		if (!std::filesystem::exists(path)) 
+		{
+			GX_CORE_ERROR("Texture file does not exist: {0}", path.string());
+
+			CreateMagentaTexture(); // Create a magenta texture to indicate missing texture
+			return;
+		}
+
 		// Force RGBA format for consistency
 		stbi_set_flip_vertically_on_load(false); // Vulkan has inverted Y compared to OpenGL
 
@@ -42,12 +50,7 @@ namespace Gravix
 		{
 			GX_CORE_ERROR("Failed to load texture: {0} - {1}", path.string(), stbi_failure_reason());
 
-			// Create a default 1x1 magenta texture to indicate missing texture
-			m_Width = 1;
-			m_Height = 1;
-			m_Channels = 4;
-			uint8_t magentaPixel[4] = { 255, 0, 255, 255 }; // Magenta RGBA
-			CreateFromData(magentaPixel, 1, 1, 4);
+			CreateMagentaTexture(); // Create a magenta texture to indicate missing texture
 			return;
 		}
 
@@ -171,6 +174,24 @@ namespace Gravix
 			m_Device->DestroyImage(m_Image);
 			m_Image = {};
 		}
+	}
+
+	void VulkanTexture2D::CreateMagentaTexture()
+	{
+		m_Width = 4;
+		m_Height = 4;
+		m_Channels = 4;
+		
+		uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 1));
+		uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
+		std::array<uint32_t, 16 * 16> pixels; //for 16x16 checkerboard texture
+		for (int x = 0; x < 16; x++) {
+			for (int y = 0; y < 16; y++) {
+				pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
+			}
+		}
+
+		CreateFromData(pixels.data(), 16, 16, 4);
 	}
 
 	VkFilter VulkanTexture2D::ConvertFilter(TextureFilter filter) const

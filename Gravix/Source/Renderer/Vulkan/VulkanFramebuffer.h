@@ -38,6 +38,8 @@ namespace Gravix
 		void TransitionToLayout(VkCommandBuffer cmd, VkImageLayout newLayout);
 		void TransitionToLayout(VkCommandBuffer cmd, uint32_t index, VkImageLayout newLayout);
 
+		void TransitionDepthToShaderRead(VkCommandBuffer cmd);
+
 		void TransitionToBeginRendering(VkCommandBuffer cmd);
 
 		uint32_t GetDepthAttachmentIndex() const { return m_DepthAttachmentIndex; }

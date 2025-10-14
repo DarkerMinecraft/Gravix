@@ -13,7 +13,7 @@ struct PushConstants
     Vertex *vertex;
 }
 
-[[vk::binding(0, 3)]]
+[[vk::binding(0, 4)]]
 ConstantBuffer<Vertex> _VertexStructReflection;
 
 [[vk::push_constant]]
@@ -48,6 +48,5 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
 float4 mainPS(VSOutput input) : SV_TARGET
 {
     float4 texColor = texture[input.texIndex].Sample(input.uv * input.tilingFactor);
-    // return texColor * input.color;
-    return float4(1, 0, 0, 1);
+    return texColor * input.color;
 }

@@ -2,7 +2,7 @@
 
 #include "Renderer/Generic/Material.h"
 #include "Renderer/Generic/Framebuffer.h"
-#include "Renderer/Generic/MeshBuffer.h"
+#include "Renderer/Generic/Mesh.h"
 #include "Renderer/Generic/Texture.h"
 
 namespace Gravix 
@@ -26,7 +26,7 @@ namespace Gravix
 		virtual void SetScissor(uint32_t offsetX, uint32_t offsetY, uint32_t width, uint32_t height) = 0;
 
 		virtual void BeginRendering() = 0;
-		virtual void BindMesh(MeshBuffer* mesh) = 0;
+		virtual void BindMesh(Mesh* mesh) = 0;
 
 		virtual void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) = 0;
 		virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) = 0;

@@ -21,6 +21,8 @@ namespace Gravix
 		virtual DynamicStruct GetMaterialStruct() override { return DynamicStruct(m_Reflection.GetReflectedStruct("Material")); }
 		virtual DynamicStruct GetVertexStruct() override { return DynamicStruct(m_Reflection.GetReflectedStruct("Vertex")); }
 
+		virtual size_t GetVertexSize() override { return m_Reflection.GetReflectedStruct("Vertex").GetSize(); }
+
 		virtual ReflectedStruct GetReflectedStruct(const std::string& name) override { return m_Reflection.GetReflectedStruct(name); }
 
 		void Bind(VkCommandBuffer cmd, void* pushConstants);

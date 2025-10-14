@@ -3,7 +3,7 @@
 
 #include "VulkanDevice.h"
 
-#include "VulkanMeshBuffer.h"
+#include "VulkanMesh.h"
 
 #include "Utils/VulkanInitializers.h"
 #include "Utils/VulkanUtils.h"
@@ -27,8 +27,10 @@ namespace Gravix
 			CopyToSwapchain();
 		else
 		{
-			if (m_TargetFramebuffer != nullptr)
-				m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			if (m_TargetFramebuffer == nullptr) return;
+
+			m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_TargetFramebuffer->TransitionDepthToShaderRead(m_CommandBuffer);
 		}
 	}
 
@@ -109,9 +111,9 @@ namespace Gravix
 		}
 	}
 
-	void VulkanCommandImpl::BindMesh(MeshBuffer* mesh)
+	void VulkanCommandImpl::BindMesh(Mesh* mesh)
 	{
-		VulkanMeshBuffer* vulkanMesh = static_cast<VulkanMeshBuffer*>(mesh);
+		VulkanMesh* vulkanMesh = static_cast<VulkanMesh*>(mesh);
 		if (vulkanMesh == nullptr)
 			return;
 		vulkanMesh->Bind(m_CommandBuffer);

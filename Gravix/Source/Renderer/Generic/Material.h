@@ -16,7 +16,7 @@ namespace Gravix
 		std::string DebugName;
 		std::filesystem::path ShaderFilePath;
 
-		Blending BlendingMode;
+		Blending BlendingMode = Blending::None;
 
 		bool EnableDepthTest = false;
 		Cull CullMode = Cull::None;
@@ -37,7 +37,9 @@ namespace Gravix
 
 		virtual DynamicStruct GetPushConstantStruct() = 0;
 		virtual DynamicStruct GetMaterialStruct() = 0;
+
 		virtual DynamicStruct GetVertexStruct() = 0;
+		virtual size_t GetVertexSize() = 0;
 
 		virtual ReflectedStruct GetReflectedStruct(const std::string& name) = 0;
 

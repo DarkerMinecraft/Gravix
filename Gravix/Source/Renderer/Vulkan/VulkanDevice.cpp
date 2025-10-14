@@ -253,9 +253,13 @@ namespace Gravix
 
 		// if the format is a depth format, we will need to have it use the correct
 		// aspect flag
-		VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
-		if (format == VK_FORMAT_D32_SFLOAT) {
-			aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+		VkImageAspectFlags aspectFlag;
+		if (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+		{
+			aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		} else 
+		{
+			aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
 		}
 
 		// build a image-view for the image

@@ -3,6 +3,8 @@
 #include "Renderer/Generic/Texture.h"
 #include "Utils/VulkanTypes.h"
 
+#include "Core/UUID.h"
+
 #include "VulkanDevice.h"
 
 namespace Gravix
@@ -19,6 +21,17 @@ namespace Gravix
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
 		virtual uint32_t GetMipLevels() const override { return m_MipLevels; }
+
+		virtual UUID GetUUID() override { return m_UUID; }
+
+		virtual bool operator==(const Texture& other) const override 
+		{
+			const auto* o = dynamic_cast<const VulkanTexture2D*>(&other);
+			if (!o)
+				return false;
+
+			return m_UUID == o->m_UUID;
+		}
 
 		// Vulkan-specific methods
 		VkImage GetVkImage() const { return m_Image.Image; }
@@ -37,6 +50,8 @@ namespace Gravix
 		void CreateSampler();
 		void Cleanup();
 
+		void CreateMagentaTexture();
+
 		VkFilter ConvertFilter(TextureFilter filter) const;
 		VkSamplerAddressMode ConvertWrap(TextureWrap wrap) const;
 	private:
@@ -47,6 +62,8 @@ namespace Gravix
 		uint32_t m_Height = 0;
 		uint32_t m_Channels = 0;
 		uint32_t m_MipLevels = 1;
+
+		UUID m_UUID;
 
 		AllocatedImage m_Image{};
 		VkSampler m_Sampler = VK_NULL_HANDLE;

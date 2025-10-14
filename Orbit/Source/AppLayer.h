@@ -4,9 +4,9 @@
 
 #include "Framebuffer.h"
 #include "Material.h"
+#include "Texture.h"
 #include "Reflections/DynamicStruct.h"
 #include "OrthographicCamera.h"
-#include "MeshBuffer.h"
 
 #include <glm/glm.hpp>
 
@@ -32,12 +32,12 @@ namespace Orbit
 
 		Ref<Gravix::Material> m_GradientMaterial;
 		Ref<Gravix::Material> m_GradientColorMaterial;
-		Ref<Gravix::Material> m_QuadTestMaterial;
 
 		Gravix::DynamicStruct m_GradientColor;
 		Gravix::DynamicStruct m_QuadTestPushConstants;
-		
-		Ref<Gravix::MeshBuffer> m_MeshBuffer;
+
+		Ref<Gravix::Texture2D> m_CheckerboardTexture;
+		Ref<Gravix::Texture2D> m_LogoTexture;
 
 		Gravix::OrthographicCamera m_Camera;
 
