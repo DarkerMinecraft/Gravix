@@ -173,14 +173,15 @@ namespace Gravix
 		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		//transition the swapchain image to a color attachment
 		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex],
-			m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			m_SwapchainImageFormat, m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
 
 	void VulkanDevice::EndFrame()
 	{
-		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageFormat,
+			m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		//end the command buffer recording
@@ -282,7 +283,7 @@ namespace Gravix
 		AllocatedImage newImage = CreateImage(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, false, mipmapped);
 
 		ImmediateSubmit([&](VkCommandBuffer cmd) {
-			VulkanUtils::TransitionImage(cmd, newImage.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			VulkanUtils::TransitionImage(cmd, newImage.Image, newImage.ImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
@@ -299,7 +300,7 @@ namespace Gravix
 			vkCmdCopyBufferToImage(cmd, uploadbuffer.Buffer, newImage.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
 				&copyRegion);
 
-			VulkanUtils::TransitionImage(cmd, newImage.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VulkanUtils::TransitionImage(cmd, newImage.Image, newImage.ImageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			});
 

@@ -63,6 +63,7 @@ namespace Gravix
 		VkImage GetCurrentSwapchainImage() const { return m_SwapchainImages[m_SwapchainImageIndex]; }
 		VkImageLayout GetCurrentSwapchainImageLayout() const { return m_SwapchainImageLayout; }
 		VkExtent2D GetSwapchainExtent() const { return m_SwapchainExtent; }
+		VkFormat GetSwapchainImageFormat() const { return m_SwapchainImageFormat; }
 		void SetCurrentSwapchainImageLayout(VkImageLayout layout) { m_SwapchainImageLayout = layout; }
 
 		FrameData& GetCurrentFrameData() { return m_Frames[m_CurrentFrame % FRAME_OVERLAP]; }

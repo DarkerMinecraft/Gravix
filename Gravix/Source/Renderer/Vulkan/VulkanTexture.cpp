@@ -112,7 +112,7 @@ namespace Gravix
 
 		m_Device->ImmediateSubmit([&](VkCommandBuffer cmd)
 		{
-			VulkanUtils::TransitionImage(cmd, m_Image.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VulkanUtils::TransitionImage(cmd, m_Image.Image, m_Image.ImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		});
 
 	}

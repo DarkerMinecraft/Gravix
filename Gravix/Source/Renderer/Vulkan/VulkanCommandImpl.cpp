@@ -153,11 +153,11 @@ namespace Gravix
 
 		VkImageLayout swapchainImageLayout = m_Device->GetCurrentSwapchainImageLayout();
 		if (swapchainImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			VulkanUtils::TransitionImage(m_CommandBuffer, m_Device->GetCurrentSwapchainImage(), swapchainImageLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			VulkanUtils::TransitionImage(m_CommandBuffer, m_Device->GetCurrentSwapchainImage(), m_Device->GetSwapchainImageFormat(), swapchainImageLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VulkanUtils::CopyImageToImage(m_CommandBuffer, m_TargetFramebuffer->GetImage(m_PresentIndex).Image, m_Device->GetCurrentSwapchainImage(), { m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight() }, m_Device->GetSwapchainExtent());
 
-		VulkanUtils::TransitionImage(m_CommandBuffer, m_Device->GetCurrentSwapchainImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, swapchainImageLayout);
+		VulkanUtils::TransitionImage(m_CommandBuffer, m_Device->GetCurrentSwapchainImage(), m_Device->GetSwapchainImageFormat(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, swapchainImageLayout);
 
 		m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
 	}

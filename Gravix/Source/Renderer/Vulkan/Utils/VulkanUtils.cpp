@@ -7,7 +7,7 @@
 namespace Gravix 
 {
 
-	void VulkanUtils::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
+	void VulkanUtils::TransitionImage(VkCommandBuffer cmd, VkImage image, VkFormat imageFormat, VkImageLayout currentLayout, VkImageLayout newLayout)
 	{
 		VkImageMemoryBarrier2 imageBarrier{ .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 		imageBarrier.pNext = nullptr;
@@ -20,7 +20,41 @@ namespace Gravix
 		imageBarrier.oldLayout = currentLayout;
 		imageBarrier.newLayout = newLayout;
 
-		VkImageAspectFlags aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		VkImageAspectFlags aspectMask = 0;
+
+		// Determine aspect mask based on image format
+		switch (imageFormat)
+		{
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			break;
+		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
+			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			break;
+		default:
+			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			break;
+		}
+
+		// Validate layout transitions to avoid invalid pairs for stencil aspect
+		if ((aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != 0)
+		{
+			if (currentLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ||
+				currentLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL)
+			{
+				// Log warning about invalid oldLayout for stencil aspect
+				GX_CORE_ERROR("Warning: OldLayout is depth-only but stencil aspect bit is set in aspectMask");
+			}
+			if (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ||
+				newLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL)
+			{
+				// Log warning about invalid newLayout for stencil aspect
+				GX_CORE_ERROR("NewLayout is depth-only but stencil aspect bit is set in aspectMask");
+			}
+		}
+
 		imageBarrier.subresourceRange = VulkanInitializers::ImageSubresourceRange(aspectMask);
 		imageBarrier.image = image;
 
@@ -33,6 +67,7 @@ namespace Gravix
 
 		vkCmdPipelineBarrier2(cmd, &depInfo);
 	}
+
 
 	void VulkanUtils::CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize, VkExtent2D dstSize)
 	{

@@ -111,7 +111,7 @@ namespace Gravix
 		for(uint32_t i = 0; i < m_Attachments.size(); i++)
 		{
 			AttachmentData& attachment = m_Attachments[i];
-			VulkanUtils::TransitionImage(cmd, attachment.Image.Image, attachment.Layout, newLayout);
+			VulkanUtils::TransitionImage(cmd, attachment.Image.Image, attachment.Format, attachment.Layout, newLayout);
 
 			attachment.Layout = newLayout;
 		}
@@ -121,7 +121,7 @@ namespace Gravix
 	{
 		AttachmentData& attachment = m_Attachments[index];
 
-		VulkanUtils::TransitionImage(cmd, attachment.Image.Image, attachment.Layout, newLayout);
+		VulkanUtils::TransitionImage(cmd, attachment.Image.Image, attachment.Format, attachment.Layout, newLayout);
 		attachment.Layout = newLayout;
 	}
 
@@ -140,7 +140,7 @@ namespace Gravix
 			VkImageLayout targetLayout = (i == m_DepthAttachmentIndex) ? VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			if (attachment.Layout != targetLayout)
 			{
-				VulkanUtils::TransitionImage(cmd, attachment.Image.Image, attachment.Layout, targetLayout);
+				VulkanUtils::TransitionImage(cmd, attachment.Image.Image, attachment.Format, attachment.Layout, targetLayout);
 				attachment.Layout = targetLayout;
 			}
 		}
