@@ -6,7 +6,7 @@
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace Orbit 
+namespace Orbit
 {
 
 	AppLayer::AppLayer()
@@ -40,8 +40,12 @@ namespace Orbit
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
-		m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
-		m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
+		// Ensure viewport is valid before updating camera
+		if (m_ViewportSize.x > 0 && m_ViewportSize.y > 0) 
+		{
+			m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
+			m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
+		}
 	}
 
 	void AppLayer::OnRender()

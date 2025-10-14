@@ -29,6 +29,15 @@ namespace Gravix
 			glm::vec2(0.0f, 1.0f)   // Vertex 3: top-left
 		};
 
+		// Define vertex offsets relative to center
+		static constexpr std::array<glm::vec2, 4> QuadVertexOffsets =
+		{
+			glm::vec2(-1.0f, -1.0f),  // Vertex 0: bottom-left
+			glm::vec2(1.0f, -1.0f),  // Vertex 1: bottom-right
+			glm::vec2(1.0f,  1.0f),  // Vertex 2: top-right
+			glm::vec2(-1.0f,  1.0f)   // Vertex 3: top-left
+		};
+
 		uint32_t QuadIndexCount = 0;
 	};
 
@@ -94,21 +103,12 @@ namespace Gravix
 		float halfWidth = size.x * 0.5f;
 		float halfHeight = size.y * 0.5f;
 
-		// Define vertex offsets relative to center
-		static constexpr std::array<glm::vec2, 4> QuadVertexOffsets = 
-		{
-			glm::vec2(-1.0f, -1.0f),  // Vertex 0: bottom-left
-			glm::vec2( 1.0f, -1.0f),  // Vertex 1: bottom-right
-			glm::vec2( 1.0f,  1.0f),  // Vertex 2: top-right
-			glm::vec2(-1.0f,  1.0f)   // Vertex 3: top-left
-		};
-
 		for (int i = 0; i < 4; i++)
 		{
 			// Calculate vertex position relative to center
 			glm::vec3 finalPos = position + glm::vec3(
-				QuadVertexOffsets[i].x * halfWidth,
-				QuadVertexOffsets[i].y * halfHeight,
+				s_Data->QuadVertexOffsets[i].x * halfWidth,
+				s_Data->QuadVertexOffsets[i].y * halfHeight,
 				0.0f);
 
 			vertex.Set<glm::vec3>("position", finalPos);
