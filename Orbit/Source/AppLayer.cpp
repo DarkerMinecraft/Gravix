@@ -12,20 +12,12 @@ namespace Orbit
 	AppLayer::AppLayer()
 	{
 		Gravix::FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8, Gravix::FramebufferTextureFormat::DEPTH24STENCIL8 };
+		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8 };
 
 		m_MainFramebuffer = Gravix::Framebuffer::Create(fbSpec);
-
-		m_GradientMaterial = Gravix::Material::Create("Gradient", "Assets/shaders/gradient.slang");
-		m_GradientColorMaterial = Gravix::Material::Create("GradientColor", "Assets/shaders/gradient_color.slang");
+		m_MainFramebuffer->SetClearColor(0, { 0.3f, 0.3f, 0.3f, 0.3f });
 
 		Gravix::Renderer2D::Init(m_MainFramebuffer);
-
-		m_GradientColor = m_GradientColorMaterial->GetPushConstantStruct();
-
-		// Purple Dream
-		m_GradientColor.Set("topColor", glm::vec4(0.7f, 0.4f, 1.0f, 1.0f));    // Light purple
-		m_GradientColor.Set("bottomColor", glm::vec4(0.9f, 0.4f, 0.7f, 1.0f)); // Pink-purple
 
 		Gravix::TextureSpecification texSpec{};
 		texSpec.DebugName = "Checkerboard";
@@ -58,15 +50,10 @@ namespace Orbit
 	{
 		Gravix::Command cmd(m_MainFramebuffer, 0, false);
 
-		cmd.SetActiveMaterial(m_GradientColorMaterial);
-		cmd.BindResource(0, m_MainFramebuffer, 0);
-		cmd.BindMaterial(m_GradientColor.Data());
-		cmd.Dispatch();
-
 		Gravix::Renderer2D::BeginScene(cmd, m_Camera.GetViewProjMatrix());
 		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ -1.0f, 0.0f, 0.0f }, { 0.8f, 0.8f }, { 0.8f, 0.2f, 0.3f, 1.0f }));
 		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.5f, 0.5f, 0.0f }, { 0.5f, 0.75f }, { 0.2f, 0.3f, 0.8f, 1.0f }));
-		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.0f, 0.0f, -0.2f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_CheckerboardTexture, 2.0f));
+		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.0f, 0.0f, -0.1f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_LogoTexture, 1.0f));
 		Gravix::Renderer2D::EndScene(cmd);
 	}
 
@@ -121,11 +108,6 @@ namespace Orbit
 		}
 
 		DrawViewportUI();
-		ImGui::Begin("Gradient Color");
-		ImGui::ColorEdit4("Top Color", glm::value_ptr(m_GradientColor.Get<glm::vec4>("topColor")));
-		ImGui::ColorEdit4("Bottom Color", glm::value_ptr(m_GradientColor.Get<glm::vec4>("bottomColor")));
-		ImGui::End();
-
 		ImGui::End();
 	}
 

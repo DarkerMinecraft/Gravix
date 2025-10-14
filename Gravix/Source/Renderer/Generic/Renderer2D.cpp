@@ -59,8 +59,10 @@ namespace Gravix
 		MaterialSpecification matSpec;
 		matSpec.DebugName = "DefaultTexturedMaterial";
 		matSpec.ShaderFilePath = "Assets/shaders/texture.slang";
+		matSpec.BlendingMode = Blending::Alphablend;
 		matSpec.RenderTarget = renderTarget;
 		matSpec.EnableDepthTest = true;
+		matSpec.DepthCompareOp = CompareOp::LessOrEqual;
 
 		s_Data->TexturedMaterial = Material::Create(matSpec);
 
@@ -152,6 +154,11 @@ namespace Gravix
 
 	void Renderer2D::EndScene(Command& cmd)
 	{
+		std::sort(s_Data->QuadVertexBuffer.begin(), s_Data->QuadVertexBuffer.end(),
+			[](DynamicStruct& a, DynamicStruct& b) {
+				return a.Get<glm::vec3>("position").z < b.Get<glm::vec3>("position").z;
+			});
+
 		s_Data->QuadMesh->SetVertices(s_Data->QuadVertexBuffer);
 		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 

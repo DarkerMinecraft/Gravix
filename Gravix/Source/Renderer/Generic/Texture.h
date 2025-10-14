@@ -14,13 +14,11 @@ namespace Gravix
 	 */
 	struct TextureSpecification
 	{
-		uint32_t Width = 1;
-		uint32_t Height = 1;
 		TextureFilter MinFilter = TextureFilter::Linear;
 		TextureFilter MagFilter = TextureFilter::Linear;
 		TextureWrap WrapS = TextureWrap::Repeat;
 		TextureWrap WrapT = TextureWrap::Repeat;
-		bool GenerateMipmaps = true;
+		bool GenerateMipmaps = false;
 		std::string DebugName = "Texture";
 	};
 

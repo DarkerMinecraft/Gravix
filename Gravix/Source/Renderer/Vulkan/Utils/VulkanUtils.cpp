@@ -38,23 +38,6 @@ namespace Gravix
 			break;
 		}
 
-		// Validate layout transitions to avoid invalid pairs for stencil aspect
-		if ((aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != 0)
-		{
-			if (currentLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ||
-				currentLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL)
-			{
-				// Log warning about invalid oldLayout for stencil aspect
-				GX_CORE_ERROR("Warning: OldLayout is depth-only but stencil aspect bit is set in aspectMask");
-			}
-			if (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ||
-				newLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL)
-			{
-				// Log warning about invalid newLayout for stencil aspect
-				GX_CORE_ERROR("NewLayout is depth-only but stencil aspect bit is set in aspectMask");
-			}
-		}
-
 		imageBarrier.subresourceRange = VulkanInitializers::ImageSubresourceRange(aspectMask);
 		imageBarrier.image = image;
 

@@ -30,12 +30,6 @@ namespace Orbit
 	private:
 		Ref<Gravix::Framebuffer> m_MainFramebuffer;
 
-		Ref<Gravix::Material> m_GradientMaterial;
-		Ref<Gravix::Material> m_GradientColorMaterial;
-
-		Gravix::DynamicStruct m_GradientColor;
-		Gravix::DynamicStruct m_QuadTestPushConstants;
-
 		Ref<Gravix::Texture2D> m_CheckerboardTexture;
 		Ref<Gravix::Texture2D> m_LogoTexture;
 

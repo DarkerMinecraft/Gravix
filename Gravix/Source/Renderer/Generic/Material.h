@@ -19,6 +19,9 @@ namespace Gravix
 		Blending BlendingMode = Blending::None;
 
 		bool EnableDepthTest = false;
+		bool EnableDepthWrite = false;
+		CompareOp DepthCompareOp = CompareOp::Less;
+
 		Cull CullMode = Cull::None;
 		FrontFace FrontFaceWinding = FrontFace::CounterClockwise;
 		Fill FillMode = Fill::Solid;

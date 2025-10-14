@@ -42,7 +42,7 @@ namespace Gravix
 	static VkShaderStageFlagBits ShaderStageToVulkanShaderStageBit(std::vector<ShaderStage> avaliableStages)
 	{
 		VkShaderStageFlagBits flags = VkShaderStageFlagBits(0);
-		for (auto stage : avaliableStages) 
+		for (auto stage : avaliableStages)
 		{
 			VkShaderStageFlagBits stageFlag = ShaderStageToVulkanShaderStage(stage);
 			flags = static_cast<VkShaderStageFlagBits>(flags | stageFlag);
@@ -76,7 +76,7 @@ namespace Gravix
 
 	void VulkanMaterial::Bind(VkCommandBuffer cmd, void* pushConstants)
 	{
-		if(m_Pipeline == VK_NULL_HANDLE)
+		if (m_Pipeline == VK_NULL_HANDLE)
 			return;
 
 		vkCmdBindPipeline(cmd, m_IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
@@ -84,12 +84,12 @@ namespace Gravix
 			0, static_cast<uint32_t>(m_Device->GetGlobalDescriptorSetLayouts().size()), m_Device->GetGlobalDescriptorSets(), 0, nullptr);
 		if (m_PushConstantSize > 0 && pushConstants != nullptr)
 			vkCmdPushConstants(cmd, m_PipelineLayout, VK_SHADER_STAGE_ALL, 0, m_PushConstantSize, pushConstants);
-		
+
 	}
 
 	void VulkanMaterial::Dispatch(VkCommandBuffer cmd, uint32_t width, uint32_t height)
 	{
-		if(m_Pipeline == VK_NULL_HANDLE || !m_IsCompute)
+		if (m_Pipeline == VK_NULL_HANDLE || !m_IsCompute)
 			return;
 
 		auto& dispatchInfo = m_Reflection.GetComputeDispatch();
@@ -99,13 +99,13 @@ namespace Gravix
 	void VulkanMaterial::BindResource(VkCommandBuffer cmd, uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler)
 	{
 		VulkanFramebuffer* framebuffer = static_cast<VulkanFramebuffer*>(buffer);
-		if (!sampler) 
+		if (!sampler)
 		{
 			framebuffer->TransitionToLayout(cmd, index, VK_IMAGE_LAYOUT_GENERAL);
 
 			DescriptorWriter writer(m_Device->GetGlobalDescriptorSetLayouts()[2], m_Device->GetGlobalDescriptorPool());
 			writer.WriteImage(binding, framebuffer->GetImage(index).ImageView, VK_IMAGE_LAYOUT_GENERAL);
-			
+
 			writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(2));
 		}
 	}
@@ -183,7 +183,7 @@ namespace Gravix
 		std::vector<VkPushConstantRange> pushConstantRanges;
 		pushConstantRanges.reserve(reflectPushConstants.size());
 
-		for(uint32_t i = 0; i < reflectPushConstants.size(); i++)
+		for (uint32_t i = 0; i < reflectPushConstants.size(); i++)
 		{
 			VkPushConstantRange pushConstantRange{};
 			pushConstantRange.offset = reflectPushConstants[i].Offset;
@@ -217,7 +217,7 @@ namespace Gravix
 		std::vector<VkVertexInputAttributeDescription> vertexAttributes = GetVertexAttributes(&stride);
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for(uint32_t i = 0; i < m_ShaderModules.size(); i++)
+		for (uint32_t i = 0; i < m_ShaderModules.size(); i++)
 		{
 			VkPipelineShaderStageCreateInfo stageInfo{};
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -311,8 +311,33 @@ namespace Gravix
 			builder.SetColorAttachments({ swapchainFormat });
 		}
 
+		auto MapCompareOp = [](CompareOp op) -> VkCompareOp
+			{
+				switch (op)
+				{
+				case CompareOp::Never:
+					return VK_COMPARE_OP_NEVER;
+				case CompareOp::Less:
+					return VK_COMPARE_OP_LESS;
+				case CompareOp::Equal:
+					return VK_COMPARE_OP_EQUAL;
+				case CompareOp::LessOrEqual:
+					return VK_COMPARE_OP_LESS_OR_EQUAL;
+				case CompareOp::Greater:
+					return VK_COMPARE_OP_GREATER;
+				case CompareOp::NotEqual:
+					return VK_COMPARE_OP_NOT_EQUAL;
+				case CompareOp::GreaterOrEqual:
+					return VK_COMPARE_OP_GREATER_OR_EQUAL;
+				case CompareOp::Always:
+					return VK_COMPARE_OP_ALWAYS;
+				default:
+					return VK_COMPARE_OP_NEVER; // or some default
+				}
+			};
+
 		if (spec.EnableDepthTest)
-			builder.EnableDepthTest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
+			builder.EnableDepthTest(spec.EnableDepthWrite, MapCompareOp(spec.DepthCompareOp));
 		else
 			builder.DisableDepthTest();
 
