@@ -90,11 +90,25 @@ namespace Gravix
 	{
 		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
+		// Calculate half extents for centering
+		float halfWidth = size.x * 0.5f;
+		float halfHeight = size.y * 0.5f;
+
+		// Define vertex offsets relative to center
+		static constexpr std::array<glm::vec2, 4> QuadVertexOffsets = 
+		{
+			glm::vec2(-1.0f, -1.0f),  // Vertex 0: bottom-left
+			glm::vec2( 1.0f, -1.0f),  // Vertex 1: bottom-right
+			glm::vec2( 1.0f,  1.0f),  // Vertex 2: top-right
+			glm::vec2(-1.0f,  1.0f)   // Vertex 3: top-left
+		};
+
 		for (int i = 0; i < 4; i++)
 		{
+			// Calculate vertex position relative to center
 			glm::vec3 finalPos = position + glm::vec3(
-				(i == 0 || i == 3) ? 0.0f : size.x,
-				(i == 0 || i == 1) ? 0.0f : size.y,
+				QuadVertexOffsets[i].x * halfWidth,
+				QuadVertexOffsets[i].y * halfHeight,
 				0.0f);
 
 			vertex.Set<glm::vec3>("position", finalPos);
