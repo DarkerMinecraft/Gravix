@@ -30,9 +30,13 @@ target_include_directories(Orbit
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Core
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Renderer/Generic
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Events
+        ${CMAKE_SOURCE_DIR}/Gravix/Source/Reflections
+        ${CMAKE_SOURCE_DIR}/Gravix/Source/Scene
+
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
+        ${CMAKE_SOURCE_DIR}/ThirdParties/entt/single_include
 )
 
 # Copy root assets every build

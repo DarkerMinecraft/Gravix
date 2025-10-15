@@ -12,8 +12,9 @@ namespace Gravix
 	{
 		glm::vec3 Position;
 		glm::vec2 Size;
-		glm::vec4 Color;
+		float Rotation;
 
+		glm::vec4 Color;
 		Ref<Texture2D> Texture = nullptr;
 		float TilingFactor = 1;
 	};

@@ -26,9 +26,6 @@ add_compile_definitions(
     $<$<BOOL:${ENGINE_PLATFORM_MACOS}>:ENGINE_PLATFORM_MACOS>
 )
 
-# Add engine modules
-add_subdirectory(Gravix)
-add_subdirectory(Orbit)
 
 add_subdirectory(ThirdParties/VkBootstrap)
 set_target_properties(vk-bootstrap PROPERTIES FOLDER "Dependencies")
@@ -55,5 +52,9 @@ set_target_properties(slangc PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(slang-common-objects PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(compiler-core PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(slangi PROPERTIES FOLDER "Slang/Dependencies")
+
+# Add engine modules
+add_subdirectory(Gravix)
+add_subdirectory(Orbit)
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Orbit)

@@ -5,7 +5,7 @@
 #include "Framebuffer.h"
 #include "Material.h"
 #include "Texture.h"
-#include "Reflections/DynamicStruct.h"
+#include "DynamicStruct.h"
 #include "OrthographicCamera.h"
 
 #include <glm/glm.hpp>

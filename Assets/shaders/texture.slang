@@ -1,6 +1,6 @@
 struct Vertex
 {
-    float3 position;
+    float4 position;
     float2 uv;
     float4 color;
     float texIndex;
@@ -34,7 +34,7 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
     VSOutput output;
     Vertex v = pc.vertex[vertexID];
 
-    output.position = mul(pc.viewProjMatrix, float4(v.position, 1.0));
+    output.position = mul(pc.viewProjMatrix, v.position);
     output.uv = v.uv;
     output.color = v.color;
     output.texIndex = (int) v.texIndex;
@@ -48,5 +48,9 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
 float4 mainPS(VSOutput input) : SV_TARGET
 {
     float4 texColor = texture[input.texIndex].Sample(input.uv * input.tilingFactor);
+
+    if (texColor.a * input.color.a < 0.2)
+        discard;
+
     return texColor * input.color;
 }

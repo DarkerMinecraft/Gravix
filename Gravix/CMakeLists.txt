@@ -28,6 +28,7 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui
+        ${CMAKE_SOURCE_DIR}/ThirdParties/entt/single_include
     PRIVATE
         ${Vulkan_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src

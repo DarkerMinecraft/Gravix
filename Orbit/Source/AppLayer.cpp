@@ -49,12 +49,6 @@ namespace Orbit
 	void AppLayer::OnRender()
 	{
 		Gravix::Command cmd(m_MainFramebuffer, 0, false);
-
-		Gravix::Renderer2D::BeginScene(cmd, m_Camera.GetViewProjMatrix());
-		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ -1.0f, 0.0f, 0.0f }, { 0.8f, 0.8f }, { 0.8f, 0.2f, 0.3f, 1.0f }));
-		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.5f, 0.5f, 0.0f }, { 0.5f, 0.75f }, { 0.2f, 0.3f, 0.8f, 1.0f }));
-		Gravix::Renderer2D::DrawQuad(Gravix::QuadVertex({ 0.0f, 0.0f, -0.1f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_LogoTexture, 1.0f));
-		Gravix::Renderer2D::EndScene(cmd);
 	}
 
 	void AppLayer::OnImGuiRender()

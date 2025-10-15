@@ -6,6 +6,7 @@
 #include "Renderer/Generic/Material.h"
 #include "Renderer/Generic/Texture.h"
 #include "Renderer/Generic/Mesh.h"
+#include <glm/ext/matrix_transform.hpp>
 
 namespace Gravix
 {
@@ -33,12 +34,12 @@ namespace Gravix
 		};
 
 		// Define vertex offsets relative to center
-		static constexpr std::array<glm::vec2, 4> QuadVertexOffsets =
+		static constexpr std::array<glm::vec4, 4> QuadVertexOffsets =
 		{
-			glm::vec2(-1.0f, -1.0f),  // Vertex 0: bottom-left
-			glm::vec2(1.0f, -1.0f),  // Vertex 1: bottom-right
-			glm::vec2(1.0f,  1.0f),  // Vertex 2: top-right
-			glm::vec2(-1.0f,  1.0f)   // Vertex 3: top-left
+			glm::vec4(-0.5f, -0.5f, 0.0f, 1.0f),  // Vertex 0: bottom-left
+			glm::vec4(0.5f, -0.5f, 0.0f, 1.0f),  // Vertex 1: bottom-right
+			glm::vec4(0.5f,  0.5f, 0.0f, 1.0f),  // Vertex 2: top-right
+			glm::vec4(-0.5f,  0.5f, 0.0f, 1.0f)   // Vertex 3: top-left
 		};
 
 		uint32_t QuadIndexCount = 0;
@@ -127,23 +128,20 @@ namespace Gravix
 			}
 		}
 
-		// Calculate half extents for centering
-		float halfWidth = quadVertex.Size.x * 0.5f;
-		float halfHeight = quadVertex.Size.y * 0.5f;
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), quadVertex.Position)
+			* glm::rotate(glm::mat4(1.0f), glm::radians(quadVertex.Rotation), { 0.0f, 0.0f, 1.0f })
+			* glm::scale(glm::mat4(1.0f), { quadVertex.Size.x, quadVertex.Size.y, 1.0f });
 
 		for (int i = 0; i < 4; i++)
 		{
 			// Calculate vertex position relative to center
-			glm::vec3 finalPos = quadVertex.Position + glm::vec3(
-				s_Data->QuadVertexOffsets[i].x * halfWidth,
-				s_Data->QuadVertexOffsets[i].y * halfHeight,
-				0.0f);
+			glm::vec4 finalPos = transform * s_Data->QuadVertexOffsets[i];
 
-			vertex.Set<glm::vec3>("position", finalPos);
-			vertex.Set<glm::vec2>("uv", s_Data->QuadTextureCoords[i]);
-			vertex.Set<glm::vec4>("color", quadVertex.Color);
-			vertex.Set<float>("texIndex", textureIndex);
-			vertex.Set<float>("tilingFactor", quadVertex.TilingFactor);
+			vertex.Set("position", finalPos);
+			vertex.Set("uv", s_Data->QuadTextureCoords[i]);
+			vertex.Set("color", quadVertex.Color);
+			vertex.Set("texIndex", textureIndex);
+			vertex.Set("tilingFactor", quadVertex.TilingFactor);
 
 			s_Data->QuadVertexBuffer.push_back(vertex);
 		}
