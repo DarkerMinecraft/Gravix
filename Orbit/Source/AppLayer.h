@@ -8,6 +8,8 @@
 #include "DynamicStruct.h"
 #include "OrthographicCamera.h"
 
+#include "Scene.h"
+
 #include <glm/glm.hpp>
 
 namespace Orbit 
@@ -32,6 +34,8 @@ namespace Orbit
 
 		Ref<Gravix::Texture2D> m_CheckerboardTexture;
 		Ref<Gravix::Texture2D> m_LogoTexture;
+
+		Ref<Gravix::Scene> m_ActiveScene;
 
 		Gravix::OrthographicCamera m_Camera;
 

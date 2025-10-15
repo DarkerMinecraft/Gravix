@@ -36,7 +36,6 @@ target_include_directories(Orbit
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
-        ${CMAKE_SOURCE_DIR}/ThirdParties/entt/single_include
 )
 
 # Copy root assets every build

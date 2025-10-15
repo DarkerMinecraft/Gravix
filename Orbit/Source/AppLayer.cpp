@@ -19,11 +19,7 @@ namespace Orbit
 
 		Gravix::Renderer2D::Init(m_MainFramebuffer);
 
-		Gravix::TextureSpecification texSpec{};
-		texSpec.DebugName = "Checkerboard";
-		m_CheckerboardTexture = Gravix::Texture2D::Create("Assets/textures/Checkerboard.png", texSpec);
-		texSpec.DebugName = "ChernoLogo";
-		m_LogoTexture = Gravix::Texture2D::Create("Assets/textures/ChernoLogo.png", texSpec);
+		m_ActiveScene = CreateRef<Gravix::Scene>();
 	}
 
 	AppLayer::~AppLayer()
@@ -44,11 +40,15 @@ namespace Orbit
 			m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
 			m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
 		}
+
+		m_ActiveScene->OnEditorUpdate(deltaTime);
 	}
 
 	void AppLayer::OnRender()
 	{
 		Gravix::Command cmd(m_MainFramebuffer, 0, false);
+
+		m_ActiveScene->OnEditorRender(cmd);
 	}
 
 	void AppLayer::OnImGuiRender()

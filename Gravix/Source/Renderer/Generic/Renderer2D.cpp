@@ -104,16 +104,16 @@ namespace Gravix
 		s_Data->PushConstants.Set("viewProjMatrix", viewProjection);
 	}
 
-	void Renderer2D::DrawQuad(const QuadVertex& quadVertex)
+	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
 	{
 		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
 		float textureIndex = 0.0f;
-		if (quadVertex.Texture != nullptr) 
+		if (texture != nullptr)
 		{
 			for (uint32_t i = 1; i < s_Data->TextureSlotIndex; i++)
 			{
-				if (*s_Data->TextureSlots[i].get() == *quadVertex.Texture.get())
+				if (*s_Data->TextureSlots[i].get() == *texture.get())
 				{
 					textureIndex = (float)i;
 					break;
@@ -123,32 +123,27 @@ namespace Gravix
 			if (textureIndex == 0.0)
 			{
 				textureIndex = (float)s_Data->TextureSlotIndex;
-				s_Data->TextureSlots[s_Data->TextureSlotIndex] = quadVertex.Texture;
+				s_Data->TextureSlots[s_Data->TextureSlotIndex] = texture;
 				s_Data->TextureSlotIndex++;
 			}
 		}
 
-		glm::mat4 transform = glm::translate(glm::mat4(1.0f), quadVertex.Position)
-			* glm::rotate(glm::mat4(1.0f), glm::radians(quadVertex.Rotation), { 0.0f, 0.0f, 1.0f })
-			* glm::scale(glm::mat4(1.0f), { quadVertex.Size.x, quadVertex.Size.y, 1.0f });
-
 		for (int i = 0; i < 4; i++)
 		{
 			// Calculate vertex position relative to center
-			glm::vec4 finalPos = transform * s_Data->QuadVertexOffsets[i];
+			glm::vec4 finalPos = transformMatrix * s_Data->QuadVertexOffsets[i];
 
 			vertex.Set("position", finalPos);
 			vertex.Set("uv", s_Data->QuadTextureCoords[i]);
-			vertex.Set("color", quadVertex.Color);
+			vertex.Set("color", color);
 			vertex.Set("texIndex", textureIndex);
-			vertex.Set("tilingFactor", quadVertex.TilingFactor);
+			vertex.Set("tilingFactor", tilingFactor);
 
 			s_Data->QuadVertexBuffer.push_back(vertex);
 		}
 
 		s_Data->QuadIndexCount += 6;
 	}
-
 
 	void Renderer2D::EndScene(Command& cmd)
 	{
