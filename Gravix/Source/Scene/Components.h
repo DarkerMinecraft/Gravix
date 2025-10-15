@@ -2,6 +2,8 @@
 
 #include "Core/UUID.h"
 
+#include "SceneCamera.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -60,6 +62,16 @@ namespace Gravix
 
 		operator glm::vec4&() { return Color; }
 		operator const glm::vec4&() const { return Color; }
+	};
+
+	struct CameraComponent 
+	{
+		SceneCamera Camera;
+		bool Primary = false;
+		bool FixedAspectRatio = false;
+
+		CameraComponent() = default;
+		CameraComponent(const CameraComponent&) = default;
 	};
 
 }

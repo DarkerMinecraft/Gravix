@@ -3,7 +3,7 @@
 
 #include "Core/Application.h"
 
-#include "Renderer/Vulkan/VulkanMesh.h"
+#include "Renderer/Vulkan/Types/VulkanMesh.h"
 
 namespace Gravix 
 {

@@ -3,6 +3,8 @@
 
 #include "Scheduler.h"
 
+#include "Scene/ComponentRegistry.h"
+
 namespace Gravix
 {
 	Application* Application::s_Instance = nullptr;
@@ -26,6 +28,7 @@ namespace Gravix
 		m_Scheduler->Init(4); // Initialize with 4 threads
 
 		m_ImGuiRender = new ImGuiRender();
+		ComponentRegistry::Get().RegisterAllComponents();
 	}
 
 	Application::~Application()

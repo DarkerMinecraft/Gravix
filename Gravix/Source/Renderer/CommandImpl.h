@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Renderer/Generic/Material.h"
-#include "Renderer/Generic/Framebuffer.h"
-#include "Renderer/Generic/Mesh.h"
-#include "Renderer/Generic/Texture.h"
+#include "Renderer/Generic/Types/Material.h"
+#include "Renderer/Generic/Types/Framebuffer.h"
+#include "Renderer/Generic/Types/Mesh.h"
+#include "Renderer/Generic/Types/Texture.h"
 
 namespace Gravix 
 {

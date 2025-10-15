@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Framebuffer.h"
+#include "Types/Framebuffer.h"
 #include "Renderer/CommandImpl.h"
 
 namespace Gravix

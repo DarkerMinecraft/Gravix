@@ -1,8 +1,5 @@
 #include "AppLayer.h"
 
-#include "Command.h"
-#include "Renderer2D.h"
-
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -39,6 +36,7 @@ namespace Orbit
 		{
 			m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
 			m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
+			m_ActiveScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
 		}
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
@@ -48,7 +46,7 @@ namespace Orbit
 	{
 		Gravix::Command cmd(m_MainFramebuffer, 0, false);
 
-		m_ActiveScene->OnEditorRender(cmd);
+		//m_ActiveScene->OnEditorRender(cmd);
 	}
 
 	void AppLayer::OnImGuiRender()
@@ -97,7 +95,10 @@ namespace Orbit
 
 		if (ImGui::BeginMenuBar())
 		{
-
+			if (ImGui::BeginMenu("File"))
+			{
+				ImGui::EndMenu();
+			}
 			ImGui::EndMenuBar();
 		}
 

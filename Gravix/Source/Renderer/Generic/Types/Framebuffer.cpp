@@ -3,7 +3,7 @@
 
 #include "Core/Application.h"
 
-#include "Renderer/Vulkan/VulkanFramebuffer.h"
+#include "Renderer/Vulkan/Types/VulkanFramebuffer.h"
 
 namespace Gravix 
 {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Renderer/Generic/Framebuffer.h"
+#include "Renderer/Generic/Types/Framebuffer.h"
 
-#include "Utils/VulkanTypes.h"
-#include "VulkanDevice.h"
+#include "Renderer/Vulkan/Utils/VulkanTypes.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
 
 namespace Gravix 
 {

@@ -3,8 +3,8 @@
 #include "VulkanFramebuffer.h"
 #include "VulkanTexture.h"
 
-#include "Utils/DescriptorWriter.h"
-#include "Utils/VulkanUtils.h"
+#include "Renderer/Vulkan/Utils/DescriptorWriter.h"
+#include "Renderer/Vulkan/Utils/VulkanUtils.h"
 
 namespace Gravix
 {

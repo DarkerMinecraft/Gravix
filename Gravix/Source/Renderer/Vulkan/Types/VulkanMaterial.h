@@ -2,10 +2,10 @@
 
 #include "Reflections/ShaderReflection.h"
 
-#include "Renderer/Generic/Material.h"
-#include "Renderer/Generic/Texture.h"
+#include "Renderer/Generic/Types/Material.h"
+#include "Renderer/Generic/Types/Texture.h"
 
-#include "VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
 
 namespace Gravix 
 {

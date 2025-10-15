@@ -1,8 +1,8 @@
 ﻿#include "pch.h"
 #include "VulkanFramebuffer.h"
 
-#include "Utils/VulkanInitializers.h"
-#include "Utils/VulkanUtils.h"
+#include "Renderer/Vulkan/Utils/VulkanInitializers.h"
+#include "Renderer/Vulkan/Utils/VulkanUtils.h"
 
 #include "Core/Application.h"
 

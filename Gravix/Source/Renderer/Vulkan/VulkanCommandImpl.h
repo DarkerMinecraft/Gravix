@@ -3,8 +3,8 @@
 #include "Renderer/CommandImpl.h"
 #include "Renderer/Generic/Device.h"
 
-#include "VulkanFramebuffer.h"
-#include "VulkanMaterial.h"
+#include "Types/VulkanFramebuffer.h"
+#include "Types/VulkanMaterial.h"
 #include "VulkanDevice.h"
 
 namespace Gravix 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Renderer/Generic/Mesh.h"
-#include "VulkanDevice.h"
+#include "Renderer/Generic/Types/Mesh.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
 
 namespace Gravix 
 {

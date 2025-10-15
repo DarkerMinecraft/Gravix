@@ -3,9 +3,9 @@
 
 #include "Core/UUID.h"
 
-#include "Renderer/Generic/Material.h"
-#include "Renderer/Generic/Texture.h"
-#include "Renderer/Generic/Mesh.h"
+#include "Renderer/Generic/Types/Material.h"
+#include "Renderer/Generic/Types/Texture.h"
+#include "Renderer/Generic/Types/Mesh.h"
 #include <glm/ext/matrix_transform.hpp>
 
 namespace Gravix
@@ -102,6 +102,19 @@ namespace Gravix
 		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
 
 		s_Data->PushConstants.Set("viewProjMatrix", viewProjection);
+	}
+
+	void Renderer2D::BeginScene(Command& cmd, const Camera& camera, const glm::mat4& transform)
+	{
+		s_Data->TextureSlotIndex = 1;
+		s_Data->QuadIndexCount = 0;
+		s_Data->QuadVertexBuffer.clear();
+
+		cmd.SetActiveMaterial(s_Data->TexturedMaterial);
+		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
+
+		glm::mat4 viewProj = camera.GetProjection() * glm::inverse(transform);
+		s_Data->PushConstants.Set("viewProjMatrix", viewProj);
 	}
 
 	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)

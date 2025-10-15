@@ -1,14 +1,6 @@
 #pragma once
 
-#include "Layer.h"
-
-#include "Framebuffer.h"
-#include "Material.h"
-#include "Texture.h"
-#include "DynamicStruct.h"
-#include "OrthographicCamera.h"
-
-#include "Scene.h"
+#include "Gravix.h"
 
 #include <glm/glm.hpp>
 

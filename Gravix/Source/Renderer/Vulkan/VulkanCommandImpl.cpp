@@ -3,7 +3,7 @@
 
 #include "VulkanDevice.h"
 
-#include "VulkanMesh.h"
+#include "Types/VulkanMesh.h"
 
 #include "Utils/VulkanInitializers.h"
 #include "Utils/VulkanUtils.h"

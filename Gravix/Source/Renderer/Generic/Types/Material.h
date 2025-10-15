@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Renderer/Specification.h"
-#include "Renderer/Generic/Framebuffer.h"
+#include "Renderer/Generic/Types/Framebuffer.h"
 
 #include "Reflections/DynamicStruct.h"
 

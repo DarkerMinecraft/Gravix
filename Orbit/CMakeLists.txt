@@ -28,10 +28,6 @@ target_include_directories(Orbit
 target_include_directories(Orbit
     PRIVATE
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Core
-        ${CMAKE_SOURCE_DIR}/Gravix/Source/Renderer/Generic
-        ${CMAKE_SOURCE_DIR}/Gravix/Source/Events
-        ${CMAKE_SOURCE_DIR}/Gravix/Source/Reflections
-        ${CMAKE_SOURCE_DIR}/Gravix/Source/Scene
 
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/

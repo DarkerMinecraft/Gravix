@@ -1,7 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Scene.h"
 #include "Components.h"
+
+#include "ComponentRegistry.h"
 
 #include <entt/entt.hpp>
 
@@ -20,7 +22,15 @@ namespace Gravix
 		{
 			GX_CORE_ASSERT(!HasComponent<T>(), "Entity already has componenet!");
 
-			return m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
+			T& component = m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
+
+			if (auto* info = ComponentRegistry::Get().GetComponentInfo(typeid(T)))
+			{
+				if (info->OnCreateFunc)
+					info->OnCreateFunc(&component, m_Scene);
+			}
+
+			return component;
 		}
 
 		template<typename T>

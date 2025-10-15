@@ -2,6 +2,9 @@
 
 #include "Core/Log.h"
 
+#include "Serialization/BinarySerializer.h"
+#include "Serialization/BinaryDeserializer.h"
+
 #include <string>
 #include <vector>
 
@@ -12,6 +15,20 @@ namespace Gravix
 		std::string Name;
 		size_t Offset;
 		size_t Size;
+
+		void Serialize(BinarySerializer& serializer) 
+		{
+			serializer.Write(Name);
+			serializer.Write(Offset);
+			serializer.Write(Size);
+		}
+
+		void Deserialize(BinaryDeserializer& deserializer) 
+		{
+			Name = deserializer.ReadString();
+			Offset = deserializer.Read<size_t>();
+			Size = deserializer.Read<size_t>();
+		}
 	};
 
 	struct ReflectedStruct
@@ -48,6 +65,20 @@ namespace Gravix
 			{
 				GX_CORE_ERROR("Field '{}' not found in struct '{}'", fieldName, Name);
 			}
+		}
+
+		void Serialize(BinarySerializer& serializer) 
+		{
+			serializer.Write(Name);
+			serializer.Write(Size);
+			serializer.Write(Members);
+		}
+
+		void Deserialize(BinaryDeserializer& deserializer) 
+		{
+			Name = deserializer.ReadString();
+			Size = deserializer.Read<size_t>();
+			Members = deserializer.ReadVector<ReflectedStructMember>();
 		}
 	};
 	

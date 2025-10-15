@@ -23,7 +23,6 @@ namespace Gravix
 		void ExtractPushConstants(slang::ProgramLayout* programLayout, ShaderReflection* reflection);
 		void ExtractVertexAttributes(slang::EntryPointReflection* entryPointReflection, ShaderReflection* reflection);
 		void ExtractComputeDispatchInfo(slang::EntryPointReflection* entryPoint, ShaderReflection* reflection);
-		void ExtractBuffers(slang::ProgramLayout* layout, ShaderReflection* reflection);
 
 		void ExtractStructs(slang::ProgramLayout* layout, ShaderReflection* reflection);
 		void ProcessStructType(slang::TypeLayoutReflection* typeLayout,

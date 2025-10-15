@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Renderer/Generic/Texture.h"
-#include "Utils/VulkanTypes.h"
+#include "Renderer/Generic/Types/Texture.h"
 
 #include "Core/UUID.h"
 
-#include "VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
+#include "Renderer/Vulkan/Utils/VulkanTypes.h"
 
 namespace Gravix
 {

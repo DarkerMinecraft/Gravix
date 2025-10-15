@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Core/Log.h"
-#include "Generic/Framebuffer.h"
+#include "Generic/Types/Framebuffer.h"
 
 namespace Gravix
 {
