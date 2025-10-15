@@ -2,7 +2,7 @@ import os
 import sys
 import platform
 import subprocess
-import json
+import glob
 from typing import Optional, Dict, List, Tuple
 
 
@@ -44,18 +44,7 @@ class GPUCapabilityChecker:
         Returns None if vulkaninfo is not available.
         """
         try:
-            # Try JSON output first (more reliable to parse)
-            result = subprocess.run(
-                ["vulkaninfo", "--json"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode == 0:
-                return self._parse_vulkaninfo_json(result.stdout)
-            
-            # Try regular vulkaninfo output
+            # Use --summary to avoid JSON file creation
             result = subprocess.run(
                 ["vulkaninfo", "--summary"],
                 capture_output=True,
@@ -63,60 +52,32 @@ class GPUCapabilityChecker:
                 timeout=10
             )
             
-            if result.returncode == 0:
-                return self._parse_vulkaninfo_text(result.stdout)
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    return self._parse_vulkaninfo_text(result.stdout)
+                except Exception as e:
+                    print(f"  ⚠ Failed to parse vulkaninfo output: {e}")
+                    # Fall through to return None
+            
+            # Clean up any JSON files that vulkaninfo might have created
+            self._cleanup_vulkaninfo_files()
                 
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
         
+        # Return None to trigger fallback to basic GPU detection
         return None
     
-    def _parse_vulkaninfo_json(self, output: str) -> Tuple[bool, List[Dict], str]:
-        """Parse vulkaninfo JSON output."""
+    def _cleanup_vulkaninfo_files(self):
+        """Clean up JSON files created by vulkaninfo."""
         try:
-            data = json.loads(output)
-            gpus = []
-            has_1_4_support = False
-            
-            # Check if there are any physical devices
-            if "capabilities" not in data or "device" not in data["capabilities"]:
-                return False, [], "No Vulkan-capable GPUs detected."
-            
-            devices = data["capabilities"]["device"]
-            if not devices:
-                return False, [], "No Vulkan-capable GPUs detected."
-            
-            for device in devices:
-                props = device.get("properties", {})
-                gpu_name = props.get("deviceName", "Unknown GPU")
-                api_version = props.get("apiVersion", 0)
-                
-                # Parse Vulkan version
-                major = (api_version >> 22) & 0x3FF
-                minor = (api_version >> 12) & 0x3FF
-                patch = api_version & 0xFFF
-                version_str = f"{major}.{minor}.{patch}"
-                
-                supports_1_4 = api_version >= self.VULKAN_1_4_VERSION
-                
-                gpu_info = {
-                    "name": gpu_name,
-                    "api_version": version_str,
-                    "supports_1_4": supports_1_4,
-                    "vendor_id": props.get("vendorID", "Unknown")
-                }
-                
-                gpus.append(gpu_info)
-                if supports_1_4:
-                    has_1_4_support = True
-            
-            if not has_1_4_support:
-                return False, gpus, "No GPU supports Vulkan 1.4 or higher."
-            
-            return True, gpus, ""
-            
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            return False, [], f"Failed to parse vulkaninfo output: {e}"
+            for json_file in glob.glob("VP_VULKANINFO_*.json"):
+                try:
+                    os.remove(json_file)
+                except:
+                    pass
+        except:
+            pass
     
     def _parse_vulkaninfo_text(self, output: str) -> Tuple[bool, List[Dict], str]:
         """Parse vulkaninfo text output."""
@@ -141,7 +102,7 @@ class GPUCapabilityChecker:
             # Extract API version
             if current_gpu and "apiVersion" in line and "=" in line:
                 version_part = line.split("=", 1)[1].strip()
-                # Parse version like "1.4.280" or hex value
+                # Parse version like "1.4.280"
                 if "." in version_part:
                     version_str = version_part.split()[0]
                     current_gpu["api_version"] = version_str
@@ -324,12 +285,12 @@ class GPUCapabilityChecker:
             version = gpu.get("api_version", "Unknown")
             supports = gpu.get("supports_1_4", False)
             
-            status = "✓" if supports else "✗"
+            status = "✓" if supports else "?"
             print(f"  {status} GPU {i}: {name}")
             print(f"     Vulkan API: {version}")
             
             if supports:
-                print(f"     Status: Vulkan 1.4 supported ✓")
+                print(f"     Status: Likely supports Vulkan 1.4 ✓")
             else:
                 print(f"     Status: Vulkan 1.4 support unknown or unsupported")
         
