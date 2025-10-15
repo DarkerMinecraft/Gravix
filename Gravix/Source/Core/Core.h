@@ -18,8 +18,8 @@
 #define GX_ASSERT(x, ...)
 #define GX_CORE_ASSERT(x, ...)
 
-#define GX_ASSERT(...)
-#define GX_CORE_ASSERT(...)
+#define GX_STATIC_ASSERT(...)
+#define GX_STATIC_CORE_ASSERT(...)
 #endif
 
 

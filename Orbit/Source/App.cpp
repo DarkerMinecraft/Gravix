@@ -1,12 +1,12 @@
 #include "Application.h"
-#include "Log.h"
-
 #include "AppLayer.h"
 
-#include <crtdbg.h>
 
 #ifdef ENGINE_PLATFORM_WINDOWS
 #ifdef ENGINE_DEBUG
+
+#include "Log.h"
+#include <crtdbg.h>
 
 	int main()
 	{
@@ -15,6 +15,23 @@
 
 		Gravix::Log::Init();
 
+		Gravix::ApplicationSpecification appSpec{};
+		appSpec.Width = 1280;
+		appSpec.Height = 720;
+		appSpec.Title = "Orbit";
+
+		Gravix::Application app(appSpec);
+		app.PushLayer<Orbit::AppLayer>();
+		app.Run();
+
+		return 0;
+	}
+
+#endif
+#ifdef ENGINE_RELEASE
+
+	int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+	{
 		Gravix::ApplicationSpecification appSpec{};
 		appSpec.Width = 1280;
 		appSpec.Height = 720;
