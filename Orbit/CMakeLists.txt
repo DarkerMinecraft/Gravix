@@ -60,7 +60,7 @@ set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Orbit)
 if(WIN32)
     # Set console subsystem for debugging, windows subsystem for release
     set_target_properties(Orbit PROPERTIES
-        WIN32_EXECUTABLE $<CONFIG:Release>
+        WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>
     )
     
     # Add Windows-specific resources if available

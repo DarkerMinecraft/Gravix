@@ -8,6 +8,8 @@ namespace Gravix
 	std::shared_ptr<spdlog::logger> Log::s_CoreLogger;
 	std::shared_ptr<spdlog::logger> Log::s_ClientLogger;
 
+	bool Log::s_IsActive = false;
+
 	void Log::Init()
 	{
 		spdlog::set_pattern("%^[%T] %n: %v%$");
@@ -16,5 +18,7 @@ namespace Gravix
 
 		s_ClientLogger = spdlog::stdout_color_mt("APP");
 		s_ClientLogger->set_level(spdlog::level::trace);
+
+		s_IsActive = true;
 	}
 }

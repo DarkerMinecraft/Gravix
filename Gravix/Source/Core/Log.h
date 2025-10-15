@@ -17,9 +17,13 @@ namespace Gravix
 
 		inline static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_CoreLogger; }
 		inline static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
+
+		inline static bool IsActive() { return s_IsActive; }
 	private:
 		static std::shared_ptr<spdlog::logger> s_CoreLogger;
 		static std::shared_ptr<spdlog::logger> s_ClientLogger;
+
+		static bool s_IsActive;
 	};
 }
 
@@ -66,13 +70,13 @@ namespace fmt
 	};
 }
 
-#define GX_CORE_CRITICAL(...) ::Gravix::Log::GetCoreLogger()->critical(__VA_ARGS__);
-#define GX_CORE_ERROR(...) ::Gravix::Log::GetCoreLogger()->error(__VA_ARGS__);
-#define GX_CORE_WARN(...) ::Gravix::Log::GetCoreLogger()->warn(__VA_ARGS__);
-#define GX_CORE_INFO(...) ::Gravix::Log::GetCoreLogger()->info(__VA_ARGS__);
-#define GX_CORE_TRACE(...) ::Gravix::Log::GetCoreLogger()->trace(__VA_ARGS__);
+#define GX_CORE_CRITICAL(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetCoreLogger()->critical(__VA_ARGS__);
+#define GX_CORE_ERROR(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetCoreLogger()->error(__VA_ARGS__);
+#define GX_CORE_WARN(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetCoreLogger()->warn(__VA_ARGS__);
+#define GX_CORE_INFO(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetCoreLogger()->info(__VA_ARGS__);
+#define GX_CORE_TRACE(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetCoreLogger()->trace(__VA_ARGS__);
 
-#define GX_ERROR(...) ::Gravix::Log::GetClientLogger()->error(__VA_ARGS__);
-#define GX_WARN(...) ::Gravix::Log::GetClientLogger()->warn(__VA_ARGS__);
-#define GX_INFO(...) ::Gravix::Log::GetClientLogger()->info(__VA_ARGS__);
-#define GX_TRACE(...) ::Gravix::Log::GetClientLogger()->trace(__VA_ARGS__);
+#define GX_ERROR(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetClientLogger()->error(__VA_ARGS__);
+#define GX_WARN(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetClientLogger()->warn(__VA_ARGS__);
+#define GX_INFO(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetClientLogger()->info(__VA_ARGS__);
+#define GX_TRACE(...) if(::Gravix::Log::IsActive()) ::Gravix::Log::GetClientLogger()->trace(__VA_ARGS__);
