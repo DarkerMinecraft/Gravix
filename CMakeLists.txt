@@ -54,6 +54,7 @@ set_target_properties(compiler-core PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(slangi PROPERTIES FOLDER "Slang/Dependencies")
 
 # Add engine modules
+add_subdirectory(Gravix-ScriptCore)
 add_subdirectory(GravixScripting)
 add_subdirectory(Gravix)
 add_subdirectory(Orbit)

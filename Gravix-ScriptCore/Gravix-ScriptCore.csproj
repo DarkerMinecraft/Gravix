@@ -5,8 +5,4 @@
 		<SelfContained>false</SelfContained>
 		<PublishAot>false</PublishAot>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="../../Gravix-ScriptCore/Gravix-ScriptCore.csproj" />
-	</ItemGroup>
 </Project>

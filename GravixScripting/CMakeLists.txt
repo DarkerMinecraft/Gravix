@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(GravixScripting)
 
 add_library(GravixScripting STATIC)
+add_dependencies(GravixScripting Gravix-ScriptCore)
 
 file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"
@@ -79,7 +80,8 @@ find_program(DOTNET_EXECUTABLE dotnet REQUIRED)
 set(MANAGED_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Managed")
 set(MANAGED_OUTPUT_DIR "${CMAKE_BINARY_DIR}/GravixScripting/Managed")
 
-add_custom_command(TARGET GravixScripting PRE_BUILD
+# Create a custom target that ALWAYS builds the managed assembly
+add_custom_target(GravixScriptingManaged ALL
     COMMAND ${DOTNET_EXECUTABLE} publish 
         "${MANAGED_PROJECT_DIR}/GravixScripting.csproj"
         --configuration $<CONFIG>
@@ -88,6 +90,9 @@ add_custom_command(TARGET GravixScripting PRE_BUILD
     WORKING_DIRECTORY ${MANAGED_PROJECT_DIR}
     COMMENT "Building framework-dependent managed GravixScripting assembly"
 )
+
+# Make GravixScripting depend on the managed build
+add_dependencies(GravixScripting GravixScriptingManaged)
 
 # Copy only the managed DLL and runtimeconfig.json
 add_custom_command(TARGET GravixScripting POST_BUILD
