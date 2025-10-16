@@ -28,13 +28,12 @@ if(WIN32)
     
     target_include_directories(GravixScripting PRIVATE ${NETHOST_PATH})
     
-    # Link nethost.lib
-    find_library(NETHOST_LIB
+        find_library(NETHOST_LIB
         NAMES nethost
         PATHS ${NETHOST_PATH}
         REQUIRED
     )
-    target_link_libraries(GravixScripting PRIVATE ${NETHOST_LIB})
+    target_link_libraries(GravixScripting PUBLIC ${NETHOST_LIB})
     
 elseif(UNIX AND NOT APPLE)
     # Linux: Use installed .NET SDK
@@ -48,7 +47,7 @@ elseif(UNIX AND NOT APPLE)
         PATHS ${NETHOST_PATH}
         REQUIRED
     )
-    target_link_libraries(GravixScripting PRIVATE ${NETHOST_LIB} dl pthread)
+    target_link_libraries(GravixScripting PUBLIC ${NETHOST_LIB} dl pthread)
     
 elseif(APPLE)
     # macOS: Use installed .NET SDK
@@ -62,8 +61,15 @@ elseif(APPLE)
         PATHS ${NETHOST_PATH}
         REQUIRED
     )
-    target_link_libraries(GravixScripting PRIVATE ${NETHOST_LIB})
+    target_link_libraries(GravixScripting PUBLIC ${NETHOST_LIB})
 endif()
+
+add_custom_command(TARGET GravixScripting POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${NETHOST_PATH}/nethost.dll"
+            $<TARGET_FILE_DIR:GravixScripting>
+        COMMENT "Copying nethost.dll to GravixScripting output directory"
+    )
 
 # Public include directories
 target_include_directories(GravixScripting 

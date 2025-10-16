@@ -33,6 +33,7 @@ namespace Gravix
 		ComponentRegistry::Get().RegisterAllComponents();
 
 		ScriptEngine::Init();
+		ScriptEngine::LoadAssembly("GravixScripting.dll");
 	}
 
 	Application::~Application()
