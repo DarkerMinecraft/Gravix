@@ -81,7 +81,14 @@ endif()
 add_custom_command(TARGET Orbit POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
     $<TARGET_FILE:slang>
-    $<TARGET_FILE_DIR:Orbit>)
+    $<TARGET_FILE_DIR:Orbit>
+)
+
+add_custom_command(TARGET Orbit POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:GravixScripting>
+    $<TARGET_FILE_DIR:Orbit>
+)
 
 # Debug information
 message(STATUS "Orbit Editor configured successfully")

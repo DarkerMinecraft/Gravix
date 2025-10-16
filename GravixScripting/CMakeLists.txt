@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(GravixScripting)
 
-add_library(GravixScripting STATIC)
+add_library(GravixScripting SHARED)
 
 file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"
@@ -70,20 +70,3 @@ target_include_directories(GravixScripting
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/
 )
-
-# Link with Gravix core
-target_link_libraries(GravixScripting PUBLIC Gravix)
-
-# --- Optional: Add custom target to build C# scripts ---
-find_program(DOTNET_EXECUTABLE dotnet)
-
-if(DOTNET_EXECUTABLE)
-    add_custom_target(BuildScripts ALL
-        COMMAND ${DOTNET_EXECUTABLE} build "${CMAKE_SOURCE_DIR}/Scripts/GravixScripts.csproj" 
-                -c Release -o "${CMAKE_BINARY_DIR}/Scripts"
-        COMMENT "Building C# Scripts"
-        VERBATIM
-    )
-    
-    add_dependencies(GravixScripting BuildScripts)
-endif()
