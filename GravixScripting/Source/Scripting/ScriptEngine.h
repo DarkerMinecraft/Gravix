@@ -8,7 +8,7 @@ namespace Gravix
 	class ScriptEngine
 	{
 	public:
-		static void Init();
+		static void Init(const std::filesystem::path& assemblyPath);
 		static void Shutdown();
 
 		static bool ReloadAssembly();

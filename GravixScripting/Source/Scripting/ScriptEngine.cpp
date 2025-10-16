@@ -9,6 +9,7 @@
 #include <hostfxr.h>
 #include <iostream>
 #include <minwindef.h>
+#include <codecvt>
 
 #ifdef ENGINE_PLATFORM_WINDOWS
 #define STR(s) L ## s
@@ -92,7 +93,8 @@ namespace Gravix
 	{
 #ifdef ENGINE_PLATFORM_WINDOWS
 		std::wstring wstr(message);
-		std::string str(wstr.begin(), wstr.end());
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		std::string str = converter.to_bytes(wstr);
 		std::cerr << "[HOSTFXR] " << str << "\n";
 #else
 		std::cerr << "[HOSTFXR] " << message << "\n";
@@ -100,10 +102,10 @@ namespace Gravix
 	}
 
 	// --- Public API ---
-	void ScriptEngine::Init()
+	void ScriptEngine::Init(const std::filesystem::path& assemblyPath)
 	{
 		std::cout << "[ScriptEngine] Initializing Script Engine\n";
-		InitDotNet("GravixScripting.dll");
+		InitDotNet(assemblyPath);
 	}
 
 	void ScriptEngine::Shutdown()
