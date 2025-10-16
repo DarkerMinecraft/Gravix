@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "AssetManagerEditor.h"
+#include "EditorAssetManager.h"
 
 namespace Gravix 
 {
