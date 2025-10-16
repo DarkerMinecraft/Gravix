@@ -42,7 +42,6 @@ set(SLANG_ENABLE_SLANGD OFF CACHE BOOL "" FORCE)          # Disable language ser
 set(SLANG_ENABLE_TESTS OFF CACHE BOOL "" FORCE)           # Disable tests
 set(SLANG_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)        # Disable samples/examples
 set(SLANG_ENABLE_SLANGRT ON CACHE BOOL "" FORCE)          # Enable runtime (reflection, compiler core)
-set(SLANG_LIB_TYPE STATIC CACHE STRING "" FORCE)          # Build static libraries
 
 add_subdirectory(ThirdParties/Slang)
 set_target_properties(slang PROPERTIES FOLDER "Slang/Dependencies")

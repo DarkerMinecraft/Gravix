@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(GravixScripting)
 
-add_library(GravixScripting SHARED)
+add_library(GravixScripting STATIC)
 
 file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"

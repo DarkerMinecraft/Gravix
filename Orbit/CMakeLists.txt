@@ -80,16 +80,21 @@ endif()
 
 add_custom_command(TARGET Orbit POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:GravixScripting>
-        $<TARGET_FILE_DIR:Orbit>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.dll"
         $<TARGET_FILE_DIR:Orbit>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.runtimeconfig.json"
         $<TARGET_FILE_DIR:Orbit>
-    COMMENT "Copying GravixScripting native and managed DLLs"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_BINARY_DIR}/GravixScripting/nethost.dll"
+        $<TARGET_FILE_DIR:Orbit>
+    COMMENT "Copying GravixScripting config and managed DLLs"
 )
+
+add_custom_command(TARGET Orbit POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:slang>
+    $<TARGET_FILE_DIR:Orbit>)
 
 # Debug information
 message(STATUS "Orbit Editor configured successfully")

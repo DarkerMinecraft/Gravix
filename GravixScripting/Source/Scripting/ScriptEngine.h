@@ -1,13 +1,11 @@
 #pragma once
 
-#include "Export.h"
-
 #include <string>
 #include <filesystem>
 
 namespace Gravix
 {
-	class GRAVIXSCRIPTING_API ScriptEngine
+	class ScriptEngine
 	{
 	public:
 		static void Init(const std::filesystem::path& assemblyPath);
