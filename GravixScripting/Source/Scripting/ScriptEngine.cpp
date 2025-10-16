@@ -23,8 +23,9 @@
 namespace Gravix
 {
 	// --- Function Pointer Types ---
-	using HostfxrInitializeForRuntimeConfigFn = int32_t(*)(
-		const char_t* runtime_config_path,
+	using HostfxrInitializeForDotnetCommandLineFn = int32_t(*)(
+		int argc,
+		const char_t** argv,
 		const struct hostfxr_initialize_parameters* parameters,
 		hostfxr_handle* host_context_handle
 		);
@@ -42,7 +43,7 @@ namespace Gravix
 		void* m_HostfxrLib = nullptr;
 		hostfxr_handle m_HostContext = nullptr;
 
-		HostfxrInitializeForRuntimeConfigFn m_InitFxrForConfig = nullptr;
+		HostfxrInitializeForDotnetCommandLineFn m_InitFxrForCommandLine = nullptr;
 		HostfxrGetRuntimeDelegateFn m_GetRuntimeDelegate = nullptr;
 		HostfxrCloseFn m_Close = nullptr;
 		HostfxrSetErrorWriterFn m_SetErrorWriter = nullptr;
@@ -50,7 +51,6 @@ namespace Gravix
 		load_assembly_and_get_function_pointer_fn m_LoadAssemblyAndGetFunctionPointer = nullptr;
 
 		std::filesystem::path m_AssemblyPath;
-		std::filesystem::path m_RuntimeConfigPath;
 	};
 
 	static ScriptEngineData s_Data;
@@ -103,7 +103,7 @@ namespace Gravix
 	void ScriptEngine::Init()
 	{
 		std::cout << "[ScriptEngine] Initializing Script Engine\n";
-		InitDotNet();
+		InitDotNet("GravixScripting.dll");
 	}
 
 	void ScriptEngine::Shutdown()
@@ -122,20 +122,6 @@ namespace Gravix
 
 		s_Data.m_AssemblyPath = assemblyPath;
 
-		// Look for .runtimeconfig.json next to the assembly
-		std::filesystem::path runtimeConfig = assemblyPath;
-		runtimeConfig.replace_extension(".runtimeconfig.json");
-
-		if (!std::filesystem::exists(runtimeConfig))
-		{
-			std::cout << "[ScriptEngine] Runtime config not found: " << runtimeConfig.string() << "\n";
-			std::cout << "[ScriptEngine] Assembly may still load if it's self-contained\n";
-		}
-		else
-		{
-			s_Data.m_RuntimeConfigPath = runtimeConfig;
-		}
-
 		// Load hostfxr if not already loaded
 		if (!s_Data.m_HostfxrLib && !LoadHostFxr())
 		{
@@ -143,7 +129,7 @@ namespace Gravix
 			return false;
 		}
 
-		// Initialize the host context for this assembly
+		// Initialize the host context for this assembly (self-contained mode)
 		if (!InitializeHostFxrContext(assemblyPath))
 		{
 			std::cerr << "[ScriptEngine] Failed to initialize hostfxr context\n";
@@ -222,12 +208,12 @@ namespace Gravix
 	}
 
 	// --- Private Implementation ---
-	void ScriptEngine::InitDotNet()
+	void ScriptEngine::InitDotNet(const std::filesystem::path& assemblyPath)
 	{
 		std::cout << "[ScriptEngine] Initializing .NET Runtime\n";
-
-		// We'll load assemblies on-demand, so just prepare the system
 		s_Data = ScriptEngineData{};
+
+		LoadAssembly(assemblyPath);
 	}
 
 	void ScriptEngine::ShutdownDotNet()
@@ -257,28 +243,61 @@ namespace Gravix
 
 	bool ScriptEngine::LoadHostFxr()
 	{
-		// Get the path to hostfxr
-		char_t buffer[MAX_PATH];
-		size_t bufferSize = sizeof(buffer) / sizeof(char_t);
+		// For self-contained: Look for hostfxr next to the assembly
+		// For framework-dependent: Use get_hostfxr_path
 
-		int32_t result = get_hostfxr_path(buffer, &bufferSize, nullptr);
-		if (result != 0)
+		// Try self-contained first (hostfxr.dll/so in app directory)
+		std::filesystem::path appDir = std::filesystem::current_path();
+
+#ifdef ENGINE_PLATFORM_WINDOWS
+		std::filesystem::path hostfxrPath = appDir / "hostfxr.dll";
+#elif defined(__APPLE__)
+		std::filesystem::path hostfxrPath = appDir / "libhostfxr.dylib";
+#else
+		std::filesystem::path hostfxrPath = appDir / "libhostfxr.so";
+#endif
+
+		bool isGlobalHostfxr = false;
+
+		// If not found locally, try to get system hostfxr
+		if (!std::filesystem::exists(hostfxrPath))
 		{
-			std::cerr << "[ScriptEngine] Failed to get hostfxr path (error code: " << result << ")\n";
-			return false;
+			char_t buffer[MAX_PATH];
+			size_t bufferSize = sizeof(buffer) / sizeof(char_t);
+
+			int32_t result = get_hostfxr_path(buffer, &bufferSize, nullptr);
+			if (result != 0)
+			{
+				std::cerr << "[ScriptEngine] Failed to get hostfxr path (error code: " << result << ")\n";
+				std::cerr << "[ScriptEngine] Make sure to publish your .NET assembly as self-contained\n";
+				return false;
+			}
+
+			hostfxrPath = buffer;
+			isGlobalHostfxr = true;
+			std::cout << "[ScriptEngine] Using system hostfxr: " << hostfxrPath << "\n";
+		}
+		else
+		{
+			std::cout << "[ScriptEngine] Using local hostfxr (self-contained): " << hostfxrPath << "\n";
 		}
 
 		// Load the hostfxr library
-		s_Data.m_HostfxrLib = LoadNativeLibrary(buffer);
+#ifdef ENGINE_PLATFORM_WINDOWS
+		s_Data.m_HostfxrLib = LoadNativeLibrary(hostfxrPath.wstring().c_str());
+#else
+		s_Data.m_HostfxrLib = LoadNativeLibrary(hostfxrPath.c_str());
+#endif
+
 		if (!s_Data.m_HostfxrLib)
 		{
-			std::cerr << "[ScriptEngine] Failed to load hostfxr library\n";
+			std::cerr << "[ScriptEngine] Failed to load hostfxr library from: " << hostfxrPath << "\n";
 			return false;
 		}
 
-		// Get function pointers
-		s_Data.m_InitFxrForConfig = (HostfxrInitializeForRuntimeConfigFn)
-			GetExport(s_Data.m_HostfxrLib, "hostfxr_initialize_for_runtime_config");
+		// Get function pointers - USE COMMAND LINE VERSION for self-contained
+		s_Data.m_InitFxrForCommandLine = (HostfxrInitializeForDotnetCommandLineFn)
+			GetExport(s_Data.m_HostfxrLib, "hostfxr_initialize_for_dotnet_command_line");
 
 		s_Data.m_GetRuntimeDelegate = (HostfxrGetRuntimeDelegateFn)
 			GetExport(s_Data.m_HostfxrLib, "hostfxr_get_runtime_delegate");
@@ -289,7 +308,7 @@ namespace Gravix
 		s_Data.m_SetErrorWriter = (HostfxrSetErrorWriterFn)
 			GetExport(s_Data.m_HostfxrLib, "hostfxr_set_error_writer");
 
-		if (!s_Data.m_InitFxrForConfig || !s_Data.m_GetRuntimeDelegate || !s_Data.m_Close)
+		if (!s_Data.m_InitFxrForCommandLine || !s_Data.m_GetRuntimeDelegate || !s_Data.m_Close)
 		{
 			std::cerr << "[ScriptEngine] Failed to load required hostfxr functions\n";
 			return false;
@@ -307,29 +326,44 @@ namespace Gravix
 
 	bool ScriptEngine::InitializeHostFxrContext(const std::filesystem::path& assemblyPath)
 	{
-		// Use runtime config if available, otherwise use assembly path
-		std::filesystem::path configPath = s_Data.m_RuntimeConfigPath.empty()
-			? assemblyPath
-			: s_Data.m_RuntimeConfigPath;
+		// For self-contained deployment, use command line initialization
+		std::filesystem::path appDir = assemblyPath.parent_path();
 
 #ifdef ENGINE_PLATFORM_WINDOWS
-		std::wstring wConfigPath = configPath.wstring();
+		std::wstring wAssemblyPath = assemblyPath.wstring();
+		std::wstring wAppDir = appDir.wstring();
+		const char_t* argv[] = { wAssemblyPath.c_str() };
 #else
-		std::string wConfigPath = configPath.string();
+		std::string sAssemblyPath = assemblyPath.string();
+		std::string sAppDir = appDir.string();
+		const char_t* argv[] = { sAssemblyPath.c_str() };
 #endif
 
-		int32_t result = s_Data.m_InitFxrForConfig(
-			wConfigPath.c_str(),
-			nullptr,
+		// Setup initialization parameters for self-contained
+		hostfxr_initialize_parameters params;
+		params.size = sizeof(hostfxr_initialize_parameters);
+		params.host_path = argv[0];
+#ifdef ENGINE_PLATFORM_WINDOWS
+		params.dotnet_root = wAppDir.c_str();
+#else
+		params.dotnet_root = sAppDir.c_str();
+#endif
+
+		int32_t result = s_Data.m_InitFxrForCommandLine(
+			1,
+			argv,
+			&params,
 			&s_Data.m_HostContext
 		);
 
 		if (result != 0 || s_Data.m_HostContext == nullptr)
 		{
-			std::cerr << "[ScriptEngine] Failed to initialize runtime config (error code: " << result << ")\n";
+			std::cerr << "[ScriptEngine] Failed to initialize hostfxr context (error code: " << result << ")\n";
+			std::cerr << "[ScriptEngine] Make sure assembly is published as self-contained with .NET 9\n";
 			return false;
 		}
 
+		std::cout << "[ScriptEngine] Successfully initialized hostfxr context (self-contained mode)\n";
 		return true;
 	}
 

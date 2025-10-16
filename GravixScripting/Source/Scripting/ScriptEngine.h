@@ -11,13 +11,14 @@ namespace Gravix
 		static void Init();
 		static void Shutdown();
 
-		static bool LoadAssembly(const std::filesystem::path& assemblyPath);
 		static bool ReloadAssembly();
 
 		static void* GetFunction(const std::string& typeName, const std::string& methodName);
 	private:
-		static void InitDotNet();
+		static void InitDotNet(const std::filesystem::path& assemblyPath);
 		static void ShutdownDotNet();
+
+		static bool LoadAssembly(const std::filesystem::path& assemblyPath);
 
 		static bool LoadHostFxr();
 		static bool InitializeHostFxrContext(const std::filesystem::path& assemblyPath);
