@@ -79,7 +79,7 @@ elseif(APPLE)
 endif()
 
 add_custom_target(CopyScripting ALL
-    COMMAND ${CMAKE_COMMAND} -E 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.dll"
         $<TARGET_FILE_DIR:Orbit>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

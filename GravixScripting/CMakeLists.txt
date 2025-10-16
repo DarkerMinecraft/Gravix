@@ -70,7 +70,7 @@ endif()
 add_custom_command(TARGET GravixScripting POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${NETHOST_PATH}/nethost.dll"
-            $<TARGET_FILE_DIR:GravixScripting>
+            "$<TARGET_FILE_DIR:GravixScripting>"
         COMMENT "Copying nethost.dll to GravixScripting output directory"
     )
 
