@@ -7,6 +7,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="../../Gravix-ScriptCore/Gravix-ScriptCore.csproj" />
+		<!-- Include all C# files from Gravix-ScriptCore as linked files -->
+		<Compile Include="../../Gravix-ScriptCore/**/*.cs"
+		         Exclude="../../Gravix-ScriptCore/obj/**;../../Gravix-ScriptCore/bin/**"
+		         Link="ScriptCore/%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 </Project>

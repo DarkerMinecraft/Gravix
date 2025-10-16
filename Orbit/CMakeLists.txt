@@ -78,8 +78,8 @@ elseif(APPLE)
     )
 endif()
 
-add_custom_command(TARGET Orbit POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+add_custom_target(CopyScripting ALL
+    COMMAND ${CMAKE_COMMAND} -E 
         "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.dll"
         $<TARGET_FILE_DIR:Orbit>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -90,6 +90,8 @@ add_custom_command(TARGET Orbit POST_BUILD
         $<TARGET_FILE_DIR:Orbit>
     COMMENT "Copying GravixScripting config and managed DLLs"
 )
+
+add_dependencies(Orbit CopyScripting)
 
 add_custom_command(TARGET Orbit POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
