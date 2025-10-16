@@ -9,6 +9,8 @@ file(GLOB_RECURSE SRC_FILES
 )
 target_sources(GravixScripting PRIVATE ${SRC_FILES})
 
+target_compile_definitions(GravixScripting PRIVATE GRAVIXSCRIPTING_EXPORTS)
+
 if(MSVC)
     target_compile_options(GravixScripting PRIVATE /utf-8)
     
@@ -70,6 +72,33 @@ add_custom_command(TARGET GravixScripting POST_BUILD
             $<TARGET_FILE_DIR:GravixScripting>
         COMMENT "Copying nethost.dll to GravixScripting output directory"
     )
+
+# Build the managed .NET assembly (framework-dependent)
+find_program(DOTNET_EXECUTABLE dotnet REQUIRED)
+
+set(MANAGED_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Managed")
+set(MANAGED_OUTPUT_DIR "${CMAKE_BINARY_DIR}/GravixScripting/Managed")
+
+add_custom_command(TARGET GravixScripting PRE_BUILD
+    COMMAND ${DOTNET_EXECUTABLE} publish 
+        "${MANAGED_PROJECT_DIR}/GravixScripting.csproj"
+        --configuration $<CONFIG>
+        --output "${MANAGED_OUTPUT_DIR}"
+        --no-self-contained
+    WORKING_DIRECTORY ${MANAGED_PROJECT_DIR}
+    COMMENT "Building framework-dependent managed GravixScripting assembly"
+)
+
+# Copy only the managed DLL and runtimeconfig.json
+add_custom_command(TARGET GravixScripting POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MANAGED_OUTPUT_DIR}/GravixScripting.dll"
+        $<TARGET_FILE_DIR:GravixScripting>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MANAGED_OUTPUT_DIR}/GravixScripting.runtimeconfig.json"
+        $<TARGET_FILE_DIR:GravixScripting>
+    COMMENT "Copying managed assembly and runtime config"
+)
 
 # Public include directories
 target_include_directories(GravixScripting 

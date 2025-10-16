@@ -83,9 +83,12 @@ add_custom_command(TARGET Orbit POST_BUILD
         $<TARGET_FILE:GravixScripting>
         $<TARGET_FILE_DIR:Orbit>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_BINARY_DIR}/GravixScripting/nethost.dll"
+        "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.dll"
         $<TARGET_FILE_DIR:Orbit>
-    COMMENT "Copying GravixScripting.dll and nethost.dll"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.runtimeconfig.json"
+        $<TARGET_FILE_DIR:Orbit>
+    COMMENT "Copying GravixScripting native and managed DLLs"
 )
 
 # Debug information

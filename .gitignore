@@ -1,3 +1,5 @@
 /.vs
 /out
 /scripts/__pycache__
+/GravixScripting/Managed/bin
+/GravixScripting/Managed/obj
