@@ -45,4 +45,5 @@ target_link_libraries(Gravix
         enkiTS
         ImGui
         slang
+        GravixScripting
 )

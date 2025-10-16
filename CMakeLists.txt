@@ -27,7 +27,6 @@ add_compile_definitions(
     $<$<BOOL:${ENGINE_PLATFORM_MACOS}>:ENGINE_PLATFORM_MACOS>
 )
 
-
 add_subdirectory(ThirdParties/VkBootstrap)
 set_target_properties(vk-bootstrap PROPERTIES FOLDER "Dependencies")
 
@@ -56,6 +55,7 @@ set_target_properties(compiler-core PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(slangi PROPERTIES FOLDER "Slang/Dependencies")
 
 # Add engine modules
+add_subdirectory(GravixScripting)
 add_subdirectory(Gravix)
 add_subdirectory(Orbit)
 
