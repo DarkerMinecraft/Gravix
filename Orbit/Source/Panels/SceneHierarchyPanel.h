@@ -1,0 +1,29 @@
+#pragma once
+
+#include "Scene/Scene.h"
+#include "Scene/Entity.h"
+
+namespace Gravix 
+{
+
+	class SceneHierarchyPanel
+	{
+	public:
+		SceneHierarchyPanel() = default;
+		SceneHierarchyPanel(const Ref<Scene>& scene);
+		~SceneHierarchyPanel() = default;
+
+		void SetContext(const Ref<Scene>& scene) { m_Context = scene; }
+
+		void OnImGuiRender();
+
+		const Entity GetSelectedEntity() const { return m_SelectedEntity; }
+		void SetSelectedEntity(Entity entity) { m_SelectedEntity = entity; }
+	private:
+		void DrawEntityNode(Entity entity);
+	private:
+		Ref<Scene> m_Context;
+		Entity m_SelectedEntity = entt::null;
+	};
+
+}

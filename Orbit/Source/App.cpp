@@ -21,7 +21,7 @@
 		appSpec.Title = "Orbit";
 
 		Gravix::Application app(appSpec);
-		app.PushLayer<Orbit::AppLayer>();
+		app.PushLayer<Gravix::AppLayer>();
 		app.Run();
 
 		return 0;
@@ -38,7 +38,7 @@
 		appSpec.Title = "Orbit";
 
 		Gravix::Application app(appSpec);
-		app.PushLayer<Orbit::AppLayer>();
+		app.PushLayer<Gravix::AppLayer>();
 		app.Run();
 
 		return 0;

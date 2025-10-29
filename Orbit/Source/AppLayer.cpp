@@ -3,25 +3,26 @@
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace Orbit
+namespace Gravix
 {
 
 	AppLayer::AppLayer()
 	{
-		Gravix::FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8 };
+		FramebufferSpecification fbSpec{};
+		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8 };
 
-		m_MainFramebuffer = Gravix::Framebuffer::Create(fbSpec);
+		m_MainFramebuffer = Framebuffer::Create(fbSpec);
 		m_MainFramebuffer->SetClearColor(0, { 0.3f, 0.3f, 0.3f, 0.3f });
 
-		Gravix::Renderer2D::Init(m_MainFramebuffer);
+		Renderer2D::Init(m_MainFramebuffer);
 
-		m_ActiveScene = CreateRef<Gravix::Scene>();
+		m_ActiveScene = CreateRef<Scene>();
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 	}
 
 	AppLayer::~AppLayer()
 	{
-		Gravix::Renderer2D::Destroy();
+		Renderer2D::Destroy();
 	}
 
 	void AppLayer::OnEvent(Gravix::Event& event)
@@ -44,7 +45,7 @@ namespace Orbit
 
 	void AppLayer::OnRender()
 	{
-		Gravix::Command cmd(m_MainFramebuffer, 0, false);
+		Command cmd(m_MainFramebuffer, 0, false);
 
 		//m_ActiveScene->OnEditorRender(cmd);
 	}
@@ -103,6 +104,7 @@ namespace Orbit
 		}
 
 		DrawViewportUI();
+		m_SceneHierarchyPanel.OnImGuiRender();
 		ImGui::End();
 	}
 

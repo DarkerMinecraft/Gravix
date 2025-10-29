@@ -20,8 +20,8 @@ namespace Gravix
 		TagComponent(const std::string& name)
 			: Name(name), ID() {}
 
-		operator std::string& () { return Name; }
-		operator const std::string& () { return Name; }
+		operator std::string&() { return Name; }
+		operator const std::string&() const { return Name; }
 
 		operator UUID&() { return ID; }
 		operator const UUID&() const { return ID; }

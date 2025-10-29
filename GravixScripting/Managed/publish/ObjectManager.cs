@@ -28,7 +28,7 @@ namespace Gravix.Interop
     public static class ObjectManager 
     {
         [UnmanagedCallersOnly]
-        public static unsafe IntPtr CreateObject(IntPtr typeNamePtr) 
+        public static IntPtr CreateObject(IntPtr typeNamePtr) 
         {
             try 
             {
@@ -82,7 +82,7 @@ namespace Gravix.Interop
         }
 
         [UnmanagedCallersOnly]
-        public static unsafe IntPtr InvokeMethod(IntPtr handlePtr, IntPtr methodNamePtr, IntPtr argsPtr)
+        public static IntPtr InvokeMethod(IntPtr handlePtr, IntPtr methodNamePtr, IntPtr argsPtr)
         {
             try
             {

@@ -6,7 +6,7 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
 )
 # Create the Orbit executable TARGET FIRST
-add_executable(Orbit ${SRC_FILES})
+add_executable(Orbit ${SRC_FILES} "Source/Panels/SceneHierarchyPanel.cpp")
 
 # NOW link libraries to the target (after it's been created)
 target_link_libraries(Orbit

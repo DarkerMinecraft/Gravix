@@ -2,18 +2,20 @@
 
 #include "Gravix.h"
 
+#include "Panels/SceneHierarchyPanel.h"
+
 #include <glm/glm.hpp>
 
-namespace Orbit 
+namespace Gravix 
 {
 
-	class AppLayer : public Gravix::Layer
+	class AppLayer : public Layer
 	{
 	public:
 		AppLayer();
 		virtual ~AppLayer();
 
-		virtual void OnEvent(Gravix::Event& event) override;
+		virtual void OnEvent(Event& event) override;
 
 		virtual void OnUpdate(float deltaTime) override;
 		virtual void OnRender() override;
@@ -22,14 +24,15 @@ namespace Orbit
 	private:
 		void DrawViewportUI();
 	private:
-		Ref<Gravix::Framebuffer> m_MainFramebuffer;
+		Ref<Framebuffer> m_MainFramebuffer;
 
-		Ref<Gravix::Texture2D> m_CheckerboardTexture;
-		Ref<Gravix::Texture2D> m_LogoTexture;
+		Ref<Texture2D> m_CheckerboardTexture;
+		Ref<Texture2D> m_LogoTexture;
 
-		Ref<Gravix::Scene> m_ActiveScene;
+		Ref<Scene> m_ActiveScene;
 
-		Gravix::OrthographicCamera m_Camera;
+		OrthographicCamera m_Camera;
+		SceneHierarchyPanel m_SceneHierarchyPanel;
 
 		glm::vec2 m_ViewportSize = {1260, 1080};
 	};

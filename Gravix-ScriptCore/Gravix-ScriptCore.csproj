@@ -4,5 +4,7 @@
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<SelfContained>false</SelfContained>
 		<PublishAot>false</PublishAot>
+
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 </Project>
