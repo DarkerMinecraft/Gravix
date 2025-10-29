@@ -31,10 +31,12 @@ namespace Gravix
 			ImGui::EndPopup();
 		}
 
-		for (auto entityID : m_Context->m_Registry.view<entt::entity>()) 
+		for (auto entityID : m_Context->m_Registry.view<TagComponent>()) 
 		{
 			Entity entity{ entityID, m_Context.get() };
-			DrawEntityNode(entity);
+
+			if(entity)
+				DrawEntityNode(entity);
 		}
 
 		ImGui::End();
@@ -44,7 +46,7 @@ namespace Gravix
 	{
 		auto& name = entity.GetName();
 
-		ImGuiTreeNodeFlags flags = (m_SelectedEntity == entity ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
+		ImGuiTreeNodeFlags flags = (m_SelectedEntity && m_SelectedEntity == entity ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
 		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity, flags, name.c_str());
 		if(ImGui::IsItemClicked())
 		{
