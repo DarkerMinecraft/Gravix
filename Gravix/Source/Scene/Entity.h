@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 #include "Scene.h"
-#include "Components.h"
 
+#include "Components.h"
 #include "ComponentRegistry.h"
 
 #include <entt/entt.hpp>

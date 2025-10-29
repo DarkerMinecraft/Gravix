@@ -1,12 +1,14 @@
 #pragma once
 
+#include <string>
+
 namespace Gravix 
 {
 
 	class ManagedObject 
 	{
 		ManagedObject(const std::string& typeName);
-		~ManagedObject();
+		~ManagedObject() = default;
 
 		ManagedObject(const ManagedObject&) = delete;
 		ManagedObject& operator=(const ManagedObject&) = delete;
@@ -24,8 +26,7 @@ namespace Gravix
 		TReturn Invoke(TArgs... args) 
 		{
 			return Invoke<TReturn, TArgs...>(m_TypeName, args...);
-		})
-
+		}
 	private:
 		void* m_Handle = nullptr;
 		std::string m_TypeName;
