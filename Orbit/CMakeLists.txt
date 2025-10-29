@@ -91,6 +91,8 @@ add_custom_target(CopyScripting ALL
     COMMENT "Copying GravixScripting config and managed DLLs"
 )
 
+# Make CopyScripting wait for GravixScripting to build first
+add_dependencies(CopyScripting GravixScripting)
 add_dependencies(Orbit CopyScripting)
 
 add_custom_command(TARGET Orbit POST_BUILD

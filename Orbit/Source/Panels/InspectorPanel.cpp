@@ -26,11 +26,12 @@ namespace Gravix
 	{
 		for(auto& componentType : entity.GetAddedComponents())
 		{
-			if(auto& info = ComponentRegistry::Get().GetComponentInfo(componentType))
+			if(auto* info = ComponentRegistry::Get().GetComponentInfo(componentType))
 			{
 				if(info->ImGuiRenderFunc)
 				{
-					info->ImGuiRenderFunc(&entity.GetComponent<componentType>);
+					auto component = entity.GetComponent<std::remove_pointer_t<decltype(componentType)>>();
+					info->ImGuiRenderFunc(&component);
 				}
 			}
 		}
