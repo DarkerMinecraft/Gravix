@@ -8,7 +8,14 @@ namespace Gravix
 
 	SceneHierarchyPanel::SceneHierarchyPanel(const Ref<Scene>& scene)
 	{
-		SetContext(scene);
+		SetContext(scene);		
+	}
+
+	void SceneHierarchyPanel::SetContext(const Ref<Scene>& scene)
+	{
+		m_Context = scene;
+
+		m_SelectedEntity = { entt::null, m_Context.get() };
 	}
 
 	void SceneHierarchyPanel::OnImGuiRender()

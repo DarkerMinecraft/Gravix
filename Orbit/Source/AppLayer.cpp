@@ -18,6 +18,7 @@ namespace Gravix
 
 		m_ActiveScene = CreateRef<Scene>();
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_InspectorPanel.SetSceneHierarchyPanel(m_SceneHierarchyPanel);
 	}
 
 	AppLayer::~AppLayer()
@@ -105,6 +106,7 @@ namespace Gravix
 
 		DrawViewportUI();
 		m_SceneHierarchyPanel.OnImGuiRender();
+		m_InspectorPanel.OnImGuiRender();
 		ImGui::End();
 	}
 

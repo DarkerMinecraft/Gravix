@@ -3,6 +3,7 @@
 #include "Gravix.h"
 
 #include "Panels/SceneHierarchyPanel.h"
+#include "Panels/InspectorPanel.h"
 
 #include <glm/glm.hpp>
 
@@ -33,6 +34,7 @@ namespace Gravix
 
 		OrthographicCamera m_Camera;
 		SceneHierarchyPanel m_SceneHierarchyPanel;
+		InspectorPanel m_InspectorPanel;
 
 		glm::vec2 m_ViewportSize = {1260, 1080};
 	};

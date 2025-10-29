@@ -13,6 +13,7 @@ namespace Gravix
 	class Entity
 	{
 	public:
+		Entity() = default;
 		Entity(entt::entity handle, Scene* scene)
 			: m_EntityHandle(handle), m_Scene(scene) {}
 		Entity(const Entity&) = default;

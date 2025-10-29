@@ -13,7 +13,7 @@ namespace Gravix
 		SceneHierarchyPanel(const Ref<Scene>& scene);
 		~SceneHierarchyPanel() = default;
 
-		void SetContext(const Ref<Scene>& scene) { m_Context = scene; }
+		void SetContext(const Ref<Scene>& scene);
 
 		void OnImGuiRender();
 
@@ -23,7 +23,7 @@ namespace Gravix
 		void DrawEntityNode(Entity entity);
 	private:
 		Ref<Scene> m_Context;
-		Entity m_SelectedEntity = entt::null;
+		Entity m_SelectedEntity;
 	};
 
 }

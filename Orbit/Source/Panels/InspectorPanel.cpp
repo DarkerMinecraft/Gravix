@@ -7,9 +7,8 @@ namespace Gravix
 {
 
 	InspectorPanel::InspectorPanel(SceneHierarchyPanel sceneHierarchyPanel)
-		: m_SceneHierarchyPanel(sceneHierarchyPanel)
 	{
-
+		SetSceneHierarchyPanel(sceneHierarchyPanel);
 	}
 
 	void InspectorPanel::OnImGuiRender()
@@ -31,7 +30,6 @@ namespace Gravix
 			{
 				if(info->ImGuiRenderFunc)
 				{
-					
 					info->ImGuiRenderFunc(&entity.GetComponent<componentType>);
 				}
 			}
