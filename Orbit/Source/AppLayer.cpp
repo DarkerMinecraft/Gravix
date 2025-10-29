@@ -12,7 +12,7 @@ namespace Gravix
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8 };
 
 		m_MainFramebuffer = Framebuffer::Create(fbSpec);
-		m_MainFramebuffer->SetClearColor(0, { 0.3f, 0.3f, 0.3f, 0.3f });
+		m_MainFramebuffer->SetClearColor(0, { 1.0f, 0.3f, 0.3f, 1.0f });
 
 		Renderer2D::Init(m_MainFramebuffer);
 
@@ -47,7 +47,9 @@ namespace Gravix
 	void AppLayer::OnRender()
 	{
 		Command cmd(m_MainFramebuffer, 0, false);
-
+		
+		cmd.BeginRendering();
+		cmd.EndRendering();
 		//m_ActiveScene->OnEditorRender(cmd);
 	}
 

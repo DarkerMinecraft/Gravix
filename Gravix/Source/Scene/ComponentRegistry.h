@@ -5,22 +5,25 @@
 #include <unordered_map>
 #include <memory>
 #include <typeindex>
+#include <entt/entt.hpp>
 
-namespace Gravix 
+namespace Gravix
 {
-	
+
 	class Scene;
 
-	struct ComponentInfo 
+	struct ComponentInfo
 	{
 		std::string Name;
 		std::function<void(void*, Scene* scene)> OnCreateFunc;
 		//std::function<void* (YAML::Emitter&, void*) SerializeFunc;
 		//std::function<void*(void*, const YAML::Node&>) DeserializeFunc;
 		std::function<void(void*)> ImGuiRenderFunc;
+		// Add a function to retrieve the component from a registry at runtime
+		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
 	};
 
-	class ComponentRegistry 
+	class ComponentRegistry
 	{
 	public:
 		template<typename T>
@@ -34,7 +37,8 @@ namespace Gravix
 			info.Name = name;
 			info.OnCreateFunc = [onCreate](void* instance, Scene* scene)
 				{
-					onCreate(*reinterpret_cast<T*>(instance), scene);
+					if(onCreate)
+						onCreate(*reinterpret_cast<T*>(instance), scene);
 				};
 			/*
 			info.SerializeFunc = [serialize](YAML::Emitter& out, void* instance)
@@ -51,6 +55,16 @@ namespace Gravix
 					imguiRender(*reinterpret_cast<T*>(instance));
 				};
 
+			// Add the getter function to retrieve component at runtime
+			info.GetComponentFunc = [](entt::registry& registry, entt::entity entity) -> void*
+				{
+					if (registry.all_of<T>(entity))
+					{
+						return &registry.get<T>(entity);
+					}
+					return nullptr;
+				};
+
 			m_Components[typeid(T)] = info;
 		}
 
@@ -64,7 +78,7 @@ namespace Gravix
 
 		void RegisterAllComponents();
 
-		static ComponentRegistry& Get() 
+		static ComponentRegistry& Get()
 		{
 			static ComponentRegistry instance;
 			return instance;

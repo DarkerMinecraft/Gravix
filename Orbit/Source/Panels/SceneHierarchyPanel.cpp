@@ -21,11 +21,22 @@ namespace Gravix
 	void SceneHierarchyPanel::OnImGuiRender()
 	{
 		ImGui::Begin("Scene Hierarchy");
+
+		if (ImGui::BeginPopupContextWindow("EntityCreation"))
+		{
+			if (ImGui::MenuItem("Create Entity"))
+			{
+				m_Context->CreateEntity("Entity");
+			}
+			ImGui::EndPopup();
+		}
+
 		for (auto entityID : m_Context->m_Registry.view<entt::entity>()) 
 		{
 			Entity entity{ entityID, m_Context.get() };
 			DrawEntityNode(entity);
 		}
+
 		ImGui::End();
 	}
 

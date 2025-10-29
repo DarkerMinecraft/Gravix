@@ -15,7 +15,8 @@ namespace Gravix
 	public:
 		Entity() = default;
 		Entity(entt::entity handle, Scene* scene)
-			: m_EntityHandle(handle), m_Scene(scene) {}
+			: m_EntityHandle(handle), m_Scene(scene) {
+		}
 		Entity(const Entity&) = default;
 
 		template<typename T, typename... Args>
@@ -78,6 +79,11 @@ namespace Gravix
 
 		const std::vector<std::type_index> GetAddedComponents() const { return m_AddedComponents; }
 
+		// Add methods to access registry and handle for runtime component retrieval
+		entt::registry& GetRegistry() { return m_Scene->m_Registry; }
+		const entt::registry& GetRegistry() const { return m_Scene->m_Registry; }
+		entt::entity GetHandle() const { return m_EntityHandle; }
+
 		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }
 		UUID& GetID() { return GetComponent<TagComponent>(); }
 		std::string& GetName() { return GetComponent<TagComponent>(); }
@@ -87,7 +93,7 @@ namespace Gravix
 		const std::string& GetName() const { return GetComponent<TagComponent>(); }
 
 		operator bool() const { return m_EntityHandle != entt::null; }
-		operator uint64_t() const { return (uint64_t) GetID(); }
+		operator uint64_t() const { return (uint64_t)GetID(); }
 
 		bool operator==(const Entity& other) const
 		{

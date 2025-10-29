@@ -3,7 +3,7 @@
 
 #include "Scene/Entity.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
 	InspectorPanel::InspectorPanel(SceneHierarchyPanel sceneHierarchyPanel)
@@ -15,7 +15,7 @@ namespace Gravix
 	{
 		ImGui::Begin("Inspector");
 		Entity selectedEntity = m_SceneHierarchyPanel.GetSelectedEntity();
-		if(selectedEntity)
+		if (selectedEntity)
 		{
 			DrawComponents(selectedEntity);
 		}
@@ -24,14 +24,18 @@ namespace Gravix
 
 	void InspectorPanel::DrawComponents(Entity entity)
 	{
-		for(auto& componentType : entity.GetAddedComponents())
+		for (auto& componentType : entity.GetAddedComponents())
 		{
-			if(auto* info = ComponentRegistry::Get().GetComponentInfo(componentType))
+			if (auto* info = ComponentRegistry::Get().GetComponentInfo(componentType))
 			{
-				if(info->ImGuiRenderFunc)
+				if (info->ImGuiRenderFunc && info->GetComponentFunc)
 				{
-					auto component = entity.GetComponent<std::remove_pointer_t<decltype(componentType)>>();
-					info->ImGuiRenderFunc(&component);
+					// Use the GetComponentFunc to retrieve the component at runtime
+					void* component = info->GetComponentFunc(entity.GetRegistry(), entity.GetHandle());
+					if (component)
+					{
+						info->ImGuiRenderFunc(component);
+					}
 				}
 			}
 		}
