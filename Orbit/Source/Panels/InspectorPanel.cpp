@@ -6,7 +6,7 @@
 namespace Gravix
 {
 
-	InspectorPanel::InspectorPanel(SceneHierarchyPanel sceneHierarchyPanel)
+	InspectorPanel::InspectorPanel(SceneHierarchyPanel* sceneHierarchyPanel)
 	{
 		SetSceneHierarchyPanel(sceneHierarchyPanel);
 	}
@@ -14,7 +14,7 @@ namespace Gravix
 	void InspectorPanel::OnImGuiRender()
 	{
 		ImGui::Begin("Inspector");
-		Entity selectedEntity = m_SceneHierarchyPanel.GetSelectedEntity();
+		Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
 		if (selectedEntity)
 		{
 			DrawComponents(selectedEntity);
@@ -24,18 +24,14 @@ namespace Gravix
 
 	void InspectorPanel::DrawComponents(Entity entity)
 	{
-		for (auto& componentType : entity.GetAddedComponents())
+		for (const auto& [typeIndex, info] : ComponentRegistry::Get().GetAllComponents())
 		{
-			if (auto* info = ComponentRegistry::Get().GetComponentInfo(componentType))
+			if (info.ImGuiRenderFunc && info.GetComponentFunc)
 			{
-				if (info->ImGuiRenderFunc && info->GetComponentFunc)
+				void* component = info.GetComponentFunc(entity.GetRegistry(), entity.GetHandle());
+				if (component)
 				{
-					// Use the GetComponentFunc to retrieve the component at runtime
-					void* component = info->GetComponentFunc(entity.GetRegistry(), entity.GetHandle());
-					if (component)
-					{
-						info->ImGuiRenderFunc(component);
-					}
+					info.ImGuiRenderFunc(component);
 				}
 			}
 		}

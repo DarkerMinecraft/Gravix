@@ -18,7 +18,7 @@ namespace Gravix
 
 		m_ActiveScene = CreateRef<Scene>();
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-		m_InspectorPanel.SetSceneHierarchyPanel(m_SceneHierarchyPanel);
+		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 	}
 
 	AppLayer::~AppLayer()

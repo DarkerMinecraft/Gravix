@@ -16,7 +16,7 @@ namespace Gravix
 		void OnEvent(Event& e);
 	private:
 		void Init();
-		void SetDarkThemeColors();
+		void SetTheme();
 	private:
 		bool m_BlockEvents = false;
 	};
