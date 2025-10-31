@@ -22,7 +22,7 @@ namespace Gravix
 		//std::function<void*(void*, const YAML::Node&>) DeserializeFunc;
 		std::function<void(void*)> ImGuiRenderFunc;
 
-		std::function<void*(entt::registry&, entt::entity)> GetComponentFunc;
+		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
 		std::function<bool(entt::registry&, entt::entity)> HasComponentFunc;
 
 		std::function<void(entt::registry&, entt::entity)> AddComponentFunc;
@@ -43,7 +43,7 @@ namespace Gravix
 			info.Name = name;
 			info.OnCreateFunc = [onCreate](void* instance, Scene* scene)
 				{
-					if(onCreate)
+					if (onCreate)
 						onCreate(*reinterpret_cast<T*>(instance), scene);
 				};
 			/*
@@ -58,11 +58,11 @@ namespace Gravix
 			*/
 			info.ImGuiRenderFunc = [name, imguiRender](void* instance)
 				{
-					if (name.empty()) 
+					if (name.empty())
 					{
 						imguiRender(*reinterpret_cast<T*>(instance));
 					}
-					else 
+					else
 					{
 						if (ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(), ImGuiTreeNodeFlags_DefaultOpen, name.c_str()))
 						{
@@ -82,15 +82,21 @@ namespace Gravix
 					return nullptr;
 				};
 
-			info.HasComponentFunc = [](entt::registry& registry, entt::entity entity) -> bool 
+			info.HasComponentFunc = [](entt::registry& registry, entt::entity entity) -> bool
 				{
-					return registry.all_of<T>(m_EntityHandle);
+					return registry.all_of<T>(entity);
 				};
 
-			info.AddComponentFunc = [](entt::registry& registry, entt::entity entity) -> void 
+			info.AddComponentFunc = [](entt::registry& registry, entt::entity entity) -> void
 				{
-					m_Scene
-				}
+					registry.emplace<T>(entity);
+				};
+
+			info.RemoveComponentFunc = [](entt::registry& registry, entt::entity entity) -> void
+				{
+					registry.remove<T>(entity);
+				};
+
 			m_Components[typeid(T)] = info;
 			m_ComponentOrder.push_back(typeid(T));
 		}

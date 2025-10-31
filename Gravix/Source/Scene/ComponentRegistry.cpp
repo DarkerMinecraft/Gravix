@@ -98,16 +98,16 @@ namespace Gravix
 			nullptr,
 			[](TransformComponent& c)
 			{
-					// Draw the Transform component UI
-					DrawVec3Control("Position", c.Position);
-					DrawVec3Control("Rotation", c.Rotation);
-					DrawVec3Control("Scale", c.Scale, 1.0f);
-					// Update the transform matrix when values change
-					c.Transform = glm::translate(glm::mat4(1.0f), c.Position)
-						* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.x), { 1.0f, 0.0f, 0.0f })
-						* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.y), { 0.0f, 1.0f, 0.0f })
-						* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.z), { 0.0f, 0.0f, 1.0f })
-						* glm::scale(glm::mat4(1.0f), c.Scale);
+				// Draw the Transform component UI
+				DrawVec3Control("Position", c.Position);
+				DrawVec3Control("Rotation", c.Rotation);
+				DrawVec3Control("Scale", c.Scale, 1.0f);
+				// Update the transform matrix when values change
+				c.Transform = glm::translate(glm::mat4(1.0f), c.Position)
+					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.x), { 1.0f, 0.0f, 0.0f })
+					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.y), { 0.0f, 1.0f, 0.0f })
+					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.z), { 0.0f, 0.0f, 1.0f })
+					* glm::scale(glm::mat4(1.0f), c.Scale);
 			}
 		);
 
@@ -124,9 +124,9 @@ namespace Gravix
 
 				auto& camera = c.Camera;
 				ImGui::Checkbox("Primary", &c.Primary);
-				if(ImGui::BeginCombo("Projection", currentProjectionTypeString)) 
+				if (ImGui::BeginCombo("Projection", currentProjectionTypeString))
 				{
-					for (int i = 0; i < 2; i++) 
+					for (int i = 0; i < 2; i++)
 					{
 						bool isSelected = currentProjectionTypeString == projectionTypeStrings[i];
 						if (ImGui::Selectable(projectionTypeStrings[i], isSelected))
@@ -139,7 +139,7 @@ namespace Gravix
 							ImGui::SetItemDefaultFocus();
 					}
 
-					if (camera.GetProjectionType() == ProjectionType::Orthographic) 
+					if (camera.GetProjectionType() == ProjectionType::Orthographic)
 					{
 						float orthoSize = camera.GetOrthographicSize();
 						if (ImGui::DragFloat("Size", &orthoSize))
@@ -154,7 +154,7 @@ namespace Gravix
 							camera.SetOrthographicFarClip(farClip);
 					}
 
-					if (camera.GetProjectionType() == ProjectionType::Perspective) 
+					if (camera.GetProjectionType() == ProjectionType::Perspective)
 					{
 						float fov = camera.GetPerspectiveFOV();
 						if (ImGui::DragFloat("Vertical FOV", &fov))

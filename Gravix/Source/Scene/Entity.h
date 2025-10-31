@@ -65,6 +65,11 @@ namespace Gravix
 			return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
 		}
 
+		template<typename T>
+		const bool HasComponent() const
+		{
+			return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
+		}
 
 		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }
 		UUID& GetID() { return GetComponent<TagComponent>(); }

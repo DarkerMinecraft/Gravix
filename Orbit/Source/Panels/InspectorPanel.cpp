@@ -50,7 +50,21 @@ namespace Gravix
 			{
 				const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
 
+				if(!info.HasComponentFunc || !info.AddComponentFunc)
+					continue;
 
+				bool hasComponent = info.HasComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+				if (!hasComponent)
+				{
+					if(info.Name.empty())
+						continue;
+
+					if (ImGui::MenuItem(info.Name.c_str()))
+					{
+						info.AddComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+						ImGui::CloseCurrentPopup();
+					}
+				}
 			}
 			ImGui::EndPopup();
 		}
