@@ -14,6 +14,7 @@ namespace Gravix
 		~SceneHierarchyPanel() = default;
 
 		void SetContext(const Ref<Scene>& scene);
+		Ref<Scene> GetContext() const { return m_Context; }
 
 		void OnImGuiRender();
 

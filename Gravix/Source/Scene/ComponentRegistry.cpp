@@ -6,6 +6,9 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 namespace Gravix
 {
 
@@ -74,7 +77,7 @@ namespace Gravix
 	void ComponentRegistry::RegisterAllComponents()
 	{
 		RegisterComponent<TagComponent>(
-			"TagComponent",
+			"",
 			[](TagComponent& c, Scene* scene)
 			{
 			},
@@ -91,33 +94,93 @@ namespace Gravix
 		);
 
 		RegisterComponent<TransformComponent>(
-			"TransformComponent",
+			"Transform",
 			nullptr,
 			[](TransformComponent& c)
 			{
-				// Draw the Transform component UI
-				DrawVec3Control("Position", c.Position);
-				DrawVec3Control("Rotation", c.Rotation);
-				DrawVec3Control("Scale", c.Scale, 1.0f);
-
-				// Update the transform matrix when values change
-				c.Transform = glm::translate(glm::mat4(1.0f), c.Position)
-					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.x), { 1.0f, 0.0f, 0.0f })
-					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.y), { 0.0f, 1.0f, 0.0f })
-					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.z), { 0.0f, 0.0f, 1.0f })
-					* glm::scale(glm::mat4(1.0f), c.Scale);
+					// Draw the Transform component UI
+					DrawVec3Control("Position", c.Position);
+					DrawVec3Control("Rotation", c.Rotation);
+					DrawVec3Control("Scale", c.Scale, 1.0f);
+					// Update the transform matrix when values change
+					c.Transform = glm::translate(glm::mat4(1.0f), c.Position)
+						* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.x), { 1.0f, 0.0f, 0.0f })
+						* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.y), { 0.0f, 1.0f, 0.0f })
+						* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.z), { 0.0f, 0.0f, 1.0f })
+						* glm::scale(glm::mat4(1.0f), c.Scale);
 			}
 		);
 
 		RegisterComponent<CameraComponent>(
-			"CameraCompoent",
+			"Camera",
 			[](CameraComponent& c, Scene* scene)
 			{
-
+				c.Camera.SetViewportSize(scene->GetViewportWidth(), scene->GetViewportHeight());
 			},
 			[](CameraComponent& c)
 			{
+				const char* projectionTypeStrings[] = { "Perspective", "Orthographic" };
+				const char* currentProjectionTypeString = projectionTypeStrings[(int)c.Camera.GetProjectionType()];
 
+				auto& camera = c.Camera;
+				ImGui::Checkbox("Primary", &c.Primary);
+				if(ImGui::BeginCombo("Projection", currentProjectionTypeString)) 
+				{
+					for (int i = 0; i < 2; i++) 
+					{
+						bool isSelected = currentProjectionTypeString == projectionTypeStrings[i];
+						if (ImGui::Selectable(projectionTypeStrings[i], isSelected))
+						{
+							currentProjectionTypeString = projectionTypeStrings[i];
+							camera.SetProjectionType((ProjectionType)i);
+						}
+
+						if (isSelected)
+							ImGui::SetItemDefaultFocus();
+					}
+
+					if (camera.GetProjectionType() == ProjectionType::Orthographic) 
+					{
+						float orthoSize = camera.GetOrthographicSize();
+						if (ImGui::DragFloat("Size", &orthoSize))
+							camera.SetOrthographicSize(orthoSize);
+
+						float nearClip = camera.GetOrthographicNearClip();
+						if (ImGui::DragFloat("Near Clip", &nearClip))
+							camera.SetOrthographicNearClip(nearClip);
+
+						float farClip = camera.GetOrthographicFarClip();
+						if (ImGui::DragFloat("Far Clip", &farClip))
+							camera.SetOrthographicFarClip(farClip);
+					}
+
+					if (camera.GetProjectionType() == ProjectionType::Perspective) 
+					{
+						float fov = camera.GetPerspectiveFOV();
+						if (ImGui::DragFloat("Vertical FOV", &fov))
+							camera.SetPerspectiveFOV(fov);
+
+						float nearClip = camera.GetPerspectiveNearClip();
+						if (ImGui::DragFloat("Near Clip", &nearClip))
+							camera.SetPerspectiveNearClip(nearClip);
+
+						float farClip = camera.GetPerspectiveFarClip();
+						if (ImGui::DragFloat("Far Clip", &farClip))
+							camera.SetPerspectiveFarClip(farClip);
+					}
+					ImGui::Checkbox("Fixed Aspect Ratio", &c.FixedAspectRatio);
+
+					ImGui::EndCombo();
+				}
+			}
+		);
+
+		RegisterComponent<SpriteRendererComponent>(
+			"Sprite Renderer",
+			nullptr,
+			[](SpriteRendererComponent& c)
+			{
+				ImGui::ColorEdit4("Color", glm::value_ptr(c.Color));
 			}
 		);
 	}

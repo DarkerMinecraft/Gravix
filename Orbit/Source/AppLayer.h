@@ -4,6 +4,7 @@
 
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
+#include "Panels/ViewportPanel.h"
 
 #include <glm/glm.hpp>
 
@@ -23,20 +24,19 @@ namespace Gravix
 
 		virtual void OnImGuiRender() override;
 	private:
-		void DrawViewportUI();
-	private:
-		Ref<Framebuffer> m_MainFramebuffer;
+		Ref<Framebuffer> m_MSAAFramebuffer;
+		Ref<Framebuffer> m_FinalFramebuffer;
 
 		Ref<Texture2D> m_CheckerboardTexture;
 		Ref<Texture2D> m_LogoTexture;
 
 		Ref<Scene> m_ActiveScene;
 
-		OrthographicCamera m_Camera;
+		EditorCamera m_EditorCamera;
+
 		SceneHierarchyPanel m_SceneHierarchyPanel;
 		InspectorPanel m_InspectorPanel;
-
-		glm::vec2 m_ViewportSize = {1260, 1080};
+		ViewportPanel m_ViewportPanel;
 	};
 
 }

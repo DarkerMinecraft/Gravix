@@ -17,6 +17,7 @@ namespace Gravix
 		void OnImGuiRender();
 	private:
 		void DrawComponents(Entity entity);
+		void DrawAddComponents(Entity entity);
 	private:
 		SceneHierarchyPanel* m_SceneHierarchyPanel;
 	};

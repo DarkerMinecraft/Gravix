@@ -176,11 +176,9 @@ namespace Gravix
 
 	void Renderer2D::Flush(Command& cmd)
 	{
-		cmd.BeginRendering();
 		cmd.BindMaterial(s_Data->PushConstants.Data());
 		cmd.BindMesh(s_Data->QuadMesh);
 		cmd.DrawIndexed(s_Data->QuadIndexCount);
-		cmd.EndRendering();
 	}
 
 	void Renderer2D::Destroy()

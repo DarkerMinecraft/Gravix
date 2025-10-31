@@ -28,6 +28,14 @@ namespace Gravix
 		return entity;
 	}
 
+	void Scene::DestroyEntity(Entity entity)
+	{
+		if (entity) 
+		{
+			m_Registry.destroy(entity);
+		}
+	}
+
 	void Scene::OnEditorUpdate(float ts)
 	{
 
@@ -38,12 +46,12 @@ namespace Gravix
 
 	}
 
-	void Scene::OnEditorRender(Command& cmd, const Camera& camera, const glm::mat4& viewMatrix)
+	void Scene::OnEditorRender(Command& cmd, EditorCamera& camera)
 	{
 		{
 			auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
 
-			Renderer2D::BeginScene(cmd, camera.GetProjection() * viewMatrix);
+			Renderer2D::BeginScene(cmd, camera.GetViewProjection());
 			for (auto entity : group)
 			{
 				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);

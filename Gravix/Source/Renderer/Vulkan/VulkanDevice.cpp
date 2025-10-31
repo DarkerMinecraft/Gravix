@@ -434,7 +434,9 @@ namespace Gravix
 		features11.shaderDrawParameters = true;  // Fixes the DrawParameters capability error
 
 		VkPhysicalDeviceFeatures features{};
-		features.samplerAnisotropy = VK_TRUE;  // Fix the sampler warning too
+		features.samplerAnisotropy = true;  // Fix the sampler warning too
+		features.shaderStorageImageMultisample = true;
+		features.sampleRateShading = true;
 
 		//We want a gpu that can write to the win32 surface and supports vulkan 1.4 with the correct features
 		vkb::PhysicalDeviceSelector selector{ instRet.value() };

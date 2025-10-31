@@ -18,22 +18,41 @@ namespace Gravix
 		if (selectedEntity)
 		{
 			DrawComponents(selectedEntity);
+			DrawAddComponents(selectedEntity);
 		}
 		ImGui::End();
 	}
 
 	void InspectorPanel::DrawComponents(Entity entity)
 	{
-		for (const auto& [typeIndex, info] : ComponentRegistry::Get().GetAllComponents())
+		for (auto typeIndex : ComponentRegistry::Get().GetComponentOrder())
 		{
+			const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
 			if (info.ImGuiRenderFunc && info.GetComponentFunc)
 			{
-				void* component = info.GetComponentFunc(entity.GetRegistry(), entity.GetHandle());
+				void* component = info.GetComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
 				if (component)
 				{
 					info.ImGuiRenderFunc(component);
 				}
 			}
+		}
+	}
+
+	void InspectorPanel::DrawAddComponents(Entity entity)
+	{
+		if (ImGui::Button("Add Component"))
+			ImGui::OpenPopup("AddComponent");
+
+		if (ImGui::BeginPopup("AddComponent"))
+		{
+			for (auto typeIndex : ComponentRegistry::Get().GetComponentOrder())
+			{
+				const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
+
+
+			}
+			ImGui::EndPopup();
 		}
 	}
 

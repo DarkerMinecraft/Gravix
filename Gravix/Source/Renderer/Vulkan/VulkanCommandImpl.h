@@ -38,6 +38,8 @@ namespace Gravix
 		virtual void DrawImGui() override;
 		virtual void EndRendering() override;
 
+		virtual void ResolveFramebuffer(Framebuffer* dst, bool shaderUse) override;
+
 		virtual void CopyToSwapchain() override;
 	private:
 		VulkanDevice* m_Device;

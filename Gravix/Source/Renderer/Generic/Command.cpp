@@ -83,6 +83,12 @@ namespace Gravix
 			m_Impl->EndRendering();
 	}
 
+	void Command::ResolveFramebuffer(Framebuffer* dst, bool shaderUse)
+	{
+		if(m_Impl)
+			m_Impl->ResolveFramebuffer(dst, shaderUse);
+	}
+
 	void Command::Initialize(Ref<Framebuffer> framebuffer, uint32_t presentIndex, bool shouldCopy)
 	{
 		Device* device = Application::Get().GetWindow().GetDevice();

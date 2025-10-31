@@ -47,6 +47,8 @@ namespace Gravix
 		std::vector<VkRenderingAttachmentInfo> GetColorAttachments() { return m_ColorAttachments; };
 		VkRenderingAttachmentInfo* GetDepthAttachment() { return m_DepthAttachmentIndex == -1 ? nullptr : &m_DepthAttachment; }
 
+		const std::vector<AttachmentData> GetAttachments() const { return m_Attachments; }
+
 		AllocatedImage GetImage(uint32_t index) const { return m_Attachments[index].Image; }
 		VkFormat GetImageFormat(uint32_t index) const { return m_Attachments[index].Format; }
 		VkSampler GetImageSampler(uint32_t index) const { return m_Attachments[index].Sampler; }

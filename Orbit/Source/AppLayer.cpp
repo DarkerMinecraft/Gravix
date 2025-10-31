@@ -10,15 +10,20 @@ namespace Gravix
 	{
 		FramebufferSpecification fbSpec{};
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8 };
+		fbSpec.Multisampled = true;
 
-		m_MainFramebuffer = Framebuffer::Create(fbSpec);
-		m_MainFramebuffer->SetClearColor(0, { 1.0f, 0.3f, 0.3f, 1.0f });
+		m_MSAAFramebuffer = Framebuffer::Create(fbSpec);
+		m_MSAAFramebuffer->SetClearColor(0, glm::vec4{ 0.1f, 0.1f, 0.1f, 1.0f });
 
-		Renderer2D::Init(m_MainFramebuffer);
+		fbSpec.Multisampled = false;
+		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
+
+		Renderer2D::Init(m_MSAAFramebuffer);
 
 		m_ActiveScene = CreateRef<Scene>();
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
 	}
 
 	AppLayer::~AppLayer()
@@ -26,19 +31,21 @@ namespace Gravix
 		Renderer2D::Destroy();
 	}
 
-	void AppLayer::OnEvent(Gravix::Event& event)
+	void AppLayer::OnEvent(Event& event)
 	{
-
+		m_EditorCamera.OnEvent(event);
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
-		// Ensure viewport is valid before updating camera
-		if (m_ViewportSize.x > 0 && m_ViewportSize.y > 0) 
+		if (m_ViewportPanel.IsViewportValid()) 
 		{
-			m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
-			m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
-			m_ActiveScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+			auto& viewportSize = m_ViewportPanel.GetViewportSize();
+
+			m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
+			m_ViewportPanel.ResizeFramebuffer();
+			m_ActiveScene->OnViewportResize(viewportSize.x, viewportSize.y);
+			m_EditorCamera.OnUpdate(deltaTime);
 		}
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
@@ -46,11 +53,15 @@ namespace Gravix
 
 	void AppLayer::OnRender()
 	{
-		Command cmd(m_MainFramebuffer, 0, false);
-		
-		cmd.BeginRendering();
-		cmd.EndRendering();
-		//m_ActiveScene->OnEditorRender(cmd);
+		{
+			Command cmd(m_MSAAFramebuffer, 0, false);
+
+			cmd.BeginRendering();
+			m_ActiveScene->OnEditorRender(cmd, m_EditorCamera);
+			cmd.EndRendering();
+
+			cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
+		}
 	}
 
 	void AppLayer::OnImGuiRender()
@@ -106,23 +117,10 @@ namespace Gravix
 			ImGui::EndMenuBar();
 		}
 
-		DrawViewportUI();
+		m_ViewportPanel.OnImGuiRender();
 		m_SceneHierarchyPanel.OnImGuiRender();
 		m_InspectorPanel.OnImGuiRender();
 		ImGui::End();
-	}
-
-	void AppLayer::DrawViewportUI()
-	{
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-		ImGui::Begin("Viewport");
-		ImVec2 avail = ImGui::GetContentRegionAvail();
-
-		m_ViewportSize = { avail.x, avail.y };
-
-		ImGui::Image(m_MainFramebuffer->GetColorAttachmentID(0), avail);
-		ImGui::End();
-		ImGui::PopStyleVar();
 	}
 
 }

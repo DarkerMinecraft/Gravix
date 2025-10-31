@@ -38,6 +38,9 @@ namespace Gravix
 		void DrawImGui();
 
 		void EndRendering();
+
+		void ResolveFramebuffer(Framebuffer* dst, bool shaderUse);
+		void ResolveFramebuffer(Ref<Framebuffer> dst, bool shaderUse) { ResolveFramebuffer(dst.get(), shaderUse); }
 	private:
 		CommandImpl* m_Impl = nullptr;
 	private:

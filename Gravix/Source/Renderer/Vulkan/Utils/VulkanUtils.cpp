@@ -86,6 +86,34 @@ namespace Gravix
 		vkCmdBlitImage2(cmd, &blitInfo);
 	}
 
+	void VulkanUtils::ResolveImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D size)
+	{
+
+		VkImageResolve resolveRegion{};
+		resolveRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		resolveRegion.srcSubresource.mipLevel = 0;
+		resolveRegion.srcSubresource.baseArrayLayer = 0;
+		resolveRegion.srcSubresource.layerCount = 1;
+		resolveRegion.srcOffset = { 0, 0, 0 };
+
+		resolveRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		resolveRegion.dstSubresource.mipLevel = 0;
+		resolveRegion.dstSubresource.baseArrayLayer = 0;
+		resolveRegion.dstSubresource.layerCount = 1;
+		resolveRegion.dstOffset = { 0, 0, 0 };
+
+		resolveRegion.extent.width = size.width;
+		resolveRegion.extent.height = size.height;
+		resolveRegion.extent.depth = 1;
+
+		vkCmdResolveImage(
+			cmd,
+			source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			destination, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &resolveRegion
+		);
+	}
+
 	void PipelineBuilder::SetVertexInputs(std::vector<VkVertexInputAttributeDescription> vertexAttributes, uint32_t stride)
 	{
 		VertexAttributes = std::move(vertexAttributes);

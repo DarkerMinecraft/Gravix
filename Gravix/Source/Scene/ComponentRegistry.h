@@ -1,16 +1,18 @@
 #pragma once
 
+#include "Scene.h"
+
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <memory>
 #include <typeindex>
+
 #include <entt/entt.hpp>
+#include <imgui.h>
 
 namespace Gravix
 {
-
-	class Scene;
 
 	struct ComponentInfo
 	{
@@ -19,8 +21,12 @@ namespace Gravix
 		//std::function<void* (YAML::Emitter&, void*) SerializeFunc;
 		//std::function<void*(void*, const YAML::Node&>) DeserializeFunc;
 		std::function<void(void*)> ImGuiRenderFunc;
-		// Add a function to retrieve the component from a registry at runtime
-		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
+
+		std::function<void*(entt::registry&, entt::entity)> GetComponentFunc;
+		std::function<bool(entt::registry&, entt::entity)> HasComponentFunc;
+
+		std::function<void(entt::registry&, entt::entity)> AddComponentFunc;
+		std::function<void(entt::registry&, entt::entity)> RemoveComponentFunc;
 	};
 
 	class ComponentRegistry
@@ -50,9 +56,20 @@ namespace Gravix
 					deserialize(*reinterpret_cast<T*>(instance), node);
 				};
 			*/
-			info.ImGuiRenderFunc = [imguiRender](void* instance)
+			info.ImGuiRenderFunc = [name, imguiRender](void* instance)
 				{
-					imguiRender(*reinterpret_cast<T*>(instance));
+					if (name.empty()) 
+					{
+						imguiRender(*reinterpret_cast<T*>(instance));
+					}
+					else 
+					{
+						if (ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(), ImGuiTreeNodeFlags_DefaultOpen, name.c_str()))
+						{
+							imguiRender(*reinterpret_cast<T*>(instance));
+							ImGui::TreePop();
+						}
+					}
 				};
 
 			// Add the getter function to retrieve component at runtime
@@ -65,7 +82,17 @@ namespace Gravix
 					return nullptr;
 				};
 
+			info.HasComponentFunc = [](entt::registry& registry, entt::entity entity) -> bool 
+				{
+					return registry.all_of<T>(m_EntityHandle);
+				};
+
+			info.AddComponentFunc = [](entt::registry& registry, entt::entity entity) -> void 
+				{
+					m_Scene
+				}
 			m_Components[typeid(T)] = info;
+			m_ComponentOrder.push_back(typeid(T));
 		}
 
 		const ComponentInfo* GetComponentInfo(std::type_index type) const
@@ -85,8 +112,10 @@ namespace Gravix
 		}
 	public:
 		const std::unordered_map<std::type_index, ComponentInfo>& GetAllComponents() const { return m_Components; }
+		const std::vector<std::type_index>& GetComponentOrder() const { return m_ComponentOrder; }
 	private:
 		std::unordered_map<std::type_index, ComponentInfo> m_Components;
+		std::vector<std::type_index> m_ComponentOrder;
 	};
 
 }
