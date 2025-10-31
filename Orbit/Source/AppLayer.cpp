@@ -24,6 +24,8 @@ namespace Gravix
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
+
+		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
 	}
 
 	AppLayer::~AppLayer()
@@ -31,22 +33,26 @@ namespace Gravix
 		Renderer2D::Destroy();
 	}
 
-	void AppLayer::OnEvent(Event& event)
+	void AppLayer::OnEvent(Event& e)
 	{
-		m_EditorCamera.OnEvent(event);
+		m_EditorCamera.OnEvent(e);
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
-		if (m_ViewportPanel.IsViewportValid()) 
+		if (m_ViewportPanel.IsViewportValid())
 		{
 			auto& viewportSize = m_ViewportPanel.GetViewportSize();
 
 			m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
 			m_ViewportPanel.ResizeFramebuffer();
 			m_ActiveScene->OnViewportResize(viewportSize.x, viewportSize.y);
-			m_EditorCamera.OnUpdate(deltaTime);
+
+			m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
 		}
+
+		if(m_ViewportPanel.IsViewportHovered())
+			m_EditorCamera.OnUpdate(deltaTime);
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
 	}

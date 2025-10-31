@@ -6,7 +6,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	EditorCamera::EditorCamera(float fov, float aspectRatio, float nearClip, float farClip)
@@ -86,7 +86,8 @@ namespace Gravix
 		float delta = e.GetYOffset() * 0.1f;
 		MouseZoom(delta);
 		UpdateView();
-		return false;
+
+		return false;  
 	}
 
 	void EditorCamera::MousePan(const glm::vec2& delta)

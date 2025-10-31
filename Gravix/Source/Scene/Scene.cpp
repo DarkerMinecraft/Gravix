@@ -5,7 +5,7 @@
 
 #include "Renderer/Generic/Renderer2D.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
 	Scene::Scene()
@@ -30,10 +30,8 @@ namespace Gravix
 
 	void Scene::DestroyEntity(Entity entity)
 	{
-		if (entity) 
-		{
+		if (entity)
 			m_Registry.destroy(entity);
-		}
 	}
 
 	void Scene::OnEditorUpdate(float ts)
@@ -51,7 +49,7 @@ namespace Gravix
 		{
 			auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
 
-			Renderer2D::BeginScene(cmd, camera.GetViewProjection());
+			Renderer2D::BeginScene(cmd, camera);
 			for (auto entity : group)
 			{
 				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
@@ -64,40 +62,34 @@ namespace Gravix
 
 	void Scene::OnRuntimeRender(Command& cmd)
 	{
-		Camera* mainCamera = nullptr;
-		glm::mat4* cameraTransform = nullptr;
+		Camera mainCamera;
+		glm::mat4 cameraTransform;
 		{
 			auto group = m_Registry.group<TransformComponent, CameraComponent>();
-			for (auto entity : group) 
+			for (auto entity : group)
 			{
 				auto [transform, camera] = group.get<TransformComponent, CameraComponent>(entity);
 
-				if (camera.Primary) 
+				if (camera.Primary)
 				{
-					mainCamera = &camera.Camera;
-					cameraTransform = &transform.Transform;
+					mainCamera = camera.Camera;
+					cameraTransform = transform.Transform;
 				}
 			}
 		}
 
 		{
-			if (mainCamera) 
+			auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
+
+			Renderer2D::BeginScene(cmd, mainCamera, cameraTransform);
+			for (auto entity : group)
 			{
-				auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
+				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
 
-				Renderer2D::BeginScene(cmd, mainCamera->GetProjection(), *cameraTransform);
-				for (auto entity : group)
-				{
-					auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
-
-					Renderer2D::DrawQuad(transform, sprite);
-				}
-				Renderer2D::EndScene(cmd);
+				Renderer2D::DrawQuad(transform, sprite);
 			}
+			Renderer2D::EndScene(cmd);
 		}
-
-		delete mainCamera;
-		delete cameraTransform;
 	}
 
 	void Scene::OnViewportResize(uint32_t width, uint32_t height)
@@ -108,10 +100,10 @@ namespace Gravix
 			m_ViewportHeight = height;
 
 			auto view = m_Registry.view<CameraComponent>();
-			for (auto entity : view) 
+			for (auto entity : view)
 			{
 				auto& cameraComponent = view.get<CameraComponent>(entity);
-				if (!cameraComponent.FixedAspectRatio) 
+				if (!cameraComponent.FixedAspectRatio)
 				{
 					cameraComponent.Camera.SetViewportSize(width, height);
 				}
