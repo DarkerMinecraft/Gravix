@@ -11,10 +11,10 @@ namespace Gravix
 		ViewportPanel(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex);
 		~ViewportPanel() = default;
 
-		void ResizeFramebuffer();
 		void OnImGuiRender();
 
 		void SetFramebuffer(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex) { m_Framebuffer = framebuffer; m_RenderIndex = renderIndex; }
+		void ResizeFramebuffer() { m_Framebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y); }
 
 		bool IsViewportValid() const { return m_ViewportSize.x > 0 && m_ViewportSize.y > 0; }
 		bool IsViewportHovered() const { return m_ViewportHovered; }

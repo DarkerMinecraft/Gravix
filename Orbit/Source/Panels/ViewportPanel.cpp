@@ -9,11 +9,6 @@ namespace Gravix
 		SetFramebuffer(framebuffer, renderIndex);
 	}
 
-	void ViewportPanel::ResizeFramebuffer()
-	{
-		m_Framebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
-	}
-
 	void ViewportPanel::OnImGuiRender()
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -26,7 +21,10 @@ namespace Gravix
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
 
-		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail);
+		ImVec2 uv0 = ImVec2(0, 1); // Bottom-left
+		ImVec2 uv1 = ImVec2(1, 0); // Top-right
+
+		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail, uv0, uv1);
 
 		ImGui::End();
 		ImGui::PopStyleVar();

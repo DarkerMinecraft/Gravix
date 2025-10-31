@@ -50,8 +50,6 @@ namespace Gravix
 
 			m_ProjectionMatrix = glm::ortho(orthoLeft, orthoRight, orthoBottom, orthoTop, m_OrthographicNear, m_OrthographicFar);
 		}
-
-		m_ProjectionMatrix[1][1] *= -1.0f;
 	}
 
 }

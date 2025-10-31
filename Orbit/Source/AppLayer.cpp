@@ -45,9 +45,9 @@ namespace Gravix
 			auto& viewportSize = m_ViewportPanel.GetViewportSize();
 
 			m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
-			m_ViewportPanel.ResizeFramebuffer();
 			m_ActiveScene->OnViewportResize(viewportSize.x, viewportSize.y);
 
+			m_ViewportPanel.ResizeFramebuffer();
 			m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
 		}
 
