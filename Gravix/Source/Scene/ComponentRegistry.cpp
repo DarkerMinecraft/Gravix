@@ -77,10 +77,9 @@ namespace Gravix
 	void ComponentRegistry::RegisterAllComponents()
 	{
 		RegisterComponent<TagComponent>(
-			"",
-			[](TagComponent& c, Scene* scene)
-			{
-			},
+			"Tag",
+			ComponentSettings{ .HasNodeTree = false, .CanRemoveComponent = false },
+			nullptr,
 			[](TagComponent& c)
 			{
 				char buffer[256];
@@ -95,6 +94,7 @@ namespace Gravix
 
 		RegisterComponent<TransformComponent>(
 			"Transform",
+			ComponentSettings{ .HasNodeTree = true, .CanRemoveComponent = false },
 			nullptr,
 			[](TransformComponent& c)
 			{
@@ -109,6 +109,7 @@ namespace Gravix
 
 		RegisterComponent<CameraComponent>(
 			"Camera",
+			ComponentSettings{ .HasNodeTree = true, .CanRemoveComponent = true },
 			[](CameraComponent& c, Scene* scene)
 			{
 				c.Camera.SetViewportSize(scene->GetViewportWidth(), scene->GetViewportHeight());
@@ -173,6 +174,7 @@ namespace Gravix
 
 		RegisterComponent<SpriteRendererComponent>(
 			"Sprite Renderer",
+			ComponentSettings{ .HasNodeTree = true, .CanRemoveComponent = true },
 			nullptr,
 			[](SpriteRendererComponent& c)
 			{

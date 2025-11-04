@@ -33,7 +33,13 @@ namespace Gravix
 				void* component = info.GetComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
 				if (component)
 				{
-					info.ImGuiRenderFunc(component);
+					ComponentUserSettings userSettings;
+					info.ImGuiRenderFunc(component, &userSettings);
+
+					if(userSettings.RemoveComponent && info.RemoveComponentFunc)
+					{
+						info.RemoveComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+					}
 				}
 			}
 		}

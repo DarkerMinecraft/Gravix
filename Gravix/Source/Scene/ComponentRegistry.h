@@ -14,13 +14,24 @@
 namespace Gravix
 {
 
+	struct ComponentSettings
+	{
+		bool HasNodeTree = false;
+		bool CanRemoveComponent = true;
+	};
+
+	struct ComponentUserSettings
+	{
+		bool RemoveComponent = false;
+	};
+
 	struct ComponentInfo
 	{
 		std::string Name;
 		std::function<void(void*, Scene* scene)> OnCreateFunc;
 		//std::function<void* (YAML::Emitter&, void*) SerializeFunc;
 		//std::function<void*(void*, const YAML::Node&>) DeserializeFunc;
-		std::function<void(void*)> ImGuiRenderFunc;
+		std::function<void(void*, ComponentUserSettings* userSettings)> ImGuiRenderFunc;
 
 		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
 		std::function<bool(entt::registry&, entt::entity)> HasComponentFunc;
@@ -34,10 +45,12 @@ namespace Gravix
 	public:
 		template<typename T>
 		void RegisterComponent(const std::string& name,
+			ComponentSettings settings,
 			std::function<void(T&, Scene* scene)> onCreate,
 			/*std::function<void(YAML::Emitter&, T&)> serialize,
 			std::function<void(T&, const YAML::Node&)> deserialize,*/
-			std::function<void(T&)> imguiRender)
+			std::function<void(T&)> imguiRender
+		)
 		{
 			ComponentInfo info;
 			info.Name = name;
@@ -56,15 +69,35 @@ namespace Gravix
 					deserialize(*reinterpret_cast<T*>(instance), node);
 				};
 			*/
-			info.ImGuiRenderFunc = [name, imguiRender](void* instance)
+			info.ImGuiRenderFunc = [name, imguiRender, settings](void* instance, ComponentUserSettings* userSettings)
 				{
-					if (name.empty())
+					if (!settings.HasNodeTree)
 					{
 						imguiRender(*reinterpret_cast<T*>(instance));
 					}
 					else
 					{
-						if (ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(), ImGuiTreeNodeFlags_DefaultOpen, name.c_str()))
+						bool open = ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap, name.c_str());
+						ImGui::SameLine();
+						if (ImGui::Button("+"))
+						{
+							ImGui::OpenPopup("ComponentSettings");
+						}
+
+						if (ImGui::BeginPopup("ComponentSettings"))
+						{
+							if (settings.CanRemoveComponent)
+							{
+								if (ImGui::Button("Remove Component"))
+								{
+									userSettings->RemoveComponent = true;
+								}
+							}
+
+							ImGui::EndPopup();
+						}
+
+						if (open)
 						{
 							imguiRender(*reinterpret_cast<T*>(instance));
 							ImGui::TreePop();
