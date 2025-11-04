@@ -33,18 +33,20 @@ namespace Gravix
 		glm::vec3 Rotation{ 0.0f, 0.0f, 0.0f };
 		glm::vec3 Scale{ 1.0f, 1.0f, 1.0f };
 
-		glm::mat4 Transform{ 1.0f };
+		glm::mat4 Transform;
 
-		TransformComponent() = default;
+		TransformComponent()  { CalculateTransform(); }
 		TransformComponent(const TransformComponent&) = default;
 		TransformComponent(const glm::vec3& position, const glm::vec3 rotation, const glm::vec3 scale)
-			: Position(position), Rotation(rotation), Scale(scale)
+			: Position(position), Rotation(rotation), Scale(scale) { CalculateTransform(); }
+
+		void CalculateTransform() 
 		{
-			Transform = glm::translate(glm::mat4(1.0f), position)
-				* glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), { 1.0f, 0.0f, 0.0f })
-				* glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), { 0.0f, 1.0f, 0.0f })
-				* glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), { 0.0f, 0.0f, 1.0f })
-				* glm::scale(glm::mat4(1.0f), scale);
+			Transform = glm::translate(glm::mat4(1.0f), Position)
+				* glm::rotate(glm::mat4(1.0f), glm::radians(Rotation.x), { 1.0f, 0.0f, 0.0f })
+				* glm::rotate(glm::mat4(1.0f), glm::radians(Rotation.y), { 0.0f, 1.0f, 0.0f })
+				* glm::rotate(glm::mat4(1.0f), glm::radians(Rotation.z), { 0.0f, 0.0f, 1.0f })
+				* glm::scale(glm::mat4(1.0f), Scale);
 		}
 
 		operator glm::mat4&() { return Transform; }

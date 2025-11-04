@@ -103,11 +103,7 @@ namespace Gravix
 				DrawVec3Control("Rotation", c.Rotation);
 				DrawVec3Control("Scale", c.Scale, 1.0f);
 				// Update the transform matrix when values change
-				c.Transform = glm::translate(glm::mat4(1.0f), c.Position)
-					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.x), { 1.0f, 0.0f, 0.0f })
-					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.y), { 0.0f, 1.0f, 0.0f })
-					* glm::rotate(glm::mat4(1.0f), glm::radians(c.Rotation.z), { 0.0f, 0.0f, 1.0f })
-					* glm::scale(glm::mat4(1.0f), c.Scale);
+				c.CalculateTransform();
 			}
 		);
 
@@ -139,39 +135,39 @@ namespace Gravix
 							ImGui::SetItemDefaultFocus();
 					}
 
-					if (camera.GetProjectionType() == ProjectionType::Orthographic)
-					{
-						float orthoSize = camera.GetOrthographicSize();
-						if (ImGui::DragFloat("Size", &orthoSize))
-							camera.SetOrthographicSize(orthoSize);
-
-						float nearClip = camera.GetOrthographicNearClip();
-						if (ImGui::DragFloat("Near Clip", &nearClip))
-							camera.SetOrthographicNearClip(nearClip);
-
-						float farClip = camera.GetOrthographicFarClip();
-						if (ImGui::DragFloat("Far Clip", &farClip))
-							camera.SetOrthographicFarClip(farClip);
-					}
-
-					if (camera.GetProjectionType() == ProjectionType::Perspective)
-					{
-						float fov = camera.GetPerspectiveFOV();
-						if (ImGui::DragFloat("Vertical FOV", &fov))
-							camera.SetPerspectiveFOV(fov);
-
-						float nearClip = camera.GetPerspectiveNearClip();
-						if (ImGui::DragFloat("Near Clip", &nearClip))
-							camera.SetPerspectiveNearClip(nearClip);
-
-						float farClip = camera.GetPerspectiveFarClip();
-						if (ImGui::DragFloat("Far Clip", &farClip))
-							camera.SetPerspectiveFarClip(farClip);
-					}
-					ImGui::Checkbox("Fixed Aspect Ratio", &c.FixedAspectRatio);
-
 					ImGui::EndCombo();
 				}
+
+				if (camera.GetProjectionType() == ProjectionType::Orthographic)
+				{
+					float orthoSize = camera.GetOrthographicSize();
+					if (ImGui::DragFloat("Size", &orthoSize))
+						camera.SetOrthographicSize(orthoSize);
+
+					float nearClip = camera.GetOrthographicNearClip();
+					if (ImGui::DragFloat("Near Clip", &nearClip))
+						camera.SetOrthographicNearClip(nearClip);
+
+					float farClip = camera.GetOrthographicFarClip();
+					if (ImGui::DragFloat("Far Clip", &farClip))
+						camera.SetOrthographicFarClip(farClip);
+				}
+
+				if (camera.GetProjectionType() == ProjectionType::Perspective)
+				{
+					float fov = camera.GetPerspectiveFOV();
+					if (ImGui::DragFloat("Vertical FOV", &fov))
+						camera.SetPerspectiveFOV(fov);
+
+					float nearClip = camera.GetPerspectiveNearClip();
+					if (ImGui::DragFloat("Near Clip", &nearClip))
+						camera.SetPerspectiveNearClip(nearClip);
+
+					float farClip = camera.GetPerspectiveFarClip();
+					if (ImGui::DragFloat("Far Clip", &farClip))
+						camera.SetPerspectiveFarClip(farClip);
+				}
+				ImGui::Checkbox("Fixed Aspect Ratio", &c.FixedAspectRatio);
 			}
 		);
 

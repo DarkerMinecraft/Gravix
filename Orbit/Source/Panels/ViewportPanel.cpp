@@ -21,8 +21,8 @@ namespace Gravix
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
 
-		ImVec2 uv0 = ImVec2(0, 1); // Bottom-left
-		ImVec2 uv1 = ImVec2(1, 0); // Top-right
+		ImVec2 uv0 = ImVec2(0, 0);
+		ImVec2 uv1 = ImVec2(1, 1); 
 
 		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail, uv0, uv1);
 
