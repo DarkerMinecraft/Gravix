@@ -34,7 +34,7 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
     VSOutput output;
     Vertex v = pc.vertex[vertexID];
 
-    output.position = mul(pc.viewProjMatrix, v.position);
+    output.position = mul(v.position, pc.viewProjMatrix);
     output.uv = v.uv;
     output.color = v.color;
     output.texIndex = (int) v.texIndex;
