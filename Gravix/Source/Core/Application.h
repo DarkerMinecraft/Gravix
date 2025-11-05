@@ -7,6 +7,8 @@
 #include "Events/WindowEvents.h"
 #include "Renderer/ImGuiRender.h"
 
+#include "Project/Project.h"
+
 #include <chrono>
 #include <filesystem>
 
@@ -22,6 +24,7 @@ namespace Gravix
 		const char* Title = "Gravix Engine";
 
 		bool VSync = true;
+		Project GlobalProject = Project(std::filesystem::current_path());
 	};
 
 	class Application
@@ -45,6 +48,9 @@ namespace Gravix
 		Window& GetWindow() { return *m_Window; }
 		Scheduler& GetScheduler() { return *m_Scheduler; }
 		ImGuiRender& GetImGui() { return *m_ImGuiRender; }
+
+		Project& GetProject() { return m_Project; }
+
 		static Application& Get() { return *s_Instance; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
@@ -60,6 +66,7 @@ namespace Gravix
 
 		std::vector<Ref<Layer>> m_LayerStack;
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_LastFrameTime;
+		Project m_Project;
 
 		static Application* s_Instance;
 	};

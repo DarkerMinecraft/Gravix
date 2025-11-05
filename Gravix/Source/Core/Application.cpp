@@ -12,6 +12,7 @@ namespace Gravix
 	Application* Application::s_Instance = nullptr;
 
 	Application::Application(const ApplicationSpecification& spec)
+		: m_Project(spec.GlobalProject)
 	{
 		s_Instance = this;
 
@@ -28,6 +29,8 @@ namespace Gravix
 
 		m_Scheduler = CreateScope<Scheduler>();
 		m_Scheduler->Init(4); // Initialize with 4 threads
+
+		m_Project.CreateProjectDirectories();
 
 		m_ImGuiRender = new ImGuiRender();
 		ComponentRegistry::Get().RegisterAllComponents();
