@@ -3,6 +3,8 @@
 #include "Maths/Maths.h"
 #include "Core/Application.h"
 
+#include "Input.h"
+
 #include <imgui.h>
 #include <ImGuizmo.h>
 
@@ -30,8 +32,7 @@ namespace Gravix
 
 		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail);
 		Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
-		m_GuizmoType = ImGuizmo::OPERATION::ROTATE;
-		if (selectedEntity) 
+		if (selectedEntity && m_GuizmoType != -1) 
 		{
 			ImGuizmo::SetOrthographic(false);
 			ImGuizmo::SetDrawlist();
@@ -46,8 +47,13 @@ namespace Gravix
 			auto& tc = selectedEntity.GetComponent<TransformComponent>();
 			glm::mat4 transform = tc.Transform;
 
+			bool snap = Input::IsKeyDown(Key::LeftControl);
+			float snapValue = m_GuizmoType == ImGuizmo::OPERATION::ROTATE ? 45.0f : 0.5f;
+
+			float snapValues[3] = { snapValue, snapValue, snapValue };
+
 			ImGuizmo::Manipulate(glm::value_ptr(cameraView), glm::value_ptr(cameraProjection), (ImGuizmo::OPERATION)m_GuizmoType,
-				ImGuizmo::LOCAL, glm::value_ptr(transform));
+				ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
 
 			if (ImGuizmo::IsUsing())
 			{
@@ -66,4 +72,18 @@ namespace Gravix
 		ImGui::End();
 		ImGui::PopStyleVar();
 	}
+
+	void ViewportPanel::GuizmoShortcuts()
+	{
+		if(Input::IsKeyPressed(Key::Q))
+			m_GuizmoType = -1;
+
+		if(Input::IsKeyPressed(Key::W))
+			m_GuizmoType = ImGuizmo::OPERATION::TRANSLATE;
+		if (Input::IsKeyPressed(Key::E))
+			m_GuizmoType = ImGuizmo::OPERATION::ROTATE;
+		if (Input::IsKeyPressed(Key::R))
+			m_GuizmoType = ImGuizmo::OPERATION::SCALE;
+	}
+
 }

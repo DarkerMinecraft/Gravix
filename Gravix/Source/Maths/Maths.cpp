@@ -33,6 +33,11 @@ namespace Gravix
 			LocalMatrix[3] = vec4(0, 0, 0, LocalMatrix[3].w);
 
 			vec3 Row[3], Pdum3;
+
+			for (length_t i = 0; i < 3; ++i) 
+				for (length_t j = 0; j < 3; ++j) 
+					Row[i][j] = LocalMatrix[i][j];
+
 			scale.x = length(Row[0]);
 			Row[0] = detail::scale(Row[0], static_cast<T>(1));
 			scale.y = length(Row[1]);
@@ -62,6 +67,7 @@ namespace Gravix
 				rotation.z = 0;
 			}
 
+			return true;
 		}
 
 	}

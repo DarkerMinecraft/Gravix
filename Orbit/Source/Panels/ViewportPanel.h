@@ -24,6 +24,8 @@ namespace Gravix
 		bool IsViewportHovered() const { return m_ViewportHovered; }
 		bool IsViewportFocused() const { return m_ViewportFocused; }
 
+		void GuizmoShortcuts();
+
 		const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
 	private:
 		Ref<Framebuffer> m_Framebuffer;

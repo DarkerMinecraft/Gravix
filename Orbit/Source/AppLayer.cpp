@@ -61,6 +61,7 @@ namespace Gravix
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
 		OnShortcuts();
+		m_ViewportPanel.GuizmoShortcuts();
 	}
 
 	void AppLayer::OnRender()
