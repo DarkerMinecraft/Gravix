@@ -6,13 +6,14 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
 )
 # Create the Orbit executable TARGET FIRST
-add_executable(Orbit ${SRC_FILES} "Source/Panels/SceneHierarchyPanel.cpp")
+add_executable(Orbit ${SRC_FILES})
 
 # NOW link libraries to the target (after it's been created)
 target_link_libraries(Orbit
     PRIVATE
         Gravix    # Your main engine library
         ImGui
+        ImGuizmo
         yaml-cpp
 )
 
@@ -34,6 +35,7 @@ target_include_directories(Orbit
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
         ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
+        ${CMAKE_SOURCE_DIR}/ThirdParties/ImGuizmo
 )
 
 # Copy root assets every build

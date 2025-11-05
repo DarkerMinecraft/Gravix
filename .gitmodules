@@ -29,3 +29,6 @@
 [submodule "ThirdParties/yaml"]
 	path = ThirdParties/yaml
 	url = https://github.com/jbeder/yaml-cpp
+[submodule "ThirdParties/ImGuizmo"]
+	path = ThirdParties/ImGuizmo
+	url = https://github.com/DarkerMinecraft/ImGuizmo.git

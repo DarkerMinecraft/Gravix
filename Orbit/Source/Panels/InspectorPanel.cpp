@@ -28,9 +28,12 @@ namespace Gravix
 		for (auto typeIndex : ComponentRegistry::Get().GetComponentOrder())
 		{
 			const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
-			if (info.ImGuiRenderFunc && info.GetComponentFunc)
+			if (info.ImGuiRenderFunc)
 			{
-				void* component = info.GetComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+				if(!entity.HasComponent(typeIndex))
+					continue;
+
+				void* component = entity.GetComponent(typeIndex);
 				if (component)
 				{
 					ComponentUserSettings userSettings;
@@ -38,7 +41,7 @@ namespace Gravix
 
 					if(userSettings.RemoveComponent && info.RemoveComponentFunc)
 					{
-						info.RemoveComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+						entity.RemoveComponent(typeIndex);
 					}
 				}
 			}
@@ -59,7 +62,7 @@ namespace Gravix
 				if(!info.HasComponentFunc || !info.AddComponentFunc)
 					continue;
 
-				bool hasComponent = info.HasComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+				bool hasComponent = entity.HasComponent(typeIndex);
 				if (!hasComponent)
 				{
 					if(info.Name.empty())
@@ -67,7 +70,7 @@ namespace Gravix
 
 					if (ImGui::MenuItem(info.Name.c_str()))
 					{
-						info.AddComponentFunc(m_SceneHierarchyPanel->GetContext()->m_Registry, entity);
+						entity.AddComponent(typeIndex);
 						ImGui::CloseCurrentPopup();
 					}
 				}

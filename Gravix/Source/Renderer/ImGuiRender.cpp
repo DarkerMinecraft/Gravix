@@ -9,6 +9,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_win32.h>
+#include <ImGuizmo.h>
 
 namespace Gravix 
 {
@@ -40,6 +41,7 @@ namespace Gravix
 		ImGui_ImplWin32_NewFrame();
 		ImGui_ImplVulkan_NewFrame();
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 	}
 
 	void ImGuiRender::End()

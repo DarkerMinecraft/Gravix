@@ -31,3 +31,5 @@
 #include "Scene/Entity.h"
 #include "Scene/Scene.h"
 #include "Scene/EditorCamera.h"
+
+#include "Maths/Maths.h"

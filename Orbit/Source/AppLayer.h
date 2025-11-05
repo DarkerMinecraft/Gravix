@@ -24,8 +24,7 @@ namespace Gravix
 
 		virtual void OnImGuiRender() override;
 	private:
-		bool OnKeyPressed(KeyPressedEvent& e);
-
+		void OnShortcuts();
 		void SaveScene();
 		void SaveSceneAs();
 		void OpenScene();

@@ -13,6 +13,8 @@ namespace Gravix
 		void Begin();
 		void End();
 
+		void BlockEvents(bool blockEvents) { m_BlockEvents = blockEvents; };
+
 		void OnEvent(Event& e);
 	private:
 		void Init();

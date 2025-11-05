@@ -1,20 +1,20 @@
 Scene: Untitled
 Entities:
-  - Entity: 18369460444094393892
+  - Entity: 4336930661101023884
     TagComponent:
-      Name: White Square
+      Name: Red Square
     TransformComponent:
       Position: [0, 0, 0]
       Rotation: [0, 0, 0]
       Scale: [1, 1, 1]
     Sprite RendererComponent:
-      Color: [1, 1, 1, 1]
-  - Entity: 1020295608181013563
+      Color: [1, 0, 0, 1]
+  - Entity: 3978844381960281841
     TagComponent:
-      Name: Red Square
+      Name: White Square
     TransformComponent:
-      Position: [-1.6, -1.3, 0]
+      Position: [0, 1.7, -6.5]
       Rotation: [0, 0, 45]
       Scale: [1, 1, 1]
     Sprite RendererComponent:
-      Color: [1, 0, 0, 1]
+      Color: [1, 1, 1, 1]

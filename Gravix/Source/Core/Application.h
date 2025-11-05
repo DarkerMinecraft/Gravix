@@ -44,7 +44,7 @@ namespace Gravix
 
 		Window& GetWindow() { return *m_Window; }
 		Scheduler& GetScheduler() { return *m_Scheduler; }
-
+		ImGuiRender& GetImGui() { return *m_ImGuiRender; }
 		static Application& Get() { return *s_Instance; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);

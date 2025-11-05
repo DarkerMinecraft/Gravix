@@ -60,6 +60,9 @@ set_target_properties(yaml-cpp-parse PROPERTIES FOLDER "yaml/Dependencies")
 set_target_properties(yaml-cpp-read PROPERTIES FOLDER "yaml/Dependencies")
 set_target_properties(yaml-cpp-sandbox PROPERTIES FOLDER "yaml/Dependencies")
 
+add_subdirectory(ThirdParties/ImGuizmo)
+set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
+
 
 # Add engine modules
 add_subdirectory(Gravix-ScriptCore)

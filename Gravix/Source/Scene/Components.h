@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
 namespace Gravix
 {
 
@@ -42,10 +45,11 @@ namespace Gravix
 
 		void CalculateTransform() 
 		{
+			glm::vec3 radianRotation = {glm::radians(Rotation.x), glm::radians(Rotation.y), glm::radians(Rotation.z)};
+			glm::mat4 rotation = glm::toMat4(glm::quat(radianRotation));
+
 			Transform = glm::translate(glm::mat4(1.0f), Position)
-				* glm::rotate(glm::mat4(1.0f), glm::radians(Rotation.x), { 1.0f, 0.0f, 0.0f })
-				* glm::rotate(glm::mat4(1.0f), glm::radians(Rotation.y), { 0.0f, 1.0f, 0.0f })
-				* glm::rotate(glm::mat4(1.0f), glm::radians(Rotation.z), { 0.0f, 0.0f, 1.0f })
+				* rotation
 				* glm::scale(glm::mat4(1.0f), Scale);
 		}
 

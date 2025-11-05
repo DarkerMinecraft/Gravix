@@ -26,9 +26,11 @@ namespace Gravix
 		m_ActiveScene = CreateRef<Scene>();
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
 
 		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
+		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
 	}
 
 	AppLayer::~AppLayer()
@@ -39,9 +41,6 @@ namespace Gravix
 	void AppLayer::OnEvent(Event& e)
 	{
 		m_EditorCamera.OnEvent(e);
-
-		EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(AppLayer::OnKeyPressed));
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
@@ -61,6 +60,7 @@ namespace Gravix
 			m_EditorCamera.OnUpdate(deltaTime);
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
+		OnShortcuts();
 	}
 
 	void AppLayer::OnRender()
@@ -154,33 +154,27 @@ namespace Gravix
 		ImGui::End();
 	}
 
-	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
+	void AppLayer::OnShortcuts()
 	{
-		if(e.GetRepeatCount() > 0)
-			return false;
-
 		bool ctrlDown = Input::IsKeyDown(Key::LeftControl) || Input::IsKeyDown(Key::RightControl);
 		bool shiftDown = Input::IsKeyDown(Key::LeftShift) || Input::IsKeyDown(Key::RightShift);
-		GX_CORE_TRACE("Key Pressed: {0} (Ctrl: {1}, Shift: {2})", e.GetKeyCode(), ctrlDown, shiftDown);
-		switch (e.GetKeyCode()) 
+		
+		if(ctrlDown && Input::IsKeyPressed(Key::S))
 		{
-		case Key::S:
-			if(ctrlDown) 
-			{
-				if (shiftDown) 
-					SaveSceneAs();
-				else 
-					SaveScene();
-			}
-			break;
-		case Key::O:
-			if (ctrlDown)
-				OpenScene();
-			break;
-		case Key::N:
-			if (ctrlDown)
-				NewScene();
-			break;
+			if (shiftDown)
+				SaveSceneAs();
+			else
+				SaveScene();
+		}
+
+		if (ctrlDown && Input::IsKeyPressed(Key::O))
+		{
+			OpenScene();
+		}
+
+		if (ctrlDown && Input::IsKeyPressed(Key::N))
+		{
+			NewScene();
 		}
 	}
 
