@@ -94,10 +94,15 @@ namespace Gravix
 						auto componentNode = entity[componentName];
 						if (componentNode)
 						{
-							void* component = info.GetComponentFunc(m_Scene->m_Registry, deserializedEntity);
-							info.DeserializeFunc(component, componentNode);
+							if (!deserializedEntity.HasComponent(typeIndex))
+								deserializedEntity.AddComponent(typeIndex);
 
-							info.AddComponentFunc(m_Scene->m_Registry, deserializedEntity);
+							// 2. Get pointer (now valid!)
+							void* component = deserializedEntity.GetComponent(typeIndex);
+
+							// 3. Deserialize into valid memory
+							if (component)
+								info.DeserializeFunc(component, componentNode);
 						}
 					}
 				}

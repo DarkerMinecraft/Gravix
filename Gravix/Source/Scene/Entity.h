@@ -5,6 +5,7 @@
 #include "Components.h"
 #include "ComponentRegistry.h"
 
+#include <typeindex>
 #include <entt/entt.hpp>
 
 namespace Gravix
@@ -69,6 +70,45 @@ namespace Gravix
 		const bool HasComponent() const
 		{
 			return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
+		}
+
+		bool HasComponent(std::type_index typeIndex)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			return info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+		}
+
+		void* GetComponent(std::type_index typeIndex)
+		{
+			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not has componenet!");
+
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			return info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+		}
+
+		void AddComponent(std::type_index typeIndex)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			GX_CORE_ASSERT(info, "Component type not registered!");
+			GX_CORE_ASSERT(info->AddComponentFunc, "Component has no AddComponentFunc!");
+			GX_CORE_ASSERT(!HasComponent(typeIndex), "Entity already has componenet!");
+
+			info->AddComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+			if (info->OnCreateFunc) 
+			{
+				void* component = info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+				info->OnCreateFunc(component, m_Scene);
+			}
+		}
+
+		void RemoveComponent(std::type_index typeIndex)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			GX_CORE_ASSERT(info, "Component type not registered!");
+			GX_CORE_ASSERT(info->RemoveComponentFunc, "Component has no RemoveComponentFunc!");
+			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not have this component!");
+
+			info->RemoveComponentFunc(m_Scene->m_Registry, m_EntityHandle);
 		}
 
 		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }

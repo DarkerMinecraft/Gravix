@@ -24,6 +24,13 @@ namespace Gravix
 
 		virtual void OnImGuiRender() override;
 	private:
+		bool OnKeyPressed(KeyPressedEvent& e);
+
+		void SaveScene();
+		void SaveSceneAs();
+		void OpenScene();
+		void NewScene();
+	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
 

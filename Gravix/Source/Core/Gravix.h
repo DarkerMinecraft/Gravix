@@ -15,6 +15,7 @@
 #include "Core.h"
 #include "Layer.h"
 #include "Log.h"
+#include "Input.h"
 
 // Events
 #include "Events/Event.h"

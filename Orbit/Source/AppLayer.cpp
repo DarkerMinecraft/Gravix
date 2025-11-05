@@ -39,6 +39,9 @@ namespace Gravix
 	void AppLayer::OnEvent(Event& e)
 	{
 		m_EditorCamera.OnEvent(e);
+
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(AppLayer::OnKeyPressed));
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
@@ -123,54 +126,22 @@ namespace Gravix
 			{
 				if (ImGui::MenuItem("New", "Ctrl+N"))
 				{
-					m_ActiveScene = CreateRef<Scene>();
-					m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-					m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-					m_SceneHierarchyPanel.SetNoneSelected();
-
-					m_ActiveScenePath = std::filesystem::path();
+					NewScene();
 				}
 				
 				if(ImGui::MenuItem("Open... ", "Ctrl+O"))
 				{
-					std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbit)\0*.orbit\0");
-					if(filePath.empty())
-						return;
-					m_ActiveScenePath = filePath;
-
-					m_ActiveScene = CreateRef<Scene>();
-					m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-					m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-					m_SceneHierarchyPanel.SetNoneSelected();
-
-					SceneSerializer serializer(m_ActiveScene);
-					serializer.Deserialize(filePath);
+					OpenScene();
 				}
 
 				if (ImGui::MenuItem("Save", "Ctrl+S"))
 				{
-					if (m_ActiveScenePath.empty())
-					{
-						std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
-						if (filePath.empty())
-							return;
-
-						m_ActiveScenePath = filePath;
-					}
-
-					SceneSerializer serializer(m_ActiveScene);
-					serializer.Serialize(m_ActiveScenePath);
+					SaveScene();
 				}
 
 				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) 
 				{
-					std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
-					if (filePath.empty())
-						return;
-					m_ActiveScenePath = filePath;
-
-					SceneSerializer serializer(m_ActiveScene);
-					serializer.Serialize(m_ActiveScenePath);
+					SaveSceneAs();
 				}
 				ImGui::EndMenu();
 			}
@@ -181,6 +152,89 @@ namespace Gravix
 		m_SceneHierarchyPanel.OnImGuiRender();
 		m_InspectorPanel.OnImGuiRender();
 		ImGui::End();
+	}
+
+	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
+	{
+		if(e.GetRepeatCount() > 0)
+			return false;
+
+		bool ctrlDown = Input::IsKeyPressed(Key::LeftControl) || Input::IsKeyPressed(Key::RightControl);
+		bool shiftDown = Input::IsKeyPressed(Key::LeftShift) || Input::IsKeyPressed(Key::RightShift);
+		switch (e.GetKeyCode()) 
+		{
+		case Key::S:
+			if(ctrlDown) 
+			{
+				if (shiftDown) 
+					SaveSceneAs();
+				else 
+					SaveScene();
+			}
+			break;
+		case Key::O:
+			if (ctrlDown)
+				OpenScene();
+			break;
+		case Key::N:
+			if (ctrlDown)
+				NewScene();
+			break;
+		}
+
+		return false;
+	}
+
+	void AppLayer::SaveScene()
+	{
+		if (m_ActiveScenePath.empty())
+		{
+			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
+			if (filePath.empty())
+				return;
+
+			m_ActiveScenePath = filePath;
+		}
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Serialize(m_ActiveScenePath);
+	}
+
+	void AppLayer::SaveSceneAs()
+	{
+		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
+		if (filePath.empty())
+			return;
+		m_ActiveScenePath = filePath;
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Serialize(m_ActiveScenePath);
+	}
+
+	void AppLayer::OpenScene()
+	{
+		std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbit)\0*.orbit\0");
+		if (filePath.empty())
+			return;
+		m_ActiveScenePath = filePath;
+
+		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetNoneSelected();
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Deserialize(filePath);
+	}
+
+	void AppLayer::NewScene()
+	{
+		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetNoneSelected();
+
+		m_ActiveScenePath = std::filesystem::path();
 	}
 
 }
