@@ -36,6 +36,7 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/enkiTS/src
         ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/stb/
+        ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
 )
 
 target_link_libraries(Gravix
@@ -45,6 +46,7 @@ target_link_libraries(Gravix
         enkiTS
         ImGui
         slang
+        yaml-cpp
     PUBLIC
         GravixScripting
 )

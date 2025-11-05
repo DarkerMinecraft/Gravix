@@ -26,3 +26,6 @@
 [submodule "ThirdParties/Entt"]
 	path = ThirdParties/Entt
 	url = https://github.com/skypjack/entt.git
+[submodule "ThirdParties/yaml"]
+	path = ThirdParties/yaml
+	url = https://github.com/jbeder/yaml-cpp

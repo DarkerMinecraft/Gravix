@@ -9,8 +9,73 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+namespace YAML 
+{
+	template<>
+	struct convert<glm::vec3>
+	{
+		static Node encode(const glm::vec3& vec)
+		{
+			Node node;
+			node.push_back(vec.x);
+			node.push_back(vec.y);
+			node.push_back(vec.z);
+			return node;
+		}
+		static bool decode(const Node& node, glm::vec3& vec)
+		{
+			if (!node.IsSequence() || node.size() != 3)
+				return false;
+
+			vec.x = node[0].as<float>();
+			vec.y = node[1].as<float>();
+			vec.z = node[2].as<float>();
+			return true;
+		}
+	};
+
+	template<>
+	struct convert<glm::vec4>
+	{
+		static Node encode(const glm::vec4& vec)
+		{
+			Node node;
+			node.push_back(vec.x);
+			node.push_back(vec.y);
+			node.push_back(vec.z);
+			node.push_back(vec.w);
+			return node;
+		}
+		static bool decode(const Node& node, glm::vec4& vec)
+		{
+			if (!node.IsSequence() || node.size() != 4)
+				return false;
+
+			vec.x = node[0].as<float>();
+			vec.y = node[1].as<float>();
+			vec.z = node[2].as<float>();
+			vec.w = node[3].as<float>();
+			return true;
+		}
+	};
+}
+
 namespace Gravix
 {
+
+	YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec3& vec)
+	{
+		out << YAML::Flow;
+		out << YAML::BeginSeq << vec.x << vec.y << vec.z << YAML::EndSeq;
+		return out;
+	}
+
+	YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec4& vec)
+	{
+		out << YAML::Flow;
+		out << YAML::BeginSeq << vec.x << vec.y << vec.z << vec.w << YAML::EndSeq;
+		return out;
+	}
 
 	static void DrawVec3Control(const char* label, glm::vec3& values, float resetValue = 0.0f, float columnWidth = 100.0f)
 	{
@@ -78,7 +143,12 @@ namespace Gravix
 	{
 		RegisterComponent<TagComponent>(
 			"Tag",
-			ComponentSettings{ .HasNodeTree = false, .CanRemoveComponent = false },
+			ComponentSpecification{ .HasNodeTree = false, .CanRemoveComponent = false },
+			nullptr,
+			[](YAML::Emitter& out, TagComponent& c) 
+			{
+				out << YAML::Key << "Name" << YAML::Value << c.Name;
+			},
 			nullptr,
 			[](TagComponent& c)
 			{
@@ -94,8 +164,22 @@ namespace Gravix
 
 		RegisterComponent<TransformComponent>(
 			"Transform",
-			ComponentSettings{ .HasNodeTree = true, .CanRemoveComponent = false },
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = false },
 			nullptr,
+			[](YAML::Emitter& out, TransformComponent& c) 
+			{
+				out << YAML::Key << "Position" << YAML::Value << c.Position;
+				out << YAML::Key << "Rotation" << YAML::Value << c.Rotation;
+				out << YAML::Key << "Scale" << YAML::Value << c.Scale;
+			},
+			[](TransformComponent& c, const YAML::Node& node) 
+			{
+				c.Position = node["Position"].as<glm::vec3>();
+				c.Rotation = node["Rotation"].as<glm::vec3>();
+				c.Scale = node["Scale"].as<glm::vec3>();
+
+				c.CalculateTransform();
+			},
 			[](TransformComponent& c)
 			{
 				// Draw the Transform component UI
@@ -109,10 +193,40 @@ namespace Gravix
 
 		RegisterComponent<CameraComponent>(
 			"Camera",
-			ComponentSettings{ .HasNodeTree = true, .CanRemoveComponent = true },
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
 			[](CameraComponent& c, Scene* scene)
 			{
 				c.Camera.SetViewportSize(scene->GetViewportWidth(), scene->GetViewportHeight());
+			},
+			[](YAML::Emitter& out, CameraComponent& c)
+			{
+				auto& camera = c.Camera;
+				out << YAML::Key << "Camera" << YAML::BeginMap;
+				out << YAML::Key << "ProjectionType" << YAML::Value << (int)camera.GetProjectionType();
+				out << YAML::Key << "PerspectiveFOV" << YAML::Value << camera.GetPerspectiveFOV();
+				out << YAML::Key << "PerspectiveNearClip" << YAML::Value << camera.GetPerspectiveNearClip();
+				out << YAML::Key << "PerspectiveFarClip" << YAML::Value << camera.GetPerspectiveFarClip();
+				out << YAML::Key << "OrthographicSize" << YAML::Value << camera.GetOrthographicSize();
+				out << YAML::Key << "OrthographicNearClip" << YAML::Value << camera.GetOrthographicNearClip();
+				out << YAML::Key << "OrthographicFarClip" << YAML::Value << camera.GetOrthographicFarClip();
+				out << YAML::EndMap;
+
+				out << YAML::Key << "Primary" << YAML::Value << c.Primary;
+				out << YAML::Key << "FixedAspectRatio" << YAML::Value << c.FixedAspectRatio;
+			},
+			[](CameraComponent& c, const YAML::Node& node)
+			{
+				auto& camera = c.Camera;
+				const YAML::Node& cameraNode = node["Camera"];
+				camera.SetProjectionType((ProjectionType)cameraNode["ProjectionType"].as<int>());
+				camera.SetPerspectiveFOV(cameraNode["PerspectiveFOV"].as<float>());
+				camera.SetPerspectiveNearClip(cameraNode["PerspectiveNearClip"].as<float>());
+				camera.SetPerspectiveFarClip(cameraNode["PerspectiveFarClip"].as<float>());
+				camera.SetOrthographicSize(cameraNode["OrthographicSize"].as<float>());
+				camera.SetOrthographicNearClip(cameraNode["OrthographicNearClip"].as<float>());
+				camera.SetOrthographicFarClip(cameraNode["OrthographicFarClip"].as<float>());
+				c.Primary = node["Primary"].as<bool>();
+				c.FixedAspectRatio = node["FixedAspectRatio"].as<bool>();
 			},
 			[](CameraComponent& c)
 			{
@@ -174,8 +288,16 @@ namespace Gravix
 
 		RegisterComponent<SpriteRendererComponent>(
 			"Sprite Renderer",
-			ComponentSettings{ .HasNodeTree = true, .CanRemoveComponent = true },
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
 			nullptr,
+			[](YAML::Emitter& out, SpriteRendererComponent& c)
+			{
+				out << YAML::Key << "Color" << YAML::Value << c.Color;
+			},
+			[](SpriteRendererComponent& c, const YAML::Node& node)
+			{
+				c.Color = node["Color"].as<glm::vec4>();
+			},
 			[](SpriteRendererComponent& c)
 			{
 				ImGui::ColorEdit4("Color", glm::value_ptr(c.Color));

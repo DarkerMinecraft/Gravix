@@ -1,5 +1,8 @@
 #include "AppLayer.h"
 
+#include "Utils/PlatformUtils.h"
+#include "Serialization/Scene/SceneSerializer.h"
+
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -118,6 +121,57 @@ namespace Gravix
 		{
 			if (ImGui::BeginMenu("File"))
 			{
+				if (ImGui::MenuItem("New", "Ctrl+N"))
+				{
+					m_ActiveScene = CreateRef<Scene>();
+					m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+					m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+					m_SceneHierarchyPanel.SetNoneSelected();
+
+					m_ActiveScenePath = std::filesystem::path();
+				}
+				
+				if(ImGui::MenuItem("Open... ", "Ctrl+O"))
+				{
+					std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbit)\0*.orbit\0");
+					if(filePath.empty())
+						return;
+					m_ActiveScenePath = filePath;
+
+					m_ActiveScene = CreateRef<Scene>();
+					m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+					m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+					m_SceneHierarchyPanel.SetNoneSelected();
+
+					SceneSerializer serializer(m_ActiveScene);
+					serializer.Deserialize(filePath);
+				}
+
+				if (ImGui::MenuItem("Save", "Ctrl+S"))
+				{
+					if (m_ActiveScenePath.empty())
+					{
+						std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
+						if (filePath.empty())
+							return;
+
+						m_ActiveScenePath = filePath;
+					}
+
+					SceneSerializer serializer(m_ActiveScene);
+					serializer.Serialize(m_ActiveScenePath);
+				}
+
+				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) 
+				{
+					std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
+					if (filePath.empty())
+						return;
+					m_ActiveScenePath = filePath;
+
+					SceneSerializer serializer(m_ActiveScene);
+					serializer.Serialize(m_ActiveScenePath);
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();

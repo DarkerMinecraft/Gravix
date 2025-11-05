@@ -18,11 +18,11 @@ namespace Gravix
 
 	}
 
-	Entity Scene::CreateEntity(const std::string& name)
+	Entity Scene::CreateEntity(const std::string& name, UUID uuid)
 	{
 		Entity entity = { m_Registry.create(), this };
 
-		entity.AddComponent<TagComponent>(name);
+		entity.AddComponent<TagComponent>(name, uuid);
 		entity.AddComponent<TransformComponent>();
 
 		return entity;

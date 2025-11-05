@@ -2,8 +2,9 @@
 
 #include "Renderer/Generic/Command.h"
 #include "Renderer/Generic/Camera.h"
-
 #include "EditorCamera.h"
+
+#include "Core/UUID.h"
 
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
@@ -19,7 +20,7 @@ namespace Gravix
 		Scene();
 		~Scene();
 		
-		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"));
+		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID());
 		void DestroyEntity(Entity entity);
 
 		void OnEditorUpdate(float ts);
@@ -38,6 +39,7 @@ namespace Gravix
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
 		friend class Entity;
+		friend class SceneSerializer;
 		friend class SceneHierarchyPanel;
 		friend class InspectorPanel;
 	};

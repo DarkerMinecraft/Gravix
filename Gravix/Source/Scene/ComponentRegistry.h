@@ -10,11 +10,12 @@
 
 #include <entt/entt.hpp>
 #include <imgui.h>
+#include <yaml-cpp/yaml.h>
 
 namespace Gravix
 {
 
-	struct ComponentSettings
+	struct ComponentSpecification
 	{
 		bool HasNodeTree = false;
 		bool CanRemoveComponent = true;
@@ -28,10 +29,10 @@ namespace Gravix
 	struct ComponentInfo
 	{
 		std::string Name;
-		std::function<void(void*, Scene* scene)> OnCreateFunc;
-		//std::function<void* (YAML::Emitter&, void*) SerializeFunc;
-		//std::function<void*(void*, const YAML::Node&>) DeserializeFunc;
-		std::function<void(void*, ComponentUserSettings* userSettings)> ImGuiRenderFunc;
+		std::function<void(void*, Scene*)> OnCreateFunc;
+		std::function<void(YAML::Emitter&, void*)> SerializeFunc;
+		std::function<void(void*, const YAML::Node&)> DeserializeFunc;
+		std::function<void(void*, ComponentUserSettings*)> ImGuiRenderFunc;
 
 		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
 		std::function<bool(entt::registry&, entt::entity)> HasComponentFunc;
@@ -45,10 +46,10 @@ namespace Gravix
 	public:
 		template<typename T>
 		void RegisterComponent(const std::string& name,
-			ComponentSettings settings,
+			ComponentSpecification specification,
 			std::function<void(T&, Scene* scene)> onCreate,
-			/*std::function<void(YAML::Emitter&, T&)> serialize,
-			std::function<void(T&, const YAML::Node&)> deserialize,*/
+			std::function<void(YAML::Emitter&, T&)> serialize,
+			std::function<void(T&, const YAML::Node&)> deserialize,
 			std::function<void(T&)> imguiRender
 		)
 		{
@@ -59,19 +60,23 @@ namespace Gravix
 					if (onCreate)
 						onCreate(*reinterpret_cast<T*>(instance), scene);
 				};
-			/*
-			info.SerializeFunc = [serialize](YAML::Emitter& out, void* instance)
+			info.SerializeFunc = [serialize, name](YAML::Emitter& out, void* instance) -> void
 				{
-					serialize(out, *reinterpret_cast<T*>(instance));
+					if (serialize)
+					{
+						out << YAML::Key << name + "Component" << YAML::BeginMap;
+						serialize(out, *reinterpret_cast<T*>(instance));
+						out << YAML::EndMap;
+					}
 				};
-			info.DeserializeFunc = [deserialize](void* instance, const YAML::Node& node)
+			info.DeserializeFunc = [deserialize](void* instance, const YAML::Node& node) -> void
 				{
-					deserialize(*reinterpret_cast<T*>(instance), node);
+					if(deserialize)
+						deserialize(*reinterpret_cast<T*>(instance), node);
 				};
-			*/
-			info.ImGuiRenderFunc = [name, imguiRender, settings](void* instance, ComponentUserSettings* userSettings)
+			info.ImGuiRenderFunc = [name, imguiRender, specification](void* instance, ComponentUserSettings* userSettings) -> void
 				{
-					if (!settings.HasNodeTree)
+					if (!specification.HasNodeTree)
 					{
 						imguiRender(*reinterpret_cast<T*>(instance));
 					}
@@ -86,7 +91,7 @@ namespace Gravix
 
 						if (ImGui::BeginPopup("ComponentSettings"))
 						{
-							if (settings.CanRemoveComponent)
+							if (specification.CanRemoveComponent)
 							{
 								if (ImGui::Button("Remove Component"))
 								{

@@ -37,6 +37,8 @@ namespace Gravix
 		SceneHierarchyPanel m_SceneHierarchyPanel;
 		InspectorPanel m_InspectorPanel;
 		ViewportPanel m_ViewportPanel;
+
+		std::filesystem::path m_ActiveScenePath;
 	};
 
 }

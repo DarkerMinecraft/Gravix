@@ -54,6 +54,13 @@ set_target_properties(slang-common-objects PROPERTIES FOLDER "Slang/Dependencies
 set_target_properties(compiler-core PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(slangi PROPERTIES FOLDER "Slang/Dependencies")
 
+add_subdirectory(ThirdParties/yaml)
+set_target_properties(yaml-cpp PROPERTIES FOLDER "yaml/Dependencies")
+set_target_properties(yaml-cpp-parse PROPERTIES FOLDER "yaml/Dependencies")
+set_target_properties(yaml-cpp-read PROPERTIES FOLDER "yaml/Dependencies")
+set_target_properties(yaml-cpp-sandbox PROPERTIES FOLDER "yaml/Dependencies")
+
+
 # Add engine modules
 add_subdirectory(Gravix-ScriptCore)
 add_subdirectory(GravixScripting)

@@ -20,6 +20,8 @@ namespace Gravix
 
 		const Entity GetSelectedEntity() const { return m_SelectedEntity; }
 		void SetSelectedEntity(Entity entity) { m_SelectedEntity = entity; }
+
+		void SetNoneSelected() { m_SelectedEntity = Entity{ entt::null, m_Context.get()  }; }
 	private:
 		void DrawEntityNode(Entity entity);
 	private:
