@@ -23,11 +23,11 @@ namespace Gravix
 
 		void CreateProjectDirectories() const 
 		{
-			if(m_WorkingDirectory.empty())
+			if(!std::filesystem::exists(m_WorkingDirectory))
 				std::filesystem::create_directories(m_WorkingDirectory);
-			if(m_AssetsDirectory.empty())
+			if(!std::filesystem::exists(m_AssetsDirectory))
 				std::filesystem::create_directories(m_AssetsDirectory);
-			if (m_ProjectLibraryDirectory.empty())
+			if (!std::filesystem::exists(m_ProjectLibraryDirectory))
 				std::filesystem::create_directories(m_ProjectLibraryDirectory);
 		}
 
