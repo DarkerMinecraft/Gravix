@@ -159,8 +159,9 @@ namespace Gravix
 		if(e.GetRepeatCount() > 0)
 			return false;
 
-		bool ctrlDown = Input::IsKeyPressed(Key::LeftControl) || Input::IsKeyPressed(Key::RightControl);
-		bool shiftDown = Input::IsKeyPressed(Key::LeftShift) || Input::IsKeyPressed(Key::RightShift);
+		bool ctrlDown = Input::IsKeyDown(Key::LeftControl) || Input::IsKeyDown(Key::RightControl);
+		bool shiftDown = Input::IsKeyDown(Key::LeftShift) || Input::IsKeyDown(Key::RightShift);
+		GX_CORE_TRACE("Key Pressed: {0} (Ctrl: {1}, Shift: {2})", e.GetKeyCode(), ctrlDown, shiftDown);
 		switch (e.GetKeyCode()) 
 		{
 		case Key::S:
@@ -181,8 +182,6 @@ namespace Gravix
 				NewScene();
 			break;
 		}
-
-		return false;
 	}
 
 	void AppLayer::SaveScene()

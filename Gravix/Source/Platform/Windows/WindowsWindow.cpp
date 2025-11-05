@@ -19,8 +19,22 @@ namespace Gravix
 
 	LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
-			return true;
+		// CRITICAL FIX: Handle keyboard events specially
+		// Only let ImGui consume them if it actually wants keyboard input
+		bool isKeyboardEvent = (msg == WM_KEYDOWN || msg == WM_KEYUP ||
+			msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_CHAR);
+
+		if (!isKeyboardEvent)
+		{
+			// Non-keyboard events can be consumed by ImGui immediately
+			if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+				return true;
+		}
+		else
+		{
+			// Let ImGui see keyboard events, but don't let it block them yet
+			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+		}
 
 		if (msg == WM_CREATE)
 		{
@@ -43,10 +57,9 @@ namespace Gravix
 		{
 			WindowCloseEvent e;
 			pData.EventCallback(e);
-			return 0; // CRITICAL FIX: Return 0 to indicate we handled the message
+			return 0;
 		}
 
-		// CRITICAL FIX: Handle window resize events more robustly
 		case WM_SIZE:
 		{
 			uint32_t width = LOWORD(lParam);
@@ -62,17 +75,25 @@ namespace Gravix
 			return 0;
 		}
 
-		// CRITICAL FIX: Handle window positioning changes that can affect rendering
 		case WM_MOVE:
 		{
-			// Don't generate events for moves, but ensure the message is processed
 			return 0;
 		}
 
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		{
-			// CRITICAL FIX: Check for repeated key events
+			// CRITICAL FIX: Only consume keyboard events if ImGui actually wants them
+			ImGuiIO& io = ImGui::GetIO();
+
+			// Check if ImGui wants keyboard input (e.g., typing in a text field)
+			if (io.WantCaptureKeyboard)
+			{
+				// ImGui wants this input, so we let it handle it and don't generate our event
+				return 0;
+			}
+
+			// ImGui doesn't want it, so generate our event
 			int repeatCount = (lParam & 0x0000FFFF);
 			bool wasDown = (lParam & 0x40000000) != 0;
 
@@ -82,13 +103,22 @@ namespace Gravix
 			}
 			return 0;
 		}
+
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
 		{
+			// Same check for key release
+			ImGuiIO& io = ImGui::GetIO();
+			if (io.WantCaptureKeyboard)
+			{
+				return 0;
+			}
+
 			KeyReleasedEvent event(static_cast<int>(wParam));
 			pData.EventCallback(event);
 			return 0;
 		}
+
 		case WM_CHAR:
 		{
 			// CRITICAL FIX: Filter out control characters
@@ -98,13 +128,15 @@ namespace Gravix
 			}
 			return 0;
 		}
+
 		case WM_LBUTTONDOWN:
 		{
-			SetCapture(hwnd); // Capture mouse for proper tracking
+			SetCapture(hwnd);
 			MouseButtonPressedEvent e(0);
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_RBUTTONDOWN:
 		{
 			SetCapture(hwnd);
@@ -112,6 +144,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MBUTTONDOWN:
 		{
 			SetCapture(hwnd);
@@ -119,6 +152,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_LBUTTONUP:
 		{
 			ReleaseCapture();
@@ -126,6 +160,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_RBUTTONUP:
 		{
 			ReleaseCapture();
@@ -133,6 +168,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MBUTTONUP:
 		{
 			ReleaseCapture();
@@ -140,6 +176,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MOUSEWHEEL:
 		{
 			float xOffset = 0.0f;
@@ -152,6 +189,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MOUSEHWHEEL:
 		{
 			float xOffset = -static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / static_cast<float>(WHEEL_DELTA);
@@ -164,9 +202,9 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MOUSEMOVE:
 		{
-			// CRITICAL FIX: Use client coordinates instead of screen coordinates
 			int xPos = GET_X_LPARAM(lParam);
 			int yPos = GET_Y_LPARAM(lParam);
 
@@ -174,11 +212,11 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
-
-		default:
-			return DefWindowProc(hwnd, msg, wParam, lParam);
 		}
+
+		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
+
 
 	WindowsWindow::WindowsWindow(const WindowSpecification& spec)
 	{
