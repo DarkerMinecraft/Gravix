@@ -13,9 +13,6 @@ struct PushConstants
     Vertex *vertex;
 }
 
-[[vk::binding(0, 4)]]
-ConstantBuffer<Vertex> _VertexStructReflection;
-
 [[vk::push_constant]]
 PushConstants pc;
 
