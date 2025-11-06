@@ -261,8 +261,35 @@ namespace Gravix
 
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &ColorBlendAttachment;
+		uint32_t attachmentCount = RenderInfo.colorAttachmentCount;
+
+		// create an array of blend attachments (one per color attachment)
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+		blendAttachments.resize(attachmentCount);
+		for (uint32_t i = 0; i < attachmentCount; ++i) {
+			blendAttachments[i] = ColorBlendAttachment; // copy base settings
+		}
+
+		// If some formats do not support blending, ensure blendEnable = VK_FALSE for them.
+		// (Quick check by known formats; for robust check use vkGetPhysicalDeviceFormatProperties)
+		for (uint32_t i = 0; i < attachmentCount; ++i) {
+			if (i >= ColorAttachmentFormats.size()) break; // defensive
+			VkFormat fmt = ColorAttachmentFormats[i];
+
+			// Example fast-path: formats without alpha / integer formats generally don't support blending
+			// Your actual check can be more thorough by querying physical device format features.
+			if (fmt == VK_FORMAT_R8_UINT || fmt == VK_FORMAT_R8_SINT || /* other int formats */ false) {
+				blendAttachments[i].blendEnable = VK_FALSE;
+			}
+		}
+
+		// If you intend to have different blending per attachment and the device didn't enable
+		// independentBlend, you must enable independentBlend when creating the device.
+		// Otherwise all elements must be identical. The code above copies the same base state
+		// and selectively disables blending for formats that don't support it (so they may differ).
+		// If you cannot differ, ensure all attachments are identical OR enable independentBlend.
+		colorBlending.attachmentCount = attachmentCount;
+		colorBlending.pAttachments = blendAttachments.data();
 
 		// build the actual pipeline
 		// we now use all of the info structs we have been writing into into this one

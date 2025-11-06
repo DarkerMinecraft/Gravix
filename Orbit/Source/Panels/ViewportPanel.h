@@ -32,7 +32,7 @@ namespace Gravix
 	private:
 		Ref<Framebuffer> m_Framebuffer;
 		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f };
-		std::vector<glm::vec2> m_ViewportBounds;
+		std::array<glm::vec2, 2> m_ViewportBounds;
 
 		bool m_ViewportHovered = false;
 		bool m_ViewportFocused = false;

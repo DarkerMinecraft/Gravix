@@ -30,7 +30,7 @@ namespace Gravix
 
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
-		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail);
+		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail, ImVec2(0, 1), ImVec2(1, 0));
 
 		auto windowSize = ImGui::GetWindowSize();
 		ImVec2 minBound = ImGui::GetWindowPos();
@@ -52,7 +52,7 @@ namespace Gravix
 			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
 
 			glm::mat4 cameraProjection = m_EditorCamera->GetProjection();
-			cameraProjection[1][1] *= -1; 
+			//cameraProjection[1][1] *= -1; 
 			const glm::mat4& cameraView = m_EditorCamera->GetViewMatrix();
 			auto& tc = selectedEntity.GetComponent<TransformComponent>();
 			glm::mat4 transform = tc.Transform;
@@ -85,16 +85,22 @@ namespace Gravix
 
 	void ViewportPanel::UpdateViewport()
 	{
+		if (m_ViewportBounds.empty())
+			return;
+
 		auto [mx, my] = ImGui::GetMousePos();
 		mx -= m_ViewportBounds[0].x;
-		my -= m_ViewportBounds[1].y;
+		my -= m_ViewportBounds[0].y;
 
 		glm::vec2 viewportSize = m_ViewportBounds[1] - m_ViewportBounds[0];
 		int mouseX = (int)mx;
 		int mouseY = (int)my;
 
-		int pixel = m_Framebuffer->ReadPixel(1, mouseX, mouseY);
-		GX_CORE_INFO("Pixel Data: {0}", pixel);
+		if (mouseX >= 0 && mouseY >= 0 && mouseX < (int)viewportSize.x && mouseY < (int)viewportSize.y) 
+		{
+			int pixel = m_Framebuffer->ReadPixel(1, mouseX, mouseY);
+			//GX_CORE_INFO("Pixel Data: {0}", pixel);
+		}
 	}
 
 	void ViewportPanel::GuizmoShortcuts()

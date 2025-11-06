@@ -437,6 +437,7 @@ namespace Gravix
 		features.samplerAnisotropy = true;  // Fix the sampler warning too
 		features.shaderStorageImageMultisample = true;
 		features.sampleRateShading = true;
+		features.independentBlend = true;
 
 		//We want a gpu that can write to the win32 surface and supports vulkan 1.4 with the correct features
 		vkb::PhysicalDeviceSelector selector{ instRet.value() };
