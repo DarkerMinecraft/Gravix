@@ -77,8 +77,6 @@ namespace Gravix
 			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
 			if (m_ShouldRegenerateShaderCache)
 				m_ShouldRegeneratePipelineCache = true;
-
-			m_SerializedShaderData.Reflection = m_Reflection;
 		} else
 		{
 			m_ShouldRegenerateShaderCache = true;
@@ -87,6 +85,8 @@ namespace Gravix
 		CreateMaterial(spec);
 		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache)
 		{
+			m_SerializedShaderData.Reflection = m_Reflection;
+
 			ShaderSerializer serializer(&m_SerializedShaderData);
 			serializer.Serialize(spec.ShaderFilePath, materialCache);
 		}
@@ -105,8 +105,6 @@ namespace Gravix
 			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
 			if (m_ShouldRegenerateShaderCache)
 				m_ShouldRegeneratePipelineCache = true;
-
-			m_SerializedShaderData.Reflection = m_Reflection;
 		}
 		else
 		{
@@ -116,6 +114,8 @@ namespace Gravix
 		CreateMaterial(debugName, shaderFilePath);
 		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache) 
 		{
+			m_SerializedShaderData.Reflection = m_Reflection;
+
 			ShaderSerializer serializer(&m_SerializedShaderData);
 			serializer.Serialize(shaderFilePath, materialCache);
 		}
@@ -248,6 +248,8 @@ namespace Gravix
 				}
 				m_ShaderModules.push_back(shaderModule);
 			}
+
+			m_Reflection = m_SerializedShaderData.Reflection;
 		}
 	}
 
