@@ -7,6 +7,8 @@
 
 #include "Renderer/Vulkan/VulkanDevice.h"
 
+#include "Serialization/Shader/ShaderSerializer.h"
+
 namespace Gravix 
 {
 
@@ -48,10 +50,16 @@ namespace Gravix
 
 		VkPipeline m_Pipeline;
 		VkPipelineLayout m_PipelineLayout;
+		VkPipelineCache m_PipelineCache;
 
 		std::vector<VkShaderModule> m_ShaderModules;
 
 		ShaderReflection m_Reflection;
+
+		ShaderSerializedData m_SerializedShaderData;
+		bool m_ShouldRegenerateShaderCache = true;
+		bool m_ShouldRegeneratePipelineCache = true;
+
 		bool m_IsCompute = false;
 		uint32_t m_PushConstantSize = 0;
 	};

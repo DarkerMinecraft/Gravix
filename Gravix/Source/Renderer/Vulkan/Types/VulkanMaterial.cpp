@@ -5,6 +5,7 @@
 
 #include "Renderer/Vulkan/Utils/DescriptorWriter.h"
 #include "Renderer/Vulkan/Utils/VulkanUtils.h"
+#include "Core/Application.h"
 
 namespace Gravix
 {
@@ -50,16 +51,63 @@ namespace Gravix
 		return flags;
 	}
 
+	static bool ShouldRegeneratePipelineCache(VkPhysicalDevice device, const std::vector<uint8_t>& cachedData) 
+	{
+		if (cachedData.size() < sizeof(VkPipelineCacheHeaderVersionOne))
+			return true;
+		const auto* cacheHeader = reinterpret_cast<const VkPipelineCacheHeaderVersionOne*>(cachedData.data());
+		VkPhysicalDeviceProperties deviceProps;
+		vkGetPhysicalDeviceProperties(device, &deviceProps);
+		return (cacheHeader->headerVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE) ||
+			(cacheHeader->vendorID != deviceProps.vendorID) ||
+			(cacheHeader->deviceID != deviceProps.deviceID) ||
+			(memcmp(cacheHeader->pipelineCacheUUID, deviceProps.pipelineCacheUUID, VK_UUID_SIZE) != 0);
+	}
+
 	VulkanMaterial::VulkanMaterial(Device* device, const MaterialSpecification& spec)
 		: m_Device(static_cast<VulkanDevice*>(device)), m_DebugName(spec.DebugName)
 	{
+		std::filesystem::path materialCache = Application::Get().GetProject().GetProjectLibraryDirectory() / (spec.DebugName + ".cache");
+		if (std::filesystem::exists(materialCache))
+		{
+			ShaderSerializer deserializer(&m_SerializedShaderData);
+			deserializer.Deserialize(spec.ShaderFilePath, materialCache);
+
+			m_ShouldRegenerateShaderCache = deserializer.IsModified();
+			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
+			if (m_ShouldRegenerateShaderCache)
+				m_ShouldRegeneratePipelineCache = true;
+
+		}
 		CreateMaterial(spec);
+		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache)
+		{
+			ShaderSerializer serializer(&m_SerializedShaderData);
+			serializer.Serialize(spec.ShaderFilePath, materialCache);
+		}
 	}
 
 	VulkanMaterial::VulkanMaterial(Device* device, const std::string& debugName, const std::filesystem::path& shaderFilePath)
 		: m_Device(static_cast<VulkanDevice*>(device)), m_DebugName(debugName)
 	{
+		std::filesystem::path materialCache = Application::Get().GetProject().GetProjectLibraryDirectory() / (debugName + ".cache");
+		if (std::filesystem::exists(materialCache))
+		{
+			ShaderSerializer deserializer(&m_SerializedShaderData);
+			deserializer.Deserialize(shaderFilePath, materialCache);
+
+			m_ShouldRegenerateShaderCache = deserializer.IsModified();
+			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
+			if (m_ShouldRegenerateShaderCache)
+				m_ShouldRegeneratePipelineCache = true;
+
+		}
 		CreateMaterial(debugName, shaderFilePath);
+		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache) 
+		{
+			ShaderSerializer serializer(&m_SerializedShaderData);
+			serializer.Serialize(shaderFilePath, materialCache);
+		}
 		m_IsCompute = true;
 	}
 
@@ -70,6 +118,7 @@ namespace Gravix
 			vkDestroyShaderModule(m_Device->GetDevice(), shaderModule, nullptr);
 		}
 
+		vkDestroyPipelineCache(m_Device->GetDevice(), m_PipelineCache, nullptr);
 		vkDestroyPipelineLayout(m_Device->GetDevice(), m_PipelineLayout, nullptr);
 		vkDestroyPipeline(m_Device->GetDevice(), m_Pipeline, nullptr);
 	}
@@ -145,28 +194,49 @@ namespace Gravix
 	void VulkanMaterial::SpinShader(const std::filesystem::path& shaderFilePath)
 	{
 		std::vector<std::vector<uint32_t>> spirv;
-		if (m_Device->GetShaderCompiler().CompileShader(shaderFilePath, &spirv, &m_Reflection))
+		if (m_ShouldRegenerateShaderCache)
 		{
-			GX_CORE_INFO("Successfully compiled shader: {0}", shaderFilePath.string());
-			for (uint32_t i = 0; i < spirv.size(); i++)
+			if (m_Device->GetShaderCompiler().CompileShader(shaderFilePath, &spirv, &m_Reflection))
+			{
+				GX_CORE_INFO("Successfully compiled shader: {0}", shaderFilePath.string());
+				for (uint32_t i = 0; i < spirv.size(); i++)
+				{
+					VkShaderModuleCreateInfo createInfo{};
+					createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+					createInfo.codeSize = spirv[i].size() * sizeof(uint32_t);
+					createInfo.pCode = spirv[i].data();
+					VkShaderModule shaderModule;
+					if (vkCreateShaderModule(m_Device->GetDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+					{
+						GX_CORE_ERROR("Failed to create shader module for: {0}", shaderFilePath.string());
+						return;
+					}
+					m_ShaderModules.push_back(shaderModule);
+				}
+				m_SerializedShaderData.SpirvCode = spirv;
+				m_SerializedShaderData.Reflection = m_Reflection;
+			}
+			else
+			{
+				GX_CORE_ERROR("Failed to compile shader: {0}", shaderFilePath.string());
+			}
+		}
+		else 
+		{
+			for (uint32_t i = 0; i < m_SerializedShaderData.SpirvCode.size(); i++) 
 			{
 				VkShaderModuleCreateInfo createInfo{};
 				createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-				createInfo.codeSize = spirv[i].size() * sizeof(uint32_t);
-				createInfo.pCode = spirv[i].data();
+				createInfo.codeSize = m_SerializedShaderData.SpirvCode[i].size() * sizeof(uint32_t);
+				createInfo.pCode = m_SerializedShaderData.SpirvCode[i].data();
 				VkShaderModule shaderModule;
 				if (vkCreateShaderModule(m_Device->GetDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
 				{
 					GX_CORE_ERROR("Failed to create shader module for: {0}", shaderFilePath.string());
 					return;
 				}
-
 				m_ShaderModules.push_back(shaderModule);
 			}
-		}
-		else
-		{
-			GX_CORE_ERROR("Failed to compile shader: {0}", shaderFilePath.string());
 		}
 	}
 
@@ -341,6 +411,28 @@ namespace Gravix
 		else
 			builder.DisableDepthTest();
 
+		VkPipelineCacheCreateInfo pipelineCacheCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+		if (!m_ShouldRegeneratePipelineCache)
+		{
+			pipelineCacheCreateInfo.initialDataSize = m_SerializedShaderData.PipelineCache.size();
+			pipelineCacheCreateInfo.pInitialData = m_SerializedShaderData.PipelineCache.data();
+
+			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
+		}
+		else 
+		{
+			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
+
+			size_t cacheSize = 0;
+			vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, nullptr);
+			if (cacheSize > 0)
+			{
+				m_SerializedShaderData.PipelineCache.reserve(cacheSize);
+				vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, m_SerializedShaderData.PipelineCache.data());
+			}
+		}
+
+		builder.Cache = m_PipelineCache;
 		builder.Layout = m_PipelineLayout;
 		m_Pipeline = builder.BuildPipeline(m_Device->GetDevice());
 	}
@@ -353,12 +445,33 @@ namespace Gravix
 		stageInfo.module = m_ShaderModules[0];
 		stageInfo.pName = m_Reflection.GetEntryPoints()[0].Name.c_str();
 
+		VkPipelineCacheCreateInfo pipelineCacheCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+		if (!m_ShouldRegeneratePipelineCache)
+		{
+			pipelineCacheCreateInfo.initialDataSize = m_SerializedShaderData.PipelineCache.size();
+			pipelineCacheCreateInfo.pInitialData = m_SerializedShaderData.PipelineCache.data();
+
+			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
+		}
+		else
+		{
+			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
+
+			size_t cacheSize = 0;
+			vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, nullptr);
+			if (cacheSize > 0)
+			{
+				m_SerializedShaderData.PipelineCache.reserve(cacheSize);
+				vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, m_SerializedShaderData.PipelineCache.data());
+			}
+		}
+
 		VkComputePipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		pipelineInfo.stage = stageInfo;
 		pipelineInfo.layout = m_PipelineLayout;
 
-		if (vkCreateComputePipelines(m_Device->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
+		if (vkCreateComputePipelines(m_Device->GetDevice(), m_PipelineCache, 1, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
 		{
 			GX_CORE_ERROR("Failed to create compute pipeline for material: {0}", m_DebugName);
 			return;
