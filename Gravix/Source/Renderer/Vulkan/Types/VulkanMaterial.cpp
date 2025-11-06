@@ -78,6 +78,7 @@ namespace Gravix
 			if (m_ShouldRegenerateShaderCache)
 				m_ShouldRegeneratePipelineCache = true;
 
+			m_SerializedShaderData.Reflection = m_Reflection;
 		} else
 		{
 			m_ShouldRegenerateShaderCache = true;
@@ -105,6 +106,7 @@ namespace Gravix
 			if (m_ShouldRegenerateShaderCache)
 				m_ShouldRegeneratePipelineCache = true;
 
+			m_SerializedShaderData.Reflection = m_Reflection;
 		}
 		else
 		{
