@@ -12,11 +12,12 @@ namespace Gravix
 	AppLayer::AppLayer()
 	{
 		FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8 };
+		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedInt };
 		fbSpec.Multisampled = true;
 
 		m_MSAAFramebuffer = Framebuffer::Create(fbSpec);
 		m_MSAAFramebuffer->SetClearColor(0, glm::vec4{ 0.1f, 0.1f, 0.1f, 1.0f });
+		m_MSAAFramebuffer->SetClearColor(1, glm::vec4{ -1.0f, 0.0f, 0.0f, 0.0f });
 
 		fbSpec.Multisampled = false;
 		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
@@ -54,6 +55,8 @@ namespace Gravix
 
 			m_ViewportPanel.ResizeFramebuffer();
 			m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
+
+			m_ViewportPanel.UpdateViewport();
 		}
 
 		if(m_ViewportPanel.IsViewportHovered())

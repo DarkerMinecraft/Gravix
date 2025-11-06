@@ -67,6 +67,7 @@ namespace Gravix
 		void SetCurrentSwapchainImageLayout(VkImageLayout layout) { m_SwapchainImageLayout = layout; }
 
 		FrameData& GetCurrentFrameData() { return m_Frames[m_CurrentFrame % FRAME_OVERLAP]; }
+		VmaAllocator& GetAllocator() { return m_Allocator; }
 	private:
 		void InitVulkan(const DeviceProperties& properties);
 		void CreateSwapchain(uint32_t width, uint32_t height, bool vSync);

@@ -10,6 +10,31 @@
 
 namespace Gravix 
 {
+
+
+	static VkFormat ConvertTextureFormatToVkFormat(FramebufferTextureFormat format) 
+	{
+		switch (format)
+		{
+		case FramebufferTextureFormat::RGBA8:
+			return VK_FORMAT_R8G8B8A8_UNORM;
+		case FramebufferTextureFormat::RGBA16F:
+			return VK_FORMAT_R16G16B16A16_SFLOAT;
+		case FramebufferTextureFormat::RGBA32F:
+			return VK_FORMAT_R32G32B32A32_SFLOAT;
+		case FramebufferTextureFormat::RGBA32UI:
+			return VK_FORMAT_R32G32B32A32_UINT;
+		case FramebufferTextureFormat::DEPTH24STENCIL8:
+			return VK_FORMAT_D24_UNORM_S8_UINT;
+		case FramebufferTextureFormat::DEPTH32FSTENCIL8:
+			return VK_FORMAT_D32_SFLOAT_S8_UINT;
+		case FramebufferTextureFormat::RedInt:
+			return VK_FORMAT_R8_UINT;
+		default:
+			return VK_FORMAT_UNDEFINED;
+		}
+	}
+
 	VulkanFramebuffer::VulkanFramebuffer(Device* device, const FramebufferSpecification& spec)
 		: m_Device(static_cast<VulkanDevice*>(device)), m_UseSamples(spec.Multisampled)
 	{
@@ -71,6 +96,92 @@ namespace Gravix
 	{
 		m_ClearColors[index] = clearColor;
 	}
+
+	int VulkanFramebuffer::ReadPixel(uint32_t attachmentIndex, int mouseX, int mouseY)
+	{
+		if (attachmentIndex >= m_Attachments.size())
+			return -1;
+
+		AttachmentData& attachment = m_Attachments[attachmentIndex];
+
+		int flippedY = m_Height - mouseY - 1;
+
+		uint32_t pixelSize = 4;
+		switch (attachment.Format)
+		{
+		case VK_FORMAT_R8_UINT: pixelSize = 1; break;
+		case VK_FORMAT_R32_UINT: pixelSize = 4; break;
+		case VK_FORMAT_R32G32B32A32_UINT: pixelSize = 16; break;
+		case VK_FORMAT_R8G8B8A8_UNORM: pixelSize = 4; break;
+		default: break;
+		}
+
+		// Create a small staging buffer using VMA (CPU-visible)
+		AllocatedBuffer stagingBuffer = m_Device->CreateBuffer(
+			pixelSize,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VMA_MEMORY_USAGE_CPU_ONLY
+		);
+
+		// Copy one pixel from the attachment image into the staging buffer
+		m_Device->ImmediateSubmit([&, this](VkCommandBuffer cmd)
+			{
+				TransitionToLayout(cmd, attachmentIndex, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+				VkBufferImageCopy region{};
+				region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				region.imageSubresource.mipLevel = 0;
+				region.imageSubresource.baseArrayLayer = 0;
+				region.imageSubresource.layerCount = 1;
+				region.imageOffset = { mouseX, flippedY, 0 };
+				region.imageExtent = { 1, 1, 1 };
+
+				vkCmdCopyImageToBuffer(
+					cmd,
+					attachment.Image.Image,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					stagingBuffer.Buffer,
+					1,
+					&region
+				);
+
+				// Restore layout to color attachment
+				TransitionToLayout(cmd, attachmentIndex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			});
+
+		// Map and read pixel
+		void* data;
+		vmaMapMemory(m_Device->GetAllocator(), stagingBuffer.Allocation, &data);
+
+		int result = -1;
+		switch (attachment.Format)
+		{
+		case VK_FORMAT_R8_UINT:
+			result = *(uint8_t*)data;
+			break;
+		case VK_FORMAT_R32_UINT:
+			result = *(uint32_t*)data;
+			break;
+		case VK_FORMAT_R32G32B32A32_UINT:
+			result = ((uint32_t*)data)[0];
+			break;
+		case VK_FORMAT_R8G8B8A8_UNORM:
+		{
+			uint8_t* px = (uint8_t*)data;
+			result = px[0]; // red channel (adjust if you store ID elsewhere)
+			break;
+		}
+		default:
+			result = *(int*)data;
+			break;
+		}
+
+		vmaUnmapMemory(m_Device->GetAllocator(), stagingBuffer.Allocation);
+		m_Device->DestroyBuffer(stagingBuffer);
+
+		return result;
+	}
+
 
 	void* VulkanFramebuffer::GetColorAttachmentID(uint32_t index)
 	{
@@ -175,27 +286,6 @@ namespace Gravix
 			1
 		};
 
-		auto MapFramebufferFormat = [](FramebufferTextureFormat format) -> VkFormat
-			{
-				switch (format)
-				{
-				case FramebufferTextureFormat::RGBA8:
-					return VK_FORMAT_R8G8B8A8_UNORM;
-				case FramebufferTextureFormat::RGBA16F:
-					return VK_FORMAT_R16G16B16A16_SFLOAT;
-				case FramebufferTextureFormat::RGBA32F:
-					return VK_FORMAT_R32G32B32A32_SFLOAT;
-				case FramebufferTextureFormat::RGBA32UI:
-					return VK_FORMAT_R32G32B32A32_UINT;
-				case FramebufferTextureFormat::DEPTH24STENCIL8:
-					return VK_FORMAT_D24_UNORM_S8_UINT;
-				case FramebufferTextureFormat::DEPTH32FSTENCIL8:
-					return VK_FORMAT_D32_SFLOAT_S8_UINT;
-				default:
-					return VK_FORMAT_UNDEFINED;
-				}
-			};
-
 		m_DescriptorSets.resize(spec.Attachments.size());
 
 		for (uint32_t i = 0; i < spec.Attachments.size(); i++) 
@@ -212,7 +302,7 @@ namespace Gravix
 			else 
 				attachmentUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 			
-			VkFormat format = MapFramebufferFormat(attachment);
+			VkFormat format = ConvertTextureFormatToVkFormat(attachment);
 			AllocatedImage image = m_Device->CreateImage(drawImageExtent, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT
 				| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | attachmentUsage, spec.Multisampled);
 

@@ -21,6 +21,7 @@ namespace Gravix
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin("Viewport");
+		auto viewportOffset = ImGui::GetCursorPos();
 
 		// Track if the viewport is hovered and focused
 		m_ViewportHovered = ImGui::IsWindowHovered();
@@ -29,8 +30,17 @@ namespace Gravix
 
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
-
 		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail);
+
+		auto windowSize = ImGui::GetWindowSize();
+		ImVec2 minBound = ImGui::GetWindowPos();
+		minBound.x += viewportOffset.x;
+		minBound.y += viewportOffset.y;
+
+		ImVec2 maxBound = { minBound.x + windowSize.x, minBound.y + windowSize.x };
+		m_ViewportBounds[0] = { minBound.x, minBound.y };
+		m_ViewportBounds[1] = { maxBound.x, maxBound.y };
+
 		Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
 		if (selectedEntity && m_GuizmoType != -1) 
 		{
@@ -71,6 +81,20 @@ namespace Gravix
 
 		ImGui::End();
 		ImGui::PopStyleVar();
+	}
+
+	void ViewportPanel::UpdateViewport()
+	{
+		auto [mx, my] = ImGui::GetMousePos();
+		mx -= m_ViewportBounds[0].x;
+		my -= m_ViewportBounds[1].y;
+
+		glm::vec2 viewportSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+		int mouseX = (int)mx;
+		int mouseY = (int)my;
+
+		int pixel = m_Framebuffer->ReadPixel(1, mouseX, mouseY);
+		GX_CORE_INFO("Pixel Data: {0}", pixel);
 	}
 
 	void ViewportPanel::GuizmoShortcuts()

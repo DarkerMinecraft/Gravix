@@ -34,6 +34,8 @@ namespace Gravix
 		virtual void DestroyImGuiDescriptors() override;
 
 		virtual void SetClearColor(uint32_t index, const glm::vec4 clearColor) override;
+		
+		virtual int ReadPixel(uint32_t attachmentIndex, int mouseX, int mouseY) override;
 
 		void TransitionToLayout(VkCommandBuffer cmd, VkImageLayout newLayout);
 		void TransitionToLayout(VkCommandBuffer cmd, uint32_t index, VkImageLayout newLayout);
