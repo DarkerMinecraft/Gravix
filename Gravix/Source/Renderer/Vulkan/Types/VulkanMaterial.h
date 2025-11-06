@@ -57,8 +57,8 @@ namespace Gravix
 		ShaderReflection m_Reflection;
 
 		ShaderSerializedData m_SerializedShaderData;
-		bool m_ShouldRegenerateShaderCache = true;
-		bool m_ShouldRegeneratePipelineCache = true;
+		bool m_ShouldRegenerateShaderCache;
+		bool m_ShouldRegeneratePipelineCache;
 
 		bool m_IsCompute = false;
 		uint32_t m_PushConstantSize = 0;

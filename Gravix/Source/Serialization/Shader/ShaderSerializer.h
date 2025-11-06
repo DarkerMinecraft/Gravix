@@ -24,12 +24,11 @@ namespace Gravix
 		void Serialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath);
 		bool Deserialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath);
 
-		bool IsModified() { return std::filesystem::last_write_time(m_ShaderFilePath).time_since_epoch().count() != m_LastModified;  }
+		bool IsModified() { return m_IsModified; };
 	private:
 		ShaderSerializedData* m_SerializedData;
 
-		int64_t m_LastModified;
-		std::filesystem::path m_ShaderFilePath;
+		bool m_IsModified;
 	};
 
 }

@@ -40,7 +40,7 @@ target_include_directories(Orbit
 
 # Copy root assets every build
 add_custom_target(CopyRootAssets ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_SOURCE_DIR}/Assets
         $<TARGET_FILE_DIR:Orbit>/Assets
     COMMENT "Copying root assets for Orbit Editor"
@@ -48,7 +48,7 @@ add_custom_target(CopyRootAssets ALL
 
 # Copy editor-specific assets every build
 add_custom_target(CopyEditorAssets ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/Assets
         $<TARGET_FILE_DIR:Orbit>/EditorAssets
     COMMENT "Copying editor assets for Orbit Editor"

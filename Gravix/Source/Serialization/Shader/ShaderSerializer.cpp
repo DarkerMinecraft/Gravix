@@ -20,10 +20,12 @@ namespace Gravix
 
 	bool ShaderSerializer::Deserialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath)
 	{
-		m_ShaderFilePath = shaderFilePath;
-
 		BinaryDeserializer deserializer(cacheFilePath, 0);
-		m_LastModified = deserializer.Read<int64_t>();
+
+		int64_t cachedTimestamp = deserializer.Read<int64_t>();
+		int64_t currentTimestamp = std::filesystem::last_write_time(shaderFilePath).time_since_epoch().count();
+
+		m_IsModified = (cachedTimestamp != currentTimestamp);
 		m_SerializedData->SpirvCode = deserializer.ReadVector<std::vector<uint32_t>>();
 		m_SerializedData->PipelineCache = deserializer.ReadVector<uint8_t>();
 		m_SerializedData->Reflection = deserializer.Read<ShaderReflection>();

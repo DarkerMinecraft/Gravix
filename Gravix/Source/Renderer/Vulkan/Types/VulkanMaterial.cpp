@@ -78,6 +78,10 @@ namespace Gravix
 			if (m_ShouldRegenerateShaderCache)
 				m_ShouldRegeneratePipelineCache = true;
 
+		} else
+		{
+			m_ShouldRegenerateShaderCache = true;
+			m_ShouldRegeneratePipelineCache = true;
 		}
 		CreateMaterial(spec);
 		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache)
@@ -101,6 +105,11 @@ namespace Gravix
 			if (m_ShouldRegenerateShaderCache)
 				m_ShouldRegeneratePipelineCache = true;
 
+		}
+		else
+		{
+			m_ShouldRegenerateShaderCache = true;
+			m_ShouldRegeneratePipelineCache = true;
 		}
 		CreateMaterial(debugName, shaderFilePath);
 		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache) 
@@ -427,7 +436,7 @@ namespace Gravix
 			vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, nullptr);
 			if (cacheSize > 0)
 			{
-				m_SerializedShaderData.PipelineCache.reserve(cacheSize);
+				m_SerializedShaderData.PipelineCache.resize(cacheSize);
 				vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, m_SerializedShaderData.PipelineCache.data());
 			}
 		}
@@ -461,7 +470,7 @@ namespace Gravix
 			vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, nullptr);
 			if (cacheSize > 0)
 			{
-				m_SerializedShaderData.PipelineCache.reserve(cacheSize);
+				m_SerializedShaderData.PipelineCache.resize(cacheSize);
 				vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, m_SerializedShaderData.PipelineCache.data());
 			}
 		}
