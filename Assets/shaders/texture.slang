@@ -5,7 +5,7 @@ struct Vertex
     float4 color;
     float texIndex;
     float tilingFactor;
-    uint entityID; 
+    int entityID; 
 }
 
 struct PushConstants 
@@ -24,7 +24,7 @@ struct VSOutput
     float4 color;
     int texIndex;
     float tilingFactor;
-    uint entityID;
+    int entityID;
 };
 
 [shader("vertex")]
@@ -47,11 +47,11 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
 struct PSOutput
 {
     float4 outColor : SV_Target;
-    uint entityID : SV_Target;
+    int entityID : SV_Target;
 }
 
 [shader("pixel")]
-PSOutput mainPS(VSOutput input) : SV_TARGET
+PSOutput mainPS(VSOutput input)
 {
     PSOutput output; 
 

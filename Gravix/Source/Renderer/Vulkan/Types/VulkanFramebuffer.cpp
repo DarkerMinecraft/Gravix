@@ -29,7 +29,7 @@ namespace Gravix
 		case FramebufferTextureFormat::DEPTH32FSTENCIL8:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
 		case FramebufferTextureFormat::RedInt:
-			return VK_FORMAT_R8_UINT;
+			return VK_FORMAT_R32_SINT;
 		default:
 			return VK_FORMAT_UNDEFINED;
 		}
@@ -111,6 +111,7 @@ namespace Gravix
 		{
 		case VK_FORMAT_R8_UINT: pixelSize = 1; break;
 		case VK_FORMAT_R32_UINT: pixelSize = 4; break;
+		case VK_FORMAT_R32_SINT: pixelSize = 4; break;
 		case VK_FORMAT_R32G32B32A32_UINT: pixelSize = 16; break;
 		case VK_FORMAT_R8G8B8A8_UNORM: pixelSize = 4; break;
 		default: break;
@@ -162,6 +163,8 @@ namespace Gravix
 		case VK_FORMAT_R32_UINT:
 			result = *(uint32_t*)data;
 			break;
+		case VK_FORMAT_R32_SINT:
+			result = *(int32_t*)data;
 		case VK_FORMAT_R32G32B32A32_UINT:
 			result = ((uint32_t*)data)[0];
 			break;
