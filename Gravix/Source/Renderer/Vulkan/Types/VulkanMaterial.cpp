@@ -67,58 +67,20 @@ namespace Gravix
 	VulkanMaterial::VulkanMaterial(Device* device, const MaterialSpecification& spec)
 		: m_Device(static_cast<VulkanDevice*>(device)), m_DebugName(spec.DebugName)
 	{
-		std::filesystem::path materialCache = Application::Get().GetProject().GetProjectLibraryDirectory() / (spec.DebugName + ".cache");
-		if (std::filesystem::exists(materialCache))
-		{
-			MaterialSerializer deserializer(&m_SerializedShaderData);
-			deserializer.Deserialize(spec.ShaderFilePath, materialCache);
-
-			m_ShouldRegenerateShaderCache = deserializer.IsModified();
-			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
-			if (m_ShouldRegenerateShaderCache)
-				m_ShouldRegeneratePipelineCache = true;
-		} else
-		{
-			m_ShouldRegenerateShaderCache = true;
-			m_ShouldRegeneratePipelineCache = true;
-		}
+		std::filesystem::path materialCache = Project::GetLibraryDirectory() / (spec.DebugName + ".cache");	
+		GetShaderCache(spec.ShaderFilePath, materialCache);
 		CreateMaterial(spec);
-		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache)
-		{
-			m_SerializedShaderData.Reflection = m_Reflection;
-
-			MaterialSerializer serializer(&m_SerializedShaderData);
-			serializer.Serialize(spec.ShaderFilePath, materialCache);
-		}
+		SaveShaderCache(spec.ShaderFilePath, materialCache);
 	}
 
 	VulkanMaterial::VulkanMaterial(Device* device, const std::string& debugName, const std::filesystem::path& shaderFilePath)
 		: m_Device(static_cast<VulkanDevice*>(device)), m_DebugName(debugName)
 	{
-		std::filesystem::path materialCache = Application::Get().GetProject().GetProjectLibraryDirectory() / (debugName + ".cache");
-		if (std::filesystem::exists(materialCache))
-		{
-			MaterialSerializer deserializer(&m_SerializedShaderData);
-			deserializer.Deserialize(shaderFilePath, materialCache);
-
-			m_ShouldRegenerateShaderCache = deserializer.IsModified();
-			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
-			if (m_ShouldRegenerateShaderCache)
-				m_ShouldRegeneratePipelineCache = true;
-		}
-		else
-		{
-			m_ShouldRegenerateShaderCache = true;
-			m_ShouldRegeneratePipelineCache = true;
-		}
+		std::filesystem::path materialCache = Project::GetLibraryDirectory() / (debugName + ".cache");
+		GetShaderCache(shaderFilePath, materialCache);
 		CreateMaterial(debugName, shaderFilePath);
-		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache) 
-		{
-			m_SerializedShaderData.Reflection = m_Reflection;
+		SaveShaderCache(shaderFilePath, materialCache);
 
-			MaterialSerializer serializer(&m_SerializedShaderData);
-			serializer.Serialize(shaderFilePath, materialCache);
-		}
 		m_IsCompute = true;
 	}
 
@@ -188,6 +150,25 @@ namespace Gravix
 		writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
 	}
 
+	void VulkanMaterial::GetShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile)
+	{
+		if (std::filesystem::exists(materialCacheFile))
+		{
+			MaterialSerializer deserializer(&m_SerializedShaderData);
+			deserializer.Deserialize(shaderFilePath, materialCacheFile);
+
+			m_ShouldRegenerateShaderCache = deserializer.IsModified();
+			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
+			if (m_ShouldRegenerateShaderCache)
+				m_ShouldRegeneratePipelineCache = true;
+		}
+		else
+		{
+			m_ShouldRegenerateShaderCache = true;
+			m_ShouldRegeneratePipelineCache = true;
+		}
+	}
+
 	void VulkanMaterial::CreateMaterial(const MaterialSpecification& spec)
 	{
 		SpinShader(spec.ShaderFilePath);
@@ -200,6 +181,17 @@ namespace Gravix
 		SpinShader(shaderFilePath);
 		CreatePipelineLayout();
 		CreateComputePipeline();
+	}
+
+	void VulkanMaterial::SaveShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile)
+	{
+		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache)
+		{
+			m_SerializedShaderData.Reflection = m_Reflection;
+
+			MaterialSerializer serializer(&m_SerializedShaderData);
+			serializer.Serialize(shaderFilePath, materialCacheFile);
+		}
 	}
 
 	void VulkanMaterial::SpinShader(const std::filesystem::path& shaderFilePath)

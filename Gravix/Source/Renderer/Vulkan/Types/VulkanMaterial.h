@@ -34,8 +34,12 @@ namespace Gravix
 		void BindResource(VkCommandBuffer cmd, uint32_t binding, Texture2D* texture);
 		void BindResource(VkCommandBuffer cmd, uint32_t binding, uint32_t index, Texture2D* texture);
 	private:
+		void GetShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile);
+
 		void CreateMaterial(const MaterialSpecification& spec);
 		void CreateMaterial(const std::string& debugName, const std::filesystem::path& shaderFilePath);
+
+		void SaveShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile);
 
 		void SpinShader(const std::filesystem::path& shaderFilePath);
 		void CreatePipelineLayout();

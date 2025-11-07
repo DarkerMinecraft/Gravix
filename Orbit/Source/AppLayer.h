@@ -28,6 +28,12 @@ namespace Gravix
 		void OpenScene(const std::filesystem::path& path);
 	private:
 		void OnShortcuts();
+
+		void SaveProject();
+		void SaveProjectAs();
+		void OpenProject();
+		void NewProject();
+
 		void SaveScene();
 		void SaveSceneAs();
 		void OpenScene();
@@ -49,6 +55,7 @@ namespace Gravix
 		ContentBroswerPanel m_ContentBrowserPanel;
 
 		std::filesystem::path m_ActiveScenePath;
+		std::filesystem::path m_ActiveProjectPath;
 	};
 
 }

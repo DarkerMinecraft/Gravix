@@ -11,6 +11,7 @@ namespace Gravix
 
 	AppLayer::AppLayer()
 	{
+
 		FramebufferSpecification fbSpec{};
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat };
 		fbSpec.Multisampled = true;
@@ -24,7 +25,7 @@ namespace Gravix
 
 		Renderer2D::Init(m_MSAAFramebuffer);
 
-		m_ActiveScene = CreateRef<Scene>();
+		OpenScene(Project::GetActiveConfig().StartScene);
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
@@ -200,11 +201,48 @@ namespace Gravix
 		}
 	}
 
+	void AppLayer::SaveProject()
+	{
+		if(m_ActiveProjectPath.empty())
+		{
+			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Project (*.orbproj)\0*.orbproj\0");
+			if (filePath.empty())
+				return;
+
+			m_ActiveProjectPath = filePath;
+		}
+		Project::SaveActive(m_ActiveProjectPath);
+	}
+
+	void AppLayer::SaveProjectAs()
+	{
+		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Project (*.orbproj)\0*.orbproj\0");
+		if (filePath.empty())
+			return;
+
+		m_ActiveProjectPath = filePath;
+		Project::SaveActive(m_ActiveProjectPath);
+	}
+
+	void AppLayer::OpenProject()
+	{
+		m_ActiveProjectPath = FileDialogs::OpenFile("Orbit Project (*.orbproj)\0*.orbproj\0");
+		if (m_ActiveProjectPath.empty())
+			return;
+
+		Project::Load(m_ActiveProjectPath);
+	}
+
+	void AppLayer::NewProject()
+	{
+		Project::New();
+	}
+
 	void AppLayer::SaveScene()
 	{
 		if (m_ActiveScenePath.empty())
 		{
-			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
+			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
 			if (filePath.empty())
 				return;
 
@@ -217,7 +255,7 @@ namespace Gravix
 
 	void AppLayer::SaveSceneAs()
 	{
-		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbit)\0*.orbit\0");
+		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
 		if (filePath.empty())
 			return;
 		m_ActiveScenePath = filePath;
@@ -228,7 +266,7 @@ namespace Gravix
 
 	void AppLayer::OpenScene()
 	{
-		std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbit)\0*.orbit\0");
+		std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
 		if (filePath.empty())
 			return;
 		m_ActiveScenePath = filePath;
@@ -244,7 +282,7 @@ namespace Gravix
 
 	void AppLayer::OpenScene(const std::filesystem::path& path)
 	{
-		m_ActiveScenePath = Application::Get().GetProject().GetAssetsDirectory() / path;
+		m_ActiveScenePath = Project::GetAssetDirectory() / path;
 
 		m_ActiveScene = CreateRef<Scene>();
 		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
@@ -252,7 +290,7 @@ namespace Gravix
 		m_SceneHierarchyPanel.SetNoneSelected();
 
 		SceneSerializer serializer(m_ActiveScene);
-		serializer.Deserialize(Application::Get().GetProject().GetAssetsDirectory() / path);
+		serializer.Deserialize(m_ActiveScenePath);
 	}
 
 	void AppLayer::NewScene()

@@ -6,6 +6,7 @@
 #ifdef ENGINE_DEBUG
 
 #include "Log.h"
+#include "Project/Project.h"
 #include <crtdbg.h>
 
 	int main()
@@ -19,7 +20,8 @@
 		appSpec.Width = 1280;
 		appSpec.Height = 720;
 		appSpec.Title = "Orbit";
-		appSpec.GlobalProject = Gravix::Project("C:/Dev/Orbit/Testing");
+
+		Gravix::Project::Load("C:/Dev/Orbit/Testing/Testing.orbproj");
 
 		Gravix::Application app(appSpec);
 		app.PushLayer<Gravix::AppLayer>();

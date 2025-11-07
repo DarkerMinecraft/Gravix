@@ -7,7 +7,7 @@ namespace Gravix
 {
 
 	ContentBroswerPanel::ContentBroswerPanel()
-		: m_AssetDirectory(Application::Get().GetProject().GetAssetsDirectory())
+		: m_AssetDirectory(Project::GetAssetDirectory())
 	{
 		m_CurrentDirectory = m_AssetDirectory;
 

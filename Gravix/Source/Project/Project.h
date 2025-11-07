@@ -1,43 +1,56 @@
 #pragma once
 
+#include "Core/Core.h"
+#include "Core/Log.h"
+
 #include <filesystem>
 
 namespace Gravix 
 {
 	
+	struct ProjectConfig
+	{
+		std::string Name = "Untitled";
+		
+		std::filesystem::path StartScene;
+
+		std::filesystem::path AssetDirectory;
+		std::filesystem::path LibraryDirectory;
+		std::filesystem::path ScriptPath;
+	};
+
 	class Project 
 	{
 	public:
-		Project(const std::filesystem::path& workingDirectory) 
-			: m_WorkingDirectory(workingDirectory), 
-			  m_AssetsDirectory(workingDirectory / "Assets"), 
-			  m_ProjectLibraryDirectory(workingDirectory / "Library") {}
 		Project() = default;
 
-		void SetWorkingDirectory(const std::filesystem::path& path) 
+		static std::filesystem::path& GetAssetDirectory()
 		{
-			m_WorkingDirectory = path;
-			m_AssetsDirectory = m_WorkingDirectory / "Assets";
-			m_ProjectLibraryDirectory = m_WorkingDirectory / "Library";
-		}
+			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			return s_ActiveProject->m_Config.AssetDirectory;
+		};
 
-		void CreateProjectDirectories() const 
+		static std::filesystem::path& GetLibraryDirectory()
 		{
-			if(!std::filesystem::exists(m_WorkingDirectory))
-				std::filesystem::create_directories(m_WorkingDirectory);
-			if(!std::filesystem::exists(m_AssetsDirectory))
-				std::filesystem::create_directories(m_AssetsDirectory);
-			if (!std::filesystem::exists(m_ProjectLibraryDirectory))
-				std::filesystem::create_directories(m_ProjectLibraryDirectory);
-		}
+			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			return s_ActiveProject->m_Config.LibraryDirectory;
+		};
 
-		const std::filesystem::path& GetWorkingDirectory() const { return m_WorkingDirectory; }
-		const std::filesystem::path& GetAssetsDirectory() const { return m_AssetsDirectory; }
-		const std::filesystem::path& GetProjectLibraryDirectory() const { return m_ProjectLibraryDirectory; }
+		ProjectConfig& GetConfig() { return m_Config; }
+
+		static ProjectConfig& GetActiveConfig() 
+		{
+			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			return s_ActiveProject->m_Config;
+		};
+
+		static Ref<Project> New();
+		static Ref<Project> Load(const std::filesystem::path& path);
+		static void SaveActive(const std::filesystem::path& path);
 	private:
-		std::filesystem::path m_WorkingDirectory;
-		std::filesystem::path m_AssetsDirectory;
-		std::filesystem::path m_ProjectLibraryDirectory;
+		ProjectConfig m_Config;
+
+		inline static Ref<Project> s_ActiveProject;
 	};
 
 }
