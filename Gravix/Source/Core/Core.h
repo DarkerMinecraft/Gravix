@@ -50,3 +50,9 @@ inline Weak<T> CreateWeak(Args&&... args)
 {
 	return Weak<T>(std::forward<Args>(args)...);
 }
+
+template<typename T, typename U>
+inline Ref<T> Cast(const Ref<U>& other)
+{
+	return std::static_pointer_cast<T>(other);
+}

@@ -25,7 +25,7 @@ namespace Gravix
 
 		Renderer2D::Init(m_MSAAFramebuffer);
 
-		OpenScene(Project::GetActiveConfig().StartScene);
+		OpenScene(Project::GetActive()->GetConfig().StartScene);
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);

@@ -3,6 +3,11 @@
 #include "Core/Core.h"
 #include "Core/Log.h"
 
+#include "Asset/AssetManagerBase.h"
+
+#include "Asset/EditorAssetManager.h"
+#include "Asset/RuntimeAssetManager.h"
+
 #include <filesystem>
 
 namespace Gravix 
@@ -38,17 +43,23 @@ namespace Gravix
 
 		ProjectConfig& GetConfig() { return m_Config; }
 
-		static ProjectConfig& GetActiveConfig() 
+		static Ref<Project> GetActive() 
 		{
 			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
-			return s_ActiveProject->m_Config;
-		};
+			return s_ActiveProject;
+		}
+
+		Ref<AssetManagerBase> GetAssetManager() { return m_AssetManager; }
+		Ref<EditorAssetManager> GetEditorAssetManager() { return Cast<EditorAssetManager>(m_AssetManager); }
+		Ref<RuntimeAssetManager> GetRuntimeAssetManager() { return Cast<RuntimeAssetManager>(m_AssetManager); }
 
 		static Ref<Project> New();
 		static Ref<Project> Load(const std::filesystem::path& path);
 		static void SaveActive(const std::filesystem::path& path);
 	private:
 		ProjectConfig m_Config;
+
+		Ref<AssetManagerBase> m_AssetManager;
 
 		inline static Ref<Project> s_ActiveProject;
 	};
