@@ -278,7 +278,9 @@ namespace Gravix
 
 			// Example fast-path: formats without alpha / integer formats generally don't support blending
 			// Your actual check can be more thorough by querying physical device format features.
-			if (fmt == VK_FORMAT_R8_UINT || fmt == VK_FORMAT_R8_SINT || /* other int formats */ false) {
+			if (fmt == VK_FORMAT_R8_UINT || fmt == VK_FORMAT_R8_SINT 
+				|| fmt == VK_FORMAT_R32_SINT || fmt == VK_FORMAT_R32_UINT
+				|| fmt == VK_FORMAT_R32_SFLOAT) {
 				blendAttachments[i].blendEnable = VK_FALSE;
 			}
 		}

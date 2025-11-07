@@ -12,7 +12,7 @@ namespace Gravix
 	AppLayer::AppLayer()
 	{
 		FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedInt };
+		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat };
 		fbSpec.Multisampled = true;
 
 		m_MSAAFramebuffer = Framebuffer::Create(fbSpec);
@@ -59,12 +59,26 @@ namespace Gravix
 			m_ViewportPanel.UpdateViewport();
 		}
 
-		if(m_ViewportPanel.IsViewportHovered())
+		if (m_ViewportPanel.IsViewportHovered())
 			m_EditorCamera.OnUpdate(deltaTime);
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
+
 		OnShortcuts();
 		m_ViewportPanel.GuizmoShortcuts();
+
+		if (Input::IsMouseDown(Mouse::LeftButton))
+		{
+			if (m_ViewportPanel.IsViewportHovered())
+			{
+				Entity hoveredEntity = m_ViewportPanel.GetHoveredEntity();
+
+				if (hoveredEntity && hoveredEntity != m_SceneHierarchyPanel.GetSelectedEntity())
+				{
+					m_SceneHierarchyPanel.SetSelectedEntity(hoveredEntity);
+				}
+			}
+		}
 	}
 
 	void AppLayer::OnRender()
@@ -132,8 +146,8 @@ namespace Gravix
 				{
 					NewScene();
 				}
-				
-				if(ImGui::MenuItem("Open... ", "Ctrl+O"))
+
+				if (ImGui::MenuItem("Open... ", "Ctrl+O"))
 				{
 					OpenScene();
 				}
@@ -143,7 +157,7 @@ namespace Gravix
 					SaveScene();
 				}
 
-				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) 
+				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
 				{
 					SaveSceneAs();
 				}
@@ -162,8 +176,8 @@ namespace Gravix
 	{
 		bool ctrlDown = Input::IsKeyDown(Key::LeftControl) || Input::IsKeyDown(Key::RightControl);
 		bool shiftDown = Input::IsKeyDown(Key::LeftShift) || Input::IsKeyDown(Key::RightShift);
-		
-		if(ctrlDown && Input::IsKeyPressed(Key::S))
+
+		if (ctrlDown && Input::IsKeyPressed(Key::S))
 		{
 			if (shiftDown)
 				SaveSceneAs();

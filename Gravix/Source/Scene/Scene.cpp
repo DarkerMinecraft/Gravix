@@ -54,7 +54,7 @@ namespace Gravix
 			{
 				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
 
-				Renderer2D::DrawQuad(transform, sprite);
+				Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite);
 			}
 			Renderer2D::EndScene(cmd);
 		}
@@ -86,7 +86,7 @@ namespace Gravix
 			{
 				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
 
-				Renderer2D::DrawQuad(transform, sprite);
+				Renderer2D::DrawQuad(transform, -1, sprite);
 			}
 			Renderer2D::EndScene(cmd);
 		}

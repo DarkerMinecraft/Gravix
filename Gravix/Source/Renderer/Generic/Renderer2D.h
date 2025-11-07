@@ -19,7 +19,7 @@ namespace Gravix
 		static void BeginScene(Command& cmd, EditorCamera& camera);
 		static void BeginScene(Command& cmd, Camera& camera, const glm::mat4& transformationMatrix);
 
-		static void DrawQuad(const glm::mat4& transformMatrix, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, Ref<Texture2D> texture = nullptr, float tilingFactor = 1.0f);
+		static void DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, Ref<Texture2D> texture = nullptr, float tilingFactor = 1.0f);
 
 		static void EndScene(Command& cmd);
 		static void Flush(Command& cmd);

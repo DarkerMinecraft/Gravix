@@ -16,6 +16,7 @@ namespace Gravix
 		RGBA32F = 3 ,
 		RGBA32UI = 4,
 		RedInt = 5,
+		RedFloat = 6,
 		// Depth/stencil
 		DEPTH24STENCIL8 = 10,
 		DEPTH32FSTENCIL8 = 11,

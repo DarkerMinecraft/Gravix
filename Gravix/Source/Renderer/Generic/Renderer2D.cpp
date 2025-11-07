@@ -114,7 +114,7 @@ namespace Gravix
 		s_Data->PushConstants.Set("viewProjMatrix", camera.GetViewProjection());
 	}
 
-	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
+	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
 	{
 		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
@@ -148,6 +148,7 @@ namespace Gravix
 			vertex.Set("color", color);
 			vertex.Set("texIndex", textureIndex);
 			vertex.Set("tilingFactor", tilingFactor);
+			vertex.Set("entityID", entityID);
 
 			s_Data->QuadVertexBuffer.push_back(vertex);
 		}

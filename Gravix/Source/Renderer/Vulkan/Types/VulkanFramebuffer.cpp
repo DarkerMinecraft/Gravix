@@ -30,6 +30,8 @@ namespace Gravix
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
 		case FramebufferTextureFormat::RedInt:
 			return VK_FORMAT_R32_SINT;
+		case FramebufferTextureFormat::RedFloat:
+			return VK_FORMAT_R32_SFLOAT;
 		default:
 			return VK_FORMAT_UNDEFINED;
 		}
@@ -165,6 +167,10 @@ namespace Gravix
 			break;
 		case VK_FORMAT_R32_SINT:
 			result = *(int32_t*)data;
+			break;
+		case VK_FORMAT_R32_SFLOAT:
+			result = static_cast<int>((*(float*)data));
+			break;
 		case VK_FORMAT_R32G32B32A32_UINT:
 			result = ((uint32_t*)data)[0];
 			break;

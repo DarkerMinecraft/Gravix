@@ -24,6 +24,8 @@ namespace Gravix
 		bool IsViewportHovered() const { return m_ViewportHovered; }
 		bool IsViewportFocused() const { return m_ViewportFocused; }
 
+		Entity GetHoveredEntity() const { return m_HoveredEntity; }
+
 		void UpdateViewport();
 
 		void GuizmoShortcuts();
@@ -41,6 +43,8 @@ namespace Gravix
 
 		EditorCamera* m_EditorCamera;
 		SceneHierarchyPanel* m_SceneHierarchyPanel;
+
+		Entity m_HoveredEntity;
 
 		uint32_t m_RenderIndex = 0;
 	};
