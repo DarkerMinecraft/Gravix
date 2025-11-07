@@ -5,6 +5,7 @@
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
+#include "Panels/ContentBrowserPanel.h"
 
 #include <glm/glm.hpp>
 
@@ -43,6 +44,7 @@ namespace Gravix
 		SceneHierarchyPanel m_SceneHierarchyPanel;
 		InspectorPanel m_InspectorPanel;
 		ViewportPanel m_ViewportPanel;
+		ContentBroswerPanel m_ContentBrowserPanel;
 
 		std::filesystem::path m_ActiveScenePath;
 	};

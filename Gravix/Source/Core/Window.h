@@ -22,7 +22,8 @@ namespace Gravix
 	{
 		Normal,
 		Hidden,
-		Disabled
+		Disabled, 
+		Pointer
 	};
 
 	class Window 

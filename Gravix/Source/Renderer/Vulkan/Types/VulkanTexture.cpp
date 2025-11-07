@@ -3,6 +3,8 @@
 
 #include "Renderer/Vulkan/Utils/VulkanUtils.h"
 
+#include <backends/imgui_impl_vulkan.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -28,6 +30,22 @@ namespace Gravix
 	VulkanTexture2D::~VulkanTexture2D()
 	{
 		Cleanup();
+	}
+
+	void* VulkanTexture2D::GetImGuiAttachment()
+	{
+		if (m_DescriptorSet == VK_NULL_HANDLE) 
+			m_DescriptorSet = ImGui_ImplVulkan_AddTexture(m_Sampler, m_Image.ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		return (void*)m_DescriptorSet;
+	}
+
+	void VulkanTexture2D::DestroyImGuiDescriptor()
+	{
+		if(m_DescriptorSet != VK_NULL_HANDLE)
+		{
+			ImGui_ImplVulkan_RemoveTexture(m_DescriptorSet);
+			m_DescriptorSet = VK_NULL_HANDLE;
+		}
 	}
 
 	void VulkanTexture2D::LoadFromFile(const std::filesystem::path& path)

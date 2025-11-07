@@ -31,6 +31,12 @@ namespace Gravix
 		}
 		device->GetFramebuffers().clear();
 
+		for (auto& texture : device->GetTextures()) 
+		{
+			texture->DestroyImGuiDescriptor();
+		}
+		device->GetTextures().clear();
+
 		ImGui_ImplWin32_Shutdown();
 		ImGui_ImplVulkan_Shutdown();
 		ImGui::DestroyContext();

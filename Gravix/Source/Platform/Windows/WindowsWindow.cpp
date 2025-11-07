@@ -261,7 +261,6 @@ namespace Gravix
 
 	void WindowsWindow::SetCursorMode(CursorMode mode)
 	{
-
 		// Ensure window has focus before changing cursor mode
 		SetForegroundWindow(m_Window);
 		SetFocus(m_Window);
@@ -325,6 +324,20 @@ namespace Gravix
 			{
 				SetCursorPos(centerX, centerY);
 			}
+			break;
+		}
+		case CursorMode::Pointer:
+		{
+			// Remove cursor clipping first
+			ClipCursor(NULL);
+			// Show cursor - more reliable method
+			int cursorCount = ShowCursor(TRUE);
+			while (cursorCount < 0)
+			{
+				cursorCount = ShowCursor(TRUE);
+			}
+			// Set to hand cursor
+			SetCursor(LoadCursor(NULL, IDC_HAND));
 			break;
 		}
 		}

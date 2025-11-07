@@ -32,6 +32,8 @@ namespace Gravix
 
 		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
 		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
+
+		m_ContentBrowserPanel = ContentBroswerPanel();
 	}
 
 	AppLayer::~AppLayer()
@@ -73,7 +75,7 @@ namespace Gravix
 			{
 				Entity hoveredEntity = m_ViewportPanel.GetHoveredEntity();
 
-				if (hoveredEntity && hoveredEntity != m_SceneHierarchyPanel.GetSelectedEntity())
+				if (hoveredEntity)
 				{
 					m_SceneHierarchyPanel.SetSelectedEntity(hoveredEntity);
 				}
@@ -169,6 +171,7 @@ namespace Gravix
 		m_ViewportPanel.OnImGuiRender();
 		m_SceneHierarchyPanel.OnImGuiRender();
 		m_InspectorPanel.OnImGuiRender();
+		m_ContentBrowserPanel.OnImGuiRender();
 		ImGui::End();
 	}
 

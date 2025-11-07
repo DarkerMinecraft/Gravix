@@ -22,6 +22,9 @@ namespace Gravix
 		virtual uint32_t GetHeight() const override { return m_Height; }
 		virtual uint32_t GetMipLevels() const override { return m_MipLevels; }
 
+		virtual void* GetImGuiAttachment() override;
+		virtual void DestroyImGuiDescriptor() override;
+
 		virtual UUID GetUUID() override { return m_UUID; }
 
 		virtual bool operator==(const Texture& other) const override 
@@ -62,6 +65,8 @@ namespace Gravix
 		uint32_t m_Height = 0;
 		uint32_t m_Channels = 0;
 		uint32_t m_MipLevels = 1;
+
+		VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
 
 		UUID m_UUID;
 

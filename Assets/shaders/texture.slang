@@ -24,7 +24,7 @@ struct VSOutput
     float4 color;
     int texIndex;
     float tilingFactor;
-    float entityID;
+    nointerpolation float entityID;
 };
 
 [shader("vertex")]
@@ -46,8 +46,8 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
 
 struct PSOutput
 {
-    float4 outColor : SV_Target;
-    float entityID : SV_Target;
+    float4 outColor : SV_Target0;
+    float entityID : SV_Target1;
 }
 
 [shader("pixel")]

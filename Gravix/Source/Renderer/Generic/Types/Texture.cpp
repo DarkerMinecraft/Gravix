@@ -15,7 +15,12 @@ namespace Gravix
 		switch (device->GetType())
 		{
 		case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return nullptr;
-		case DeviceType::Vulkan: return CreateRef<VulkanTexture2D>(device, path, specification);
+		case DeviceType::Vulkan: 
+		{
+			Ref<Texture2D> texture = CreateRef<VulkanTexture2D>(device, path, specification);
+			device->RegisterTexture(texture);
+			return texture;
+		}
 		}
 		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
 		return nullptr;
