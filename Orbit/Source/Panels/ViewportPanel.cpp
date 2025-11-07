@@ -2,6 +2,7 @@
 
 #include "Maths/Maths.h"
 #include "Core/Application.h"
+#include "AppLayer.h"
 
 #include "Input.h"
 
@@ -9,6 +10,7 @@
 #include <ImGuizmo.h>
 
 #include <glm/gtc/type_ptr.hpp>
+
 
 namespace Gravix
 {
@@ -37,6 +39,16 @@ namespace Gravix
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
 		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail, ImVec2(0, 1), ImVec2(1, 0));
+
+		if (ImGui::BeginDragDropTarget()) 
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) 
+			{
+				const wchar_t* path = (const wchar_t*)payload->Data;
+				m_AppLayer->OpenScene(path);
+			}
+			ImGui::EndDragDropTarget();
+		}
 
 		Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
 		if (selectedEntity && m_GuizmoType != -1) 

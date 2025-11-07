@@ -6,6 +6,9 @@
 
 namespace Gravix
 {
+
+	class AppLayer;
+
 	class ViewportPanel
 	{
 	public:
@@ -19,6 +22,8 @@ namespace Gravix
 		void SetEditorCamera(EditorCamera* camera) { m_EditorCamera = camera; }
 		void SetSceneHierarchyPanel(SceneHierarchyPanel* panel) { m_SceneHierarchyPanel = panel; }
 		void ResizeFramebuffer() { m_Framebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y); }
+
+		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
 
 		bool IsViewportValid() const { return m_ViewportSize.x > 0 && m_ViewportSize.y > 0; }
 		bool IsViewportHovered() const { return m_ViewportHovered; }
@@ -43,6 +48,8 @@ namespace Gravix
 
 		EditorCamera* m_EditorCamera;
 		SceneHierarchyPanel* m_SceneHierarchyPanel;
+
+		AppLayer* m_AppLayer;
 
 		Entity m_HoveredEntity;
 

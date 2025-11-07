@@ -24,6 +24,8 @@ namespace Gravix
 		virtual void OnRender() override;
 
 		virtual void OnImGuiRender() override;
+
+		void OpenScene(const std::filesystem::path& path);
 	private:
 		void OnShortcuts();
 		void SaveScene();

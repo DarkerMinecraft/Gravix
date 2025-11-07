@@ -46,7 +46,13 @@ namespace Gravix
 			
 			Ref<Texture2D> icon = entry.is_directory() ? m_DirectoryIcon : m_FileIcon;
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-			ImGui::ImageButton("##", (ImTextureID)icon->GetImGuiAttachment(), {thumbnailSize, thumbnailSize});
+			ImGui::ImageButton(path.string().c_str(), (ImTextureID)icon->GetImGuiAttachment(), {thumbnailSize, thumbnailSize});
+			if (ImGui::BeginDragDropSource()) 
+			{
+				const wchar_t* payloadPath = relativePath.c_str();
+				ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", payloadPath, (wcslen(payloadPath) + 1) * sizeof(wchar_t), ImGuiCond_Once);
+				ImGui::EndDragDropSource();
+			}
 			ImGui::PopStyleColor();
 
 			if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))

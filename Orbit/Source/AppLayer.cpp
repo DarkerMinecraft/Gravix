@@ -32,6 +32,7 @@ namespace Gravix
 
 		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
 		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
+		m_ViewportPanel.SetAppLayer(this);
 
 		m_ContentBrowserPanel = ContentBroswerPanel();
 	}
@@ -239,6 +240,19 @@ namespace Gravix
 
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Deserialize(filePath);
+	}
+
+	void AppLayer::OpenScene(const std::filesystem::path& path)
+	{
+		m_ActiveScenePath = Application::Get().GetProject().GetAssetsDirectory() / path;
+
+		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetNoneSelected();
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Deserialize(Application::Get().GetProject().GetAssetsDirectory() / path);
 	}
 
 	void AppLayer::NewScene()
