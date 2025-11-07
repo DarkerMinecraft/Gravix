@@ -56,7 +56,7 @@ namespace Gravix
 			m_ViewportPanel.ResizeFramebuffer();
 			m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
 
-			m_ViewportPanel.UpdateViewport();
+			//m_ViewportPanel.UpdateViewport();
 		}
 
 		if(m_ViewportPanel.IsViewportHovered())

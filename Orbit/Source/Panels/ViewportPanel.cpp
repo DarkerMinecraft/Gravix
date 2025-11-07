@@ -52,7 +52,6 @@ namespace Gravix
 			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
 
 			glm::mat4 cameraProjection = m_EditorCamera->GetProjection();
-			//cameraProjection[1][1] *= -1; 
 			const glm::mat4& cameraView = m_EditorCamera->GetViewMatrix();
 			auto& tc = selectedEntity.GetComponent<TransformComponent>();
 			glm::mat4 transform = tc.Transform;

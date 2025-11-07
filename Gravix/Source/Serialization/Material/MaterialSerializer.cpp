@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "ShaderSerializer.h"
+#include "MaterialSerializer.h"
 
 #include "Serialization/BinarySerializer.h"
 #include "Serialization/BinaryDeserializer.h"
@@ -7,7 +7,7 @@
 namespace Gravix 
 {
 
-	void ShaderSerializer::Serialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath)
+	void MaterialSerializer::Serialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath)
 	{
 		BinarySerializer serializer(0);
 		serializer.Write((int64_t)std::filesystem::last_write_time(shaderFilePath).time_since_epoch().count());
@@ -18,7 +18,7 @@ namespace Gravix
 		serializer.WriteToFile(cacheFilePath);
 	}
 
-	bool ShaderSerializer::Deserialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath)
+	bool MaterialSerializer::Deserialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath)
 	{
 		BinaryDeserializer deserializer(cacheFilePath, 0);
 

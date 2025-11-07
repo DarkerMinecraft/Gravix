@@ -7,7 +7,7 @@
 
 #include "Renderer/Vulkan/VulkanDevice.h"
 
-#include "Serialization/Shader/ShaderSerializer.h"
+#include "Serialization/Material/MaterialSerializer.h"
 
 namespace Gravix 
 {
@@ -56,7 +56,7 @@ namespace Gravix
 
 		ShaderReflection m_Reflection;
 
-		ShaderSerializedData m_SerializedShaderData;
+		MaterialSerializedData m_SerializedShaderData;
 		bool m_ShouldRegenerateShaderCache;
 		bool m_ShouldRegeneratePipelineCache;
 

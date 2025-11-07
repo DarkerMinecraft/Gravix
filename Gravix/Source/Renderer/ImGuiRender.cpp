@@ -94,6 +94,8 @@ namespace Gravix
 
 		Application& app = Application::Get();
 		HWND window = static_cast<HWND>(app.GetWindow().GetWindowHandle());
+		
+		//io.IniFilename = imguiIniPath.c_str();
 
 		ImGui_ImplWin32_Init(window);
 

@@ -11,7 +11,10 @@ namespace Gravix
 	{
 		None = 0,
 		Scene,
-		Texture2D
+		Texture2D,
+		Material,
+		Script,
+		Mesh
 	};
 
 	class Asset 

@@ -8,17 +8,17 @@
 namespace Gravix 
 {
 
-	struct ShaderSerializedData
+	struct MaterialSerializedData
 	{
 		std::vector<std::vector<uint32_t>> SpirvCode;
 		std::vector<uint8_t> PipelineCache;
 		ShaderReflection Reflection;
 	};
 
-	class ShaderSerializer 
+	class MaterialSerializer 
 	{
 	public:
-		ShaderSerializer(ShaderSerializedData* serializedData)
+		MaterialSerializer(MaterialSerializedData* serializedData)
 			: m_SerializedData(serializedData) {}
 
 		void Serialize(const std::filesystem::path& shaderFilePath, const std::filesystem::path& cacheFilePath);
@@ -26,7 +26,7 @@ namespace Gravix
 
 		bool IsModified() { return m_IsModified; };
 	private:
-		ShaderSerializedData* m_SerializedData;
+		MaterialSerializedData* m_SerializedData;
 
 		bool m_IsModified;
 	};

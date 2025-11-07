@@ -70,7 +70,7 @@ namespace Gravix
 		std::filesystem::path materialCache = Application::Get().GetProject().GetProjectLibraryDirectory() / (spec.DebugName + ".cache");
 		if (std::filesystem::exists(materialCache))
 		{
-			ShaderSerializer deserializer(&m_SerializedShaderData);
+			MaterialSerializer deserializer(&m_SerializedShaderData);
 			deserializer.Deserialize(spec.ShaderFilePath, materialCache);
 
 			m_ShouldRegenerateShaderCache = deserializer.IsModified();
@@ -87,7 +87,7 @@ namespace Gravix
 		{
 			m_SerializedShaderData.Reflection = m_Reflection;
 
-			ShaderSerializer serializer(&m_SerializedShaderData);
+			MaterialSerializer serializer(&m_SerializedShaderData);
 			serializer.Serialize(spec.ShaderFilePath, materialCache);
 		}
 	}
@@ -98,7 +98,7 @@ namespace Gravix
 		std::filesystem::path materialCache = Application::Get().GetProject().GetProjectLibraryDirectory() / (debugName + ".cache");
 		if (std::filesystem::exists(materialCache))
 		{
-			ShaderSerializer deserializer(&m_SerializedShaderData);
+			MaterialSerializer deserializer(&m_SerializedShaderData);
 			deserializer.Deserialize(shaderFilePath, materialCache);
 
 			m_ShouldRegenerateShaderCache = deserializer.IsModified();
@@ -116,7 +116,7 @@ namespace Gravix
 		{
 			m_SerializedShaderData.Reflection = m_Reflection;
 
-			ShaderSerializer serializer(&m_SerializedShaderData);
+			MaterialSerializer serializer(&m_SerializedShaderData);
 			serializer.Serialize(shaderFilePath, materialCache);
 		}
 		m_IsCompute = true;
