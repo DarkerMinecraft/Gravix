@@ -1,18 +1,17 @@
 #pragma once
 
 #include "Asset.h"
-
-#include "Core/Scheduler.h"
+#include "AsyncLoadRequest.h"
 
 #include <unordered_map>
 #include <map>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	using AssetMap = std::unordered_map<AssetHandle, Ref<Asset>>;
 
-	class AssetManagerBase 
+	class AssetManagerBase
 	{
 	public:
 		virtual Ref<Asset> GetAsset(AssetHandle handle) const = 0;
@@ -22,6 +21,6 @@ namespace Gravix
 		virtual AssetType GetAssetType(AssetHandle handle) const = 0;
 
 		virtual void PushToCompletionQueue(AsyncLoadRequest* request) = 0;
-		virtual void ProcessAsyncLoads() = 0; 
+		virtual void ProcessAsyncLoads() = 0;
 	};
 }
