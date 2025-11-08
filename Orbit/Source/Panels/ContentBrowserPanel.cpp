@@ -434,10 +434,14 @@ namespace Gravix
 
 	void ContentBrowserPanel::RenameAsset(const std::filesystem::path& oldPath, const std::string& newName)
 	{
-		std::filesystem::path fullOldPath = m_AssetDirectory / oldPath;
+		// Build full paths using current directory (not asset directory)
+		std::filesystem::path fullOldPath = m_CurrentDirectory / oldPath;
 		std::filesystem::path extension = oldPath.extension();
 		std::filesystem::path newFilename = newName + extension.string();
 		std::filesystem::path fullNewPath = fullOldPath.parent_path() / newFilename;
+
+		// Calculate relative path from asset directory for metadata lookup
+		std::filesystem::path oldRelativePath = std::filesystem::relative(fullOldPath, m_AssetDirectory);
 
 		try
 		{
@@ -451,7 +455,7 @@ namespace Gravix
 			// Find the asset handle for the old path
 			for (auto& [handle, metadata] : assetRegistry)
 			{
-				if (metadata.FilePath == oldPath)
+				if (metadata.FilePath == oldRelativePath)
 				{
 					// Update the metadata file path
 					auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
@@ -471,7 +475,7 @@ namespace Gravix
 						m_AppLayer->UpdateWindowTitle();
 					}
 
-					GX_CORE_INFO("Renamed asset: {0} -> {1}", oldPath.string(), mutableMetadata.FilePath.string());
+					GX_CORE_INFO("Renamed asset: {0} -> {1}", oldRelativePath.string(), mutableMetadata.FilePath.string());
 					break;
 				}
 			}
