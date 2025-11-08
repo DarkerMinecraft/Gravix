@@ -43,6 +43,9 @@ namespace Gravix
 			if (request->State == AssetState::Failed)
 			{
 				GX_CORE_ERROR("Failed to load asset asynchronously: {0}", request->FilePath.string());
+				m_LoadingAssets.erase(request->Handle);
+
+				delete request;
 				continue;
 			}
 			if (request->State == AssetState::ReadyForGPU) 
@@ -52,6 +55,8 @@ namespace Gravix
 				if (!asset)
 				{
 					GX_CORE_ERROR("Failed to import asset after async load: {0}", request->FilePath.string());
+					m_LoadingAssets.erase(request->Handle);
+					delete request;
 					continue;
 				}
 				request->State = AssetState::Loaded;
@@ -59,6 +64,7 @@ namespace Gravix
 				m_LoadedAssets[request->Handle] = asset;
 				m_LoadingAssets.erase(request->Handle);
 				GX_CORE_INFO("Asynchronously loaded asset: {0}", request->FilePath.string());
+				delete request;
 			}
 		}
 
@@ -78,6 +84,10 @@ namespace Gravix
 
 		m_LoadingAssets[handle] = request;
 		m_AssetRegistry[handle] = metadata;
+
+		AsyncLoadTask* loadTask = new AsyncLoadTask(1);
+		loadTask->LoadRequests.push_back(request);
+		Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(loadTask);
 	}
 
 	const AssetMetadata& EditorAssetManager::GetAssetMetadata(AssetHandle handle) const
@@ -155,9 +165,10 @@ namespace Gravix
 		if(!IsAssetHandleValid(handle))
 			return nullptr;
 
+		AssetMetadata metadata = GetAssetMetadata(handle);
 		if(m_LoadingAssets.contains(handle))
 		{
-			GX_CORE_INFO("Asset is still loading: {0}", GetAssetMetadata(handle).FilePath.string());
+			GX_CORE_INFO("Asset is still loading: {0}", metadata.FilePath.string());
 			return nullptr; // Asset is still loading
 		}
 
@@ -166,8 +177,18 @@ namespace Gravix
 			return m_LoadedAssets.at(handle);
 		}
 
-		// Asset is not loaded and not being loaded - return nullptr
-		// Async loading should be initiated elsewhere
+		AsyncLoadRequest* request = new AsyncLoadRequest();
+		request->Handle = handle;
+		request->FilePath = metadata.FilePath;
+		request->State = AssetState::NotLoaded;
+		request->Priority = LoadPriority::Normal;
+
+		m_LoadingAssets[handle] = request;
+		m_AssetRegistry[handle] = metadata;
+
+		AsyncLoadTask* loadTask = new AsyncLoadTask(1);
+		loadTask->LoadRequests.push_back(request);
+		Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(loadTask);
 		return nullptr;
 	}
 
