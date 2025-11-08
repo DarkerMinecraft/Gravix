@@ -51,6 +51,7 @@ namespace Gravix
 		m_ViewportPanel.SetAppLayer(this);
 
 		m_ContentBrowserPanel.emplace();
+		m_ContentBrowserPanel->SetAppLayer(this);
 
 		Renderer2D::Init(m_MSAAFramebuffer);
 	}
@@ -355,6 +356,7 @@ namespace Gravix
 			{
 				// Refresh panels if project was already initialized
 				m_ContentBrowserPanel.emplace();
+				m_ContentBrowserPanel->SetAppLayer(this);
 			}
 		}
 	}
@@ -384,6 +386,7 @@ namespace Gravix
 		{
 			// Refresh panels if project was already initialized
 			m_ContentBrowserPanel.emplace();
+			m_ContentBrowserPanel->SetAppLayer(this);
 		}
 	}
 

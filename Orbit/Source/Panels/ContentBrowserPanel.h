@@ -9,8 +9,9 @@
 #include <vector>
 #include <set>
 
-namespace Gravix 
+namespace Gravix
 {
+	class AppLayer;
 
 	class ContentBrowserPanel
 	{
@@ -20,11 +21,14 @@ namespace Gravix
 
 		void OnImGuiRender();
 		void OnFileDrop(const std::vector<std::string>& paths);
+		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
 	private:
 		void RefreshAssetTree();
 		void ScanAndImportAssets();
 		void RenameAsset(const std::filesystem::path& oldPath, const std::string& newName);
+		void CreateNewScene();
 	private:
+		AppLayer* m_AppLayer = nullptr;
 		std::filesystem::path m_AssetDirectory;
 		std::filesystem::path m_CurrentDirectory;
 
