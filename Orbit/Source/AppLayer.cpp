@@ -27,7 +27,7 @@ namespace Gravix
 		Renderer2D::Init(m_MSAAFramebuffer);
 
 		// Check if a project has been loaded
-		if (Project::GetActive())
+		if (Project::HasActiveProject())
 		{
 			InitializeProject();
 		}
@@ -65,7 +65,7 @@ namespace Gravix
 		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
 		m_ViewportPanel.SetAppLayer(this);
 
-		m_ContentBrowserPanel = ContentBrowserPanel();
+		m_ContentBrowserPanel.emplace();
 
 		m_ProjectInitialized = true;
 		m_ShowStartupDialog = false;
@@ -73,7 +73,7 @@ namespace Gravix
 
 	AppLayer::~AppLayer()
 	{
-		if (Project::GetActive())
+		if (Project::HasActiveProject())
 		{
 			Project::GetActive()->GetEditorAssetManager()->ClearLoadedAssets();
 		}
@@ -242,7 +242,7 @@ namespace Gravix
 			m_ViewportPanel.OnImGuiRender();
 			m_SceneHierarchyPanel.OnImGuiRender();
 			m_InspectorPanel.OnImGuiRender();
-			m_ContentBrowserPanel.OnImGuiRender();
+			if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnImGuiRender();
 		}
 		ImGui::End();
 	}
@@ -296,7 +296,7 @@ namespace Gravix
 
 	bool AppLayer::OnFileDrop(WindowFileDropEvent& e)
 	{
-		m_ContentBrowserPanel.OnFileDrop(e.GetPaths());
+		if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnFileDrop(e.GetPaths());
 		return true;
 	}
 
@@ -339,7 +339,7 @@ namespace Gravix
 			else
 			{
 				// Refresh panels if project was already initialized
-				m_ContentBrowserPanel = ContentBrowserPanel();
+				m_ContentBrowserPanel.emplace();
 			}
 		}
 	}
@@ -368,7 +368,7 @@ namespace Gravix
 		else
 		{
 			// Refresh panels if project was already initialized
-			m_ContentBrowserPanel = ContentBrowserPanel();
+			m_ContentBrowserPanel.emplace();
 		}
 	}
 
