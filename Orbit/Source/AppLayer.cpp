@@ -247,13 +247,13 @@ namespace Gravix
 			return;
 		}
 
-		const auto& filePath = Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
+		const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
 
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Serialize(filePath);
 	}
 
-	void AppLayer::OpenScene(AssetHandle handle)
+	void AppLayer::OpenScene(AssetHandle handle, bool deserialize)
 	{
 		if(AssetManager::GetAssetType(handle) != AssetType::Scene) 	
 		{
@@ -267,7 +267,10 @@ namespace Gravix
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_SceneHierarchyPanel.SetNoneSelected();
 
-		const auto& filePath = Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
+		if(!deserialize)
+			return;
+
+		const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Deserialize(filePath);
 	}

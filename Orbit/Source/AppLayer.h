@@ -25,7 +25,7 @@ namespace Gravix
 
 		virtual void OnImGuiRender() override;
 
-		void OpenScene(AssetHandle handle);
+		void OpenScene(AssetHandle handle, bool deserialize = false);
 	private:
 		void OnShortcuts();
 

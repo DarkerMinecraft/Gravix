@@ -3,6 +3,7 @@
 
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui_internal.h>
 
 namespace Gravix
 {
