@@ -505,12 +505,6 @@ namespace Gravix
 			RefreshAssetTree();
 
 			GX_CORE_INFO("Created new scene: {0}", newScenePath.filename().string());
-
-			// Open the newly created scene
-			if (m_AppLayer)
-			{
-				m_AppLayer->OpenScene(sceneHandle, true);
-			}
 		}
 		catch (const std::exception& e)
 		{

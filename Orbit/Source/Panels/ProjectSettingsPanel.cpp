@@ -73,8 +73,48 @@ namespace Gravix
 			ImGui::Separator();
 			ImGui::Spacing();
 
-			// Start Scene
-			ImGui::Text("Start Scene Handle: %llu", static_cast<uint64_t>(config.StartScene));
+			// Start Scene (Default Scene)
+			ImGui::Text("Default Scene");
+
+			// Get scene name if valid
+			std::string sceneName = "None";
+			if (config.StartScene != 0 && AssetManager::IsValidAssetHandle(config.StartScene))
+			{
+				const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(config.StartScene);
+				sceneName = metadata.FilePath.stem().string();
+			}
+
+			// Display scene with drag/drop target
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 30.0f); // Leave space for X button
+			ImGui::InputText("##DefaultScene", const_cast<char*>(sceneName.c_str()), sceneName.size(), ImGuiInputTextFlags_ReadOnly);
+
+			// Drag and drop target
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+				{
+					AssetHandle droppedHandle = *(AssetHandle*)payload->Data;
+					if (AssetManager::GetAssetType(droppedHandle) == AssetType::Scene)
+					{
+						config.StartScene = droppedHandle;
+						GX_CORE_INFO("Set default scene to: {0}", static_cast<uint64_t>(droppedHandle));
+					}
+					else
+					{
+						GX_CORE_WARN("Dropped asset is not a scene!");
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			// X button to clear
+			ImGui::SameLine();
+			if (ImGui::Button("X", ImVec2(25, 0)))
+			{
+				config.StartScene = 0;
+				GX_CORE_INFO("Cleared default scene");
+			}
+
 			ImGui::Spacing();
 
 			ImGui::Separator();
