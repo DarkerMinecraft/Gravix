@@ -498,7 +498,6 @@ namespace Gravix
 			// Import the scene into the asset manager
 			auto relativePath = std::filesystem::relative(newScenePath, m_AssetDirectory);
 			Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
-			AssetHandle sceneHandle = assetManager->ImportAsset(relativePath);
 			assetManager->SerializeAssetRegistry();
 
 			// Refresh the asset tree to show the new scene
