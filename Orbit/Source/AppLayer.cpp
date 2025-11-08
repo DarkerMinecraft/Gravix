@@ -73,7 +73,7 @@ namespace Gravix
 			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
 			AssetHandle sceneToLoad = m_PendingSceneHandle;
 			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
-			OpenScene(sceneToLoad, true); // Load with deserialization
+			OpenScene(sceneToLoad, false); // Load with deserialization
 		}
 
 		if (m_ViewportPanel.IsViewportValid())

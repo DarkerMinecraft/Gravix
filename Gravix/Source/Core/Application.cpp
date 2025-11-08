@@ -51,15 +51,6 @@ namespace Gravix
 		{
 			m_Window->GetDevice()->StartFrame();
 
-			// Process async asset loads every frame if we have an active project
-			if (auto activeProject = Project::GetActive())
-			{
-				if (auto editorAssetManager = activeProject->GetEditorAssetManager())
-				{
-					editorAssetManager->ProcessAsyncLoads();
-				}
-			}
-
 			currentTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> elapsedTime = currentTime - m_LastFrameTime;
 			m_LastFrameTime = currentTime;
@@ -68,6 +59,15 @@ namespace Gravix
 
 			if (!m_IsMinimize)
 			{
+				// Process async asset loads every frame if we have an active project
+				if (auto activeProject = Project::GetActive())
+				{
+					if (auto editorAssetManager = activeProject->GetEditorAssetManager())
+					{
+						editorAssetManager->ProcessAsyncLoads();
+					}
+				}
+
 				{
 					for (Ref<Layer> layer : m_LayerStack)
 						layer->OnUpdate(deltaTime);
