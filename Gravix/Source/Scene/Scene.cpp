@@ -20,13 +20,13 @@ namespace Gravix
 
 	}
 
-	Entity Scene::CreateEntity(const std::string& name, UUID uuid)
+	Entity Scene::CreateEntity(const std::string& name, UUID uuid, uint32_t creationIndex)
 	{
 		Entity entity = { m_Registry.create(), this };
 
-		entity.AddComponent<TagComponent>(name, uuid, m_NextCreationIndex++);
-		entity.AddComponent<TransformComponent>();
 		entity.AddComponent<ComponentOrderComponent>();
+		entity.AddComponent<TagComponent>(name, uuid, creationIndex == (uint32_t)-1 ? m_NextCreationIndex++ : creationIndex);
+		entity.AddComponent<TransformComponent>();
 
 		return entity;
 	}

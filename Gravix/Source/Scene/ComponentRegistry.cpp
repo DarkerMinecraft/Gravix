@@ -92,7 +92,7 @@ namespace Gravix
 				out << YAML::Key << "Name" << YAML::Value << c.Name;
 				out << YAML::Key << "CreationIndex" << YAML::Value << c.CreationIndex;
 			},
-			[](TagComponent& c, YAML::Node& node)
+			[](TagComponent& c, const YAML::Node& node)
 			{
 				if (node["CreationIndex"])
 					c.CreationIndex = node["CreationIndex"].as<uint32_t>();
