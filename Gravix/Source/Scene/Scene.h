@@ -21,7 +21,7 @@ namespace Gravix
 	public:
 		Scene();
 		~Scene();
-		
+
 		virtual AssetType GetAssetType() const override { return AssetType::Scene; }
 
 		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID(), uint32_t creationIndex = (uint32_t)-1);

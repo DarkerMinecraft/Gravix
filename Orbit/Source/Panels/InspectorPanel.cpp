@@ -1,4 +1,6 @@
 #include "InspectorPanel.h"
+#include "AppLayer.h"
+
 #include <imgui.h>
 #include <algorithm>
 #include <vector>
@@ -79,9 +81,18 @@ namespace Gravix
 					ComponentUserSettings userSettings;
 					info.ImGuiRenderFunc(component, &userSettings);
 
+					// Check if any component value was modified
+					if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::IsItemEdited())
+					{
+						if (m_AppLayer)
+							m_AppLayer->MarkSceneDirty();
+					}
+
 					if(userSettings.RemoveComponent && info.RemoveComponentFunc)
 					{
 						entity.RemoveComponent(typeIndex);
+						if (m_AppLayer)
+							m_AppLayer->MarkSceneDirty();
 					}
 				}
 			}
@@ -151,6 +162,8 @@ namespace Gravix
 					if (ImGui::MenuItem(info.Name.c_str()))
 					{
 						entity.AddComponent(typeIndex);
+						if (m_AppLayer)
+							m_AppLayer->MarkSceneDirty();
 						searchBuffer[0] = '\0'; // Clear search on selection
 						ImGui::CloseCurrentPopup();
 					}

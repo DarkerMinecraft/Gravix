@@ -497,4 +497,10 @@ namespace Gravix
 		m_Window = nullptr;
 	}
 
+	void WindowsWindow::SetTitle(const std::string& title)
+	{
+		SetWindowTextA(m_Window, title.c_str());
+		m_Data.Title = title.c_str();
+	}
+
 }

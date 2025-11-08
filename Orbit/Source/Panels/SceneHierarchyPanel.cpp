@@ -1,11 +1,13 @@
 #include "SceneHierarchyPanel.h"
+#include "AppLayer.h"
+
 #include <imgui.h>
 #include <vector>
 #include <algorithm>
 
 #include "Scene/Components.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
 	SceneHierarchyPanel::SceneHierarchyPanel(const Ref<Scene>& scene)
@@ -59,6 +61,7 @@ namespace Gravix
 			if (ImGui::MenuItem("Create Empty Entity"))
 			{
 				m_Context->CreateEntity("Entity");
+				if (m_AppLayer) m_AppLayer->MarkSceneDirty();
 			}
 
 			ImGui::Separator();
@@ -67,12 +70,14 @@ namespace Gravix
 			{
 				Entity newEntity = m_Context->CreateEntity("Sprite");
 				newEntity.AddComponent<SpriteRendererComponent>();
+				if (m_AppLayer) m_AppLayer->MarkSceneDirty();
 			}
 
 			if (ImGui::MenuItem("Create Camera"))
 			{
 				Entity newEntity = m_Context->CreateEntity("Camera");
 				newEntity.AddComponent<CameraComponent>();
+				if (m_AppLayer) m_AppLayer->MarkSceneDirty();
 			}
 
 			ImGui::EndPopup();
@@ -130,6 +135,7 @@ namespace Gravix
 			if (m_SelectedEntity && m_SelectedEntity == entity)
 				m_SelectedEntity = { entt::null, m_Context.get() };
 			m_Context->DestroyEntity(entity);
+			if (m_AppLayer) m_AppLayer->MarkSceneDirty();
 		}
 	}
 

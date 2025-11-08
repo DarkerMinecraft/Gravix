@@ -6,6 +6,7 @@
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
 #include "Panels/ContentBrowserPanel.h"
+#include "Panels/ProjectSettingsPanel.h"
 
 #include <glm/glm.hpp>
 #include <optional>
@@ -27,6 +28,7 @@ namespace Gravix
 		virtual void OnImGuiRender() override;
 
 		void OpenScene(AssetHandle handle, bool deserialize = false);
+		void MarkSceneDirty();
 	private:
 		bool OnKeyPressed(KeyPressedEvent& e);
 		bool OnFileDrop(WindowFileDropEvent& e);
@@ -40,6 +42,8 @@ namespace Gravix
 
 		void ShowStartupDialog();
 		void InitializeProject();
+
+		void UpdateWindowTitle();
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
@@ -55,6 +59,7 @@ namespace Gravix
 		InspectorPanel m_InspectorPanel;
 		ViewportPanel m_ViewportPanel;
 		std::optional<ContentBrowserPanel> m_ContentBrowserPanel;
+		ProjectSettingsPanel m_ProjectSettingsPanel;
 
 		AssetHandle m_ActiveSceneHandle;
 		AssetHandle m_PendingSceneHandle = 0; // Track scene waiting to load asynchronously
@@ -62,6 +67,7 @@ namespace Gravix
 
 		bool m_ProjectInitialized = false;
 		bool m_ShowStartupDialog = false;
+		bool m_SceneDirty = false;
 	};
 
 }

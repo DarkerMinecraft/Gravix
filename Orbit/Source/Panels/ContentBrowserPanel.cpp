@@ -170,19 +170,100 @@ namespace Gravix
 					m_CurrentDirectory /= item.filename();
 			}
 
-			// Center-aligned text for file names
-			ImVec2 textSize = ImGui::CalcTextSize(itemStr.c_str());
+			// Right-click context menu
+			std::filesystem::path fullPath = m_AssetDirectory / item;
+			if (ImGui::BeginPopupContextItem())
+			{
+				if (ImGui::MenuItem("Rename"))
+				{
+					m_IsRenaming = true;
+					m_RenamingPath = item;
+					// Get name without extension for files
+					std::string displayName = isDirectory ? item.filename().string() : item.stem().string();
+					strncpy(m_RenameBuffer, displayName.c_str(), sizeof(m_RenameBuffer) - 1);
+				}
+
+				if (ImGui::MenuItem("Delete"))
+				{
+					// TODO: Implement delete functionality
+				}
+
+				ImGui::EndPopup();
+			}
+
+			// Center-aligned text for file names (hide extension for files)
+			std::string displayName = isDirectory ? itemStr : std::filesystem::path(itemStr).stem().string();
+			ImVec2 textSize = ImGui::CalcTextSize(displayName.c_str());
 			float textOffset = (thumbnailSize - textSize.x) * 0.5f;
 			if (textOffset > 0.0f)
 				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + textOffset);
 
-			ImGui::TextWrapped("%s", itemStr.c_str());
+			ImGui::TextWrapped("%s", displayName.c_str());
 
 			ImGui::PopID();
 			ImGui::NextColumn();
 		}
 
 		ImGui::Columns(1);
+
+		// Rename dialog
+		if (m_IsRenaming)
+		{
+			ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+			ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(400, 150), ImGuiCond_Always);
+
+			if (!ImGui::IsPopupOpen("Rename Asset"))
+			{
+				ImGui::OpenPopup("Rename Asset");
+			}
+
+			if (ImGui::BeginPopupModal("Rename Asset", &m_IsRenaming, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
+			{
+				ImGui::Text("Enter new name:");
+				ImGui::Spacing();
+
+				ImGui::SetNextItemWidth(-1);
+				if (ImGui::InputText("##AssetName", m_RenameBuffer, sizeof(m_RenameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					if (strlen(m_RenameBuffer) > 0)
+					{
+						RenameAsset(m_RenamingPath, m_RenameBuffer);
+						m_IsRenaming = false;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
+				float buttonWidth = 100.0f;
+				float spacing = 10.0f;
+				float totalWidth = buttonWidth * 2 + spacing;
+				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
+
+				if (ImGui::Button("Rename", ImVec2(buttonWidth, 0)))
+				{
+					if (strlen(m_RenameBuffer) > 0)
+					{
+						RenameAsset(m_RenamingPath, m_RenameBuffer);
+						m_IsRenaming = false;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine(0, spacing);
+
+				if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)))
+				{
+					m_IsRenaming = false;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+		}
 
 		ImGui::End();
 	}
@@ -204,7 +285,9 @@ namespace Gravix
 
 					// Import the newly copied asset
 					auto relativePath = std::filesystem::relative(destinationPath, m_AssetDirectory);
-					Project::GetActive()->GetEditorAssetManager()->ImportAsset(relativePath);
+					Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
+					assetManager->ImportAsset(relativePath);
+					assetManager->SerializeAssetRegistry();
 					RefreshAssetTree();
 
 					GX_CORE_INFO("Imported external file: {0}", fsPath.filename().string());
@@ -279,10 +362,57 @@ namespace Gravix
 					assetManager->ImportAsset(relativePath);
 				}
 			}
+
+			// Serialize registry after importing new assets
+			assetManager->SerializeAssetRegistry();
 		}
 		catch (const std::filesystem::filesystem_error& e)
 		{
 			GX_CORE_ERROR("Failed to scan asset directory: {0}", e.what());
+		}
+	}
+
+	void ContentBrowserPanel::RenameAsset(const std::filesystem::path& oldPath, const std::string& newName)
+	{
+		std::filesystem::path fullOldPath = m_AssetDirectory / oldPath;
+		std::filesystem::path extension = oldPath.extension();
+		std::filesystem::path newFilename = newName + extension.string();
+		std::filesystem::path fullNewPath = fullOldPath.parent_path() / newFilename;
+
+		try
+		{
+			// Rename the file on disk
+			std::filesystem::rename(fullOldPath, fullNewPath);
+
+			// Update asset metadata in the asset manager
+			Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
+			const auto& assetRegistry = assetManager->GetAssetRegistry();
+
+			// Find the asset handle for the old path
+			for (auto& [handle, metadata] : assetRegistry)
+			{
+				if (metadata.FilePath == oldPath)
+				{
+					// Update the metadata file path
+					auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
+					mutableMetadata.FilePath = std::filesystem::relative(fullNewPath, m_AssetDirectory);
+
+					// Serialize the updated asset registry
+					assetManager->SerializeAssetRegistry();
+
+					// Refresh the asset tree
+					m_TreeNodes.clear();
+					m_TreeNodes.push_back(TreeNode(".", 0));
+					RefreshAssetTree();
+
+					GX_CORE_INFO("Renamed asset: {0} -> {1}", oldPath.string(), mutableMetadata.FilePath.string());
+					break;
+				}
+			}
+		}
+		catch (const std::filesystem::filesystem_error& e)
+		{
+			GX_CORE_ERROR("Failed to rename asset: {0}", e.what());
 		}
 	}
 

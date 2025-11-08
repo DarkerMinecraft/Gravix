@@ -27,6 +27,8 @@ namespace Gravix
 		}
 
 		FramebufferSpecification fbSpec{};
+		fbSpec.Width = 1280;
+		fbSpec.Height = 720;
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
 		fbSpec.Multisampled = true;
 
@@ -52,11 +54,13 @@ namespace Gravix
 		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
 		if (startScene != 0)
 		{
-			OpenScene(startScene);
+			OpenScene(startScene, false); // AssetManager handles deserialization
 		}
 
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetAppLayer(this);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_InspectorPanel.SetAppLayer(this);
 		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
 
@@ -68,6 +72,9 @@ namespace Gravix
 
 		m_ProjectInitialized = true;
 		m_ShowStartupDialog = false;
+
+		// Update window title with scene name
+		UpdateWindowTitle();
 	}
 
 	AppLayer::~AppLayer()
@@ -105,7 +112,7 @@ namespace Gravix
 			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
 			AssetHandle sceneToLoad = m_PendingSceneHandle;
 			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
-			OpenScene(sceneToLoad, false); // Load with deserialization
+			OpenScene(sceneToLoad, false); // AssetManager already deserialized the scene
 		}
 
 		if (m_ViewportPanel.IsViewportValid())
@@ -224,6 +231,14 @@ namespace Gravix
 				{
 					//SaveSceneAs();
 				}
+
+				ImGui::Separator();
+
+				if (m_ProjectInitialized && ImGui::MenuItem("Preferences..."))
+				{
+					m_ProjectSettingsPanel.Open();
+				}
+
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();
@@ -242,6 +257,7 @@ namespace Gravix
 			m_SceneHierarchyPanel.OnImGuiRender();
 			m_InspectorPanel.OnImGuiRender();
 			if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnImGuiRender();
+			m_ProjectSettingsPanel.OnImGuiRender();
 		}
 		ImGui::End();
 	}
@@ -354,7 +370,7 @@ namespace Gravix
 		Project::New(projectFolder);
 
 		// Set the project path and save it
-		m_ActiveProjectPath = projectFolder / "Untitled.orbproj";
+		m_ActiveProjectPath = projectFolder / ".orbproj";
 		Project::SaveActive(m_ActiveProjectPath);
 
 		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
@@ -450,7 +466,7 @@ namespace Gravix
 
 	void AppLayer::SaveScene()
 	{
-		if (AssetManager::GetAssetType(m_ActiveSceneHandle) != AssetType::Scene) 
+		if (AssetManager::GetAssetType(m_ActiveSceneHandle) != AssetType::Scene)
 		{
 			GX_CORE_ERROR("Asset with handle {0} is not a scene!", static_cast<uint64_t>(m_ActiveSceneHandle));
 			return;
@@ -460,6 +476,9 @@ namespace Gravix
 
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Serialize(filePath);
+
+		m_SceneDirty = false;
+		UpdateWindowTitle();
 	}
 
 	void AppLayer::OpenScene(AssetHandle handle, bool deserialize)
@@ -484,17 +503,56 @@ namespace Gravix
 			m_SceneHierarchyPanel.SetNoneSelected();
 
 			if(!deserialize)
+			{
+				m_SceneDirty = false;
+				UpdateWindowTitle();
 				return;
+			}
 
 			const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
 			SceneSerializer serializer(m_ActiveScene);
 			serializer.Deserialize(filePath);
+
+			m_SceneDirty = false;
+			UpdateWindowTitle();
 		}
 		else
 		{
 			// Scene is loading asynchronously, track it so we can auto-load when ready
 			m_PendingSceneHandle = handle;
 			GX_CORE_INFO("Scene {0} is loading asynchronously, will auto-switch when ready", static_cast<uint64_t>(handle));
+		}
+	}
+
+	void AppLayer::UpdateWindowTitle()
+	{
+		if (!Project::HasActiveProject())
+		{
+			Application::Get().GetWindow().SetTitle("Orbit");
+			return;
+		}
+
+		std::string sceneName = "Untitled";
+
+		if (m_ActiveSceneHandle != 0 && AssetManager::IsValidAssetHandle(m_ActiveSceneHandle))
+		{
+			const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
+			sceneName = metadata.FilePath.stem().string();
+		}
+
+		std::string title = "Orbit - " + sceneName;
+		if (m_SceneDirty)
+			title += "*";
+
+		Application::Get().GetWindow().SetTitle(title);
+	}
+
+	void AppLayer::MarkSceneDirty()
+	{
+		if (!m_SceneDirty)
+		{
+			m_SceneDirty = true;
+			UpdateWindowTitle();
 		}
 	}
 
