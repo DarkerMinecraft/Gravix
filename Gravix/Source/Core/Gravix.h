@@ -15,6 +15,7 @@
 #include "Core.h"
 #include "Layer.h"
 #include "Log.h"
+#include "Input.h"
 
 // Events
 #include "Events/Event.h"
@@ -29,3 +30,6 @@
 #include "Scene/Components.h"
 #include "Scene/Entity.h"
 #include "Scene/Scene.h"
+#include "Scene/EditorCamera.h"
+
+#include "Maths/Maths.h"

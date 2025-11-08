@@ -19,8 +19,16 @@ namespace Gravix
 
 	LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
-			return true;
+		// Handle non-keyboard events normally - let ImGui consume them if it wants
+		bool isKeyboardEvent = (msg == WM_KEYDOWN || msg == WM_KEYUP ||
+			msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_CHAR);
+
+		if (!isKeyboardEvent)
+		{
+			// Non-keyboard events can be consumed by ImGui immediately
+			if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+				return true;
+		}
 
 		if (msg == WM_CREATE)
 		{
@@ -29,7 +37,7 @@ namespace Gravix
 			return 0;
 		}
 
-		// CRITICAL FIX: Validate window data pointer before use
+		// Validate window data pointer before use
 		LONG_PTR userData = GetWindowLongPtr(hwnd, GWLP_USERDATA);
 		if (userData == 0) {
 			return DefWindowProc(hwnd, msg, wParam, lParam);
@@ -43,10 +51,9 @@ namespace Gravix
 		{
 			WindowCloseEvent e;
 			pData.EventCallback(e);
-			return 0; // CRITICAL FIX: Return 0 to indicate we handled the message
+			return 0;
 		}
 
-		// CRITICAL FIX: Handle window resize events more robustly
 		case WM_SIZE:
 		{
 			uint32_t width = LOWORD(lParam);
@@ -62,17 +69,32 @@ namespace Gravix
 			return 0;
 		}
 
-		// CRITICAL FIX: Handle window positioning changes that can affect rendering
 		case WM_MOVE:
 		{
-			// Don't generate events for moves, but ensure the message is processed
 			return 0;
 		}
 
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		{
-			// CRITICAL FIX: Check for repeated key events
+			// CRITICAL FIX: Only block keyboard events if ImGui is ACTIVELY using them
+			ImGuiIO& io = ImGui::GetIO();
+
+			// Check if ImGui is actually using keyboard input (typing in text field, widget active)
+			bool imguiActuallyNeedsInput = io.WantCaptureKeyboard &&
+				(io.WantTextInput || ImGui::IsAnyItemActive());
+
+			if (imguiActuallyNeedsInput)
+			{
+				// ImGui is actively using keyboard (typing) - let it consume the event
+				ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+				return 0;
+			}
+
+			// Let ImGui see the event for navigation purposes
+			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+
+			// ALWAYS generate our event for application shortcuts
 			int repeatCount = (lParam & 0x0000FFFF);
 			bool wasDown = (lParam & 0x40000000) != 0;
 
@@ -82,29 +104,52 @@ namespace Gravix
 			}
 			return 0;
 		}
+
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
 		{
+			// Same logic as key down
+			ImGuiIO& io = ImGui::GetIO();
+
+			bool imguiActuallyNeedsInput = io.WantCaptureKeyboard &&
+				(io.WantTextInput || ImGui::IsAnyItemActive());
+
+			if (imguiActuallyNeedsInput)
+			{
+				ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+				return 0;
+			}
+
+			// Let ImGui see the event
+			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+
+			// Generate our event
 			KeyReleasedEvent event(static_cast<int>(wParam));
 			pData.EventCallback(event);
 			return 0;
 		}
+
 		case WM_CHAR:
 		{
-			// CRITICAL FIX: Filter out control characters
+			// Let ImGui handle character input
+			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+
+			// Filter out control characters for our event system
 			if (wParam >= 32 && wParam < 127) {
 				KeyTypedEvent event(static_cast<int>(wParam));
 				pData.EventCallback(event);
 			}
 			return 0;
 		}
+
 		case WM_LBUTTONDOWN:
 		{
-			SetCapture(hwnd); // Capture mouse for proper tracking
+			SetCapture(hwnd);
 			MouseButtonPressedEvent e(0);
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_RBUTTONDOWN:
 		{
 			SetCapture(hwnd);
@@ -112,6 +157,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MBUTTONDOWN:
 		{
 			SetCapture(hwnd);
@@ -119,6 +165,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_LBUTTONUP:
 		{
 			ReleaseCapture();
@@ -126,6 +173,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_RBUTTONUP:
 		{
 			ReleaseCapture();
@@ -133,6 +181,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MBUTTONUP:
 		{
 			ReleaseCapture();
@@ -140,6 +189,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MOUSEWHEEL:
 		{
 			float xOffset = 0.0f;
@@ -152,6 +202,7 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MOUSEHWHEEL:
 		{
 			float xOffset = -static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / static_cast<float>(WHEEL_DELTA);
@@ -164,9 +215,9 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
+
 		case WM_MOUSEMOVE:
 		{
-			// CRITICAL FIX: Use client coordinates instead of screen coordinates
 			int xPos = GET_X_LPARAM(lParam);
 			int yPos = GET_Y_LPARAM(lParam);
 
@@ -174,11 +225,11 @@ namespace Gravix
 			pData.EventCallback(e);
 			return 0;
 		}
-
-		default:
-			return DefWindowProc(hwnd, msg, wParam, lParam);
 		}
+
+		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
+
 
 	WindowsWindow::WindowsWindow(const WindowSpecification& spec)
 	{
@@ -210,7 +261,6 @@ namespace Gravix
 
 	void WindowsWindow::SetCursorMode(CursorMode mode)
 	{
-
 		// Ensure window has focus before changing cursor mode
 		SetForegroundWindow(m_Window);
 		SetFocus(m_Window);
@@ -274,6 +324,20 @@ namespace Gravix
 			{
 				SetCursorPos(centerX, centerY);
 			}
+			break;
+		}
+		case CursorMode::Pointer:
+		{
+			// Remove cursor clipping first
+			ClipCursor(NULL);
+			// Show cursor - more reliable method
+			int cursorCount = ShowCursor(TRUE);
+			while (cursorCount < 0)
+			{
+				cursorCount = ShowCursor(TRUE);
+			}
+			// Set to hand cursor
+			SetCursor(LoadCursor(NULL, IDC_HAND));
 			break;
 		}
 		}
@@ -387,7 +451,7 @@ namespace Gravix
 
 		ShowWindow(m_Window, SW_SHOW);
 
-		m_Device = CreateScope<VulkanDevice>(DeviceProperties{ m_Data.Width, m_Data.Height, m_Window, false});
+		m_Device = CreateScope<VulkanDevice>(DeviceProperties{ m_Data.Width, m_Data.Height, m_Window, false });
 		UpdateWindow(m_Window);
 
 		GX_CORE_INFO("Window created successfully with title: '{}'", m_Data.Title);

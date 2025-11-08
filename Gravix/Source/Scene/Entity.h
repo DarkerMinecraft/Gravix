@@ -1,10 +1,11 @@
 ﻿#pragma once
 
 #include "Scene.h"
-#include "Components.h"
 
+#include "Components.h"
 #include "ComponentRegistry.h"
 
+#include <typeindex>
 #include <entt/entt.hpp>
 
 namespace Gravix
@@ -13,8 +14,10 @@ namespace Gravix
 	class Entity
 	{
 	public:
+		Entity() = default;
 		Entity(entt::entity handle, Scene* scene)
-			: m_EntityHandle(handle), m_Scene(scene) {}
+			: m_EntityHandle(handle), m_Scene(scene) {
+		}
 		Entity(const Entity&) = default;
 
 		template<typename T, typename... Args>
@@ -69,13 +72,66 @@ namespace Gravix
 			return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
 		}
 
+		bool HasComponent(std::type_index typeIndex)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			return info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+		}
+
+		void* GetComponent(std::type_index typeIndex)
+		{
+			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not has componenet!");
+
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			return info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+		}
+
+		void AddComponent(std::type_index typeIndex)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			GX_CORE_ASSERT(info, "Component type not registered!");
+			GX_CORE_ASSERT(info->AddComponentFunc, "Component has no AddComponentFunc!");
+			GX_CORE_ASSERT(!HasComponent(typeIndex), "Entity already has componenet!");
+
+			info->AddComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+			if (info->OnCreateFunc) 
+			{
+				void* component = info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+				info->OnCreateFunc(component, m_Scene);
+			}
+		}
+
+		void RemoveComponent(std::type_index typeIndex)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			GX_CORE_ASSERT(info, "Component type not registered!");
+			GX_CORE_ASSERT(info->RemoveComponentFunc, "Component has no RemoveComponentFunc!");
+			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not have this component!");
+
+			info->RemoveComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+		}
+
 		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }
 		UUID& GetID() { return GetComponent<TagComponent>(); }
+		std::string& GetName() { return GetComponent<TagComponent>(); }
 
 		const glm::mat4& GetTransform() const { return GetComponent<TransformComponent>(); }
 		const UUID& GetID() const { return GetComponent<TagComponent>(); }
+		const std::string& GetName() const { return GetComponent<TagComponent>(); }
 
 		operator bool() const { return m_EntityHandle != entt::null; }
+		operator uint64_t() const { return (uint64_t)GetID(); }
+		operator entt::entity() const { return m_EntityHandle; }
+
+		bool operator==(const Entity& other) const
+		{
+			return GetID() == other.GetID() && m_Scene == other.m_Scene;
+		}
+
+		bool operator!=(const Entity& other) const
+		{
+			return !(*this == other);
+		}
 	private:
 		entt::entity m_EntityHandle{ entt::null };
 		Scene* m_Scene;

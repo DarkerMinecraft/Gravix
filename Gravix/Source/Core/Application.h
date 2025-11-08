@@ -7,6 +7,8 @@
 #include "Events/WindowEvents.h"
 #include "Renderer/ImGuiRender.h"
 
+#include "Project/Project.h"
+
 #include <chrono>
 #include <filesystem>
 
@@ -44,6 +46,7 @@ namespace Gravix
 
 		Window& GetWindow() { return *m_Window; }
 		Scheduler& GetScheduler() { return *m_Scheduler; }
+		ImGuiRender& GetImGui() { return *m_ImGuiRender; }
 
 		static Application& Get() { return *s_Instance; }
 	private:

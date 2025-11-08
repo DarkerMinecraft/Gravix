@@ -2,36 +2,60 @@
 
 #include "Gravix.h"
 
+#include "Panels/SceneHierarchyPanel.h"
+#include "Panels/InspectorPanel.h"
+#include "Panels/ViewportPanel.h"
+#include "Panels/ContentBrowserPanel.h"
+
 #include <glm/glm.hpp>
 
-namespace Orbit 
+namespace Gravix 
 {
 
-	class AppLayer : public Gravix::Layer
+	class AppLayer : public Layer
 	{
 	public:
 		AppLayer();
 		virtual ~AppLayer();
 
-		virtual void OnEvent(Gravix::Event& event) override;
+		virtual void OnEvent(Event& event) override;
 
 		virtual void OnUpdate(float deltaTime) override;
 		virtual void OnRender() override;
 
 		virtual void OnImGuiRender() override;
+
+		void OpenScene(const std::filesystem::path& path);
 	private:
-		void DrawViewportUI();
+		void OnShortcuts();
+
+		void SaveProject();
+		void SaveProjectAs();
+		void OpenProject();
+		void NewProject();
+
+		void SaveScene();
+		void SaveSceneAs();
+		void OpenScene();
+		void NewScene();
 	private:
-		Ref<Gravix::Framebuffer> m_MainFramebuffer;
+		Ref<Framebuffer> m_MSAAFramebuffer;
+		Ref<Framebuffer> m_FinalFramebuffer;
 
-		Ref<Gravix::Texture2D> m_CheckerboardTexture;
-		Ref<Gravix::Texture2D> m_LogoTexture;
+		Ref<Texture2D> m_CheckerboardTexture;
+		Ref<Texture2D> m_LogoTexture;
 
-		Ref<Gravix::Scene> m_ActiveScene;
+		Ref<Scene> m_ActiveScene;
 
-		Gravix::OrthographicCamera m_Camera;
+		EditorCamera m_EditorCamera;
 
-		glm::vec2 m_ViewportSize = {1260, 1080};
+		SceneHierarchyPanel m_SceneHierarchyPanel;
+		InspectorPanel m_InspectorPanel;
+		ViewportPanel m_ViewportPanel;
+		ContentBroswerPanel m_ContentBrowserPanel;
+
+		std::filesystem::path m_ActiveScenePath;
+		std::filesystem::path m_ActiveProjectPath;
 	};
 
 }

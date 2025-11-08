@@ -7,6 +7,8 @@
 
 #include "Renderer/Vulkan/VulkanDevice.h"
 
+#include "Serialization/Material/MaterialSerializer.h"
+
 namespace Gravix 
 {
 
@@ -32,8 +34,12 @@ namespace Gravix
 		void BindResource(VkCommandBuffer cmd, uint32_t binding, Texture2D* texture);
 		void BindResource(VkCommandBuffer cmd, uint32_t binding, uint32_t index, Texture2D* texture);
 	private:
+		void GetShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile);
+
 		void CreateMaterial(const MaterialSpecification& spec);
 		void CreateMaterial(const std::string& debugName, const std::filesystem::path& shaderFilePath);
+
+		void SaveShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile);
 
 		void SpinShader(const std::filesystem::path& shaderFilePath);
 		void CreatePipelineLayout();
@@ -48,10 +54,16 @@ namespace Gravix
 
 		VkPipeline m_Pipeline;
 		VkPipelineLayout m_PipelineLayout;
+		VkPipelineCache m_PipelineCache;
 
 		std::vector<VkShaderModule> m_ShaderModules;
 
 		ShaderReflection m_Reflection;
+
+		MaterialSerializedData m_SerializedShaderData;
+		bool m_ShouldRegenerateShaderCache;
+		bool m_ShouldRegeneratePipelineCache;
+
 		bool m_IsCompute = false;
 		uint32_t m_PushConstantSize = 0;
 	};

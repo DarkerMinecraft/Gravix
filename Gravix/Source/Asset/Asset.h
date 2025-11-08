@@ -11,8 +11,13 @@ namespace Gravix
 	{
 		None = 0,
 		Scene,
-		Texture2D
+		Texture2D,
+		Material,
+		Script,
 	};
+
+	std::string_view AssetTypeToString(AssetType type);
+	AssetType StringToAssetType(const std::string& typeStr);
 
 	class Asset 
 	{

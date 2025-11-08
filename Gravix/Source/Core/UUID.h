@@ -14,6 +14,13 @@ namespace Gravix
 
 		operator uint64_t() const { return m_UUID; }
 		bool operator==(const UUID& other) const { return m_UUID == other.m_UUID; }
+		bool operator!=(const UUID& other) const { return !(m_UUID == other.m_UUID); }
+
+		bool operator==(uint64_t other) const { return m_UUID == other; }
+		bool operator!=(uint64_t other) const { return !(m_UUID == other); }
+
+		bool operator==(int other) const { return m_UUID == static_cast<uint64_t>(other); }
+		bool operator!=(int other) const { return !(m_UUID == static_cast<uint64_t>(other)); }
 	private:
 		uint64_t m_UUID;
 	};

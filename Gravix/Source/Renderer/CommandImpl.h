@@ -33,6 +33,8 @@ namespace Gravix
 
 		virtual void DrawImGui() = 0;
 
+		virtual void ResolveFramebuffer(Framebuffer* dst, bool shaderUse) = 0;
+
 		virtual void EndRendering() = 0;
 
 		virtual void CopyToSwapchain() = 0;

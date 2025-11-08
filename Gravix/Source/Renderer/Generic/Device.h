@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Types/Framebuffer.h"
+#include "Types/Texture.h"
 
 #include <vector>
 
@@ -38,8 +39,12 @@ namespace Gravix
 
 		void RegisterFramebuffer(Ref<Framebuffer> framebuffer) { m_Framebuffers.push_back(framebuffer); }
 		std::vector<Ref<Framebuffer>>& GetFramebuffers() { return m_Framebuffers; }
+
+		void RegisterTexture(Ref<Texture2D> texture) { m_Textures.push_back(texture); }
+		std::vector<Ref<Texture2D>>& GetTextures() { return m_Textures; }
 	private:
 		std::vector<Ref<Framebuffer>> m_Framebuffers;
+		std::vector<Ref<Texture2D>> m_Textures;
 	};
 
 }

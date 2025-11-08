@@ -2,19 +2,20 @@
 
 #include <vector>
 #include <map>
+#include <array>
 #include <string>
 #include <concepts>
 #include <type_traits>
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 namespace Gravix
 {
-	// Forward declare the class
 	class BinarySerializer;
 
-	// Type trait to detect Serialize method
+	// Trait to detect custom Serialize()
 	template<typename T, typename = void>
 	struct has_serialize
 	{
@@ -35,7 +36,7 @@ namespace Gravix
 	class BinarySerializer
 	{
 	public:
-		BinarySerializer(uint32_t version)
+		explicit BinarySerializer(uint32_t version)
 		{
 			WriteHeader(version);
 		}
@@ -45,7 +46,16 @@ namespace Gravix
 		{
 			if constexpr (has_serialize_v<T>)
 			{
+				// Allow Serialize to mutate internal state if needed
 				const_cast<T&>(obj).Serialize(*this);
+			}
+			else if constexpr (is_vector<T>::value)
+			{
+				WriteVector(obj);
+			}
+			else if constexpr (is_map<T>::value)
+			{
+				WriteMap(obj);
 			}
 			else if constexpr (std::is_trivially_copyable_v<T>)
 			{
@@ -68,25 +78,21 @@ namespace Gravix
 		template<typename T, size_t N>
 		void Write(const std::array<T, N>& array)
 		{
-			for (size_t i = 0; i < N; i++)
-			{
-				Write(array[i]);
-			}
+			for (const auto& elem : array)
+				Write(elem);
 		}
 
 		template<typename T>
-		void Write(const std::vector<T>& vec)
+		void WriteVector(const std::vector<T>& vec)
 		{
 			size_t count = vec.size();
 			Write(count);
-			for (const auto& obj : vec)
-			{
-				Write(obj);
-			}
+			for (const auto& elem : vec)
+				Write(elem);
 		}
 
 		template<typename K, typename V>
-		void Write(const std::map<K, V>& map)
+		void WriteMap(const std::map<K, V>& map)
 		{
 			size_t count = map.size();
 			Write(count);
@@ -103,22 +109,35 @@ namespace Gravix
 			if (!file.is_open())
 				throw std::runtime_error("Failed to open file for writing: " + filePath.string());
 
-			file.write(reinterpret_cast<const char*>(m_Buffer.data()), m_Buffer.size());
+			file.write(reinterpret_cast<const char*>(m_Buffer.data()), static_cast<std::streamsize>(m_Buffer.size()));
 			file.close();
 		}
+
 	private:
 		void WriteHeader(uint32_t version)
 		{
 			const char magic[9] = "GRAVIXBN";
-
-			m_Buffer.insert(m_Buffer.end(), magic, magic + 9);
+			m_Buffer.insert(m_Buffer.end(), magic, magic + 8);
 			Write(version);
 		}
+
 	private:
 		std::vector<uint8_t> m_Buffer;
+
+		// Helpers for container detection
+		template<typename T>
+		struct is_vector : std::false_type {};
+
+		template<typename T, typename A>
+		struct is_vector<std::vector<T, A>> : std::true_type {};
+
+		template<typename T>
+		struct is_map : std::false_type {};
+
+		template<typename K, typename V, typename C, typename A>
+		struct is_map<std::map<K, V, C, A>> : std::true_type {};
 	};
 
-	// Optional: Concept alias if you prefer concept syntax elsewhere
 	template<typename T>
 	concept Serializable = has_serialize_v<T>;
 }

@@ -8,13 +8,12 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 namespace Gravix
 {
-	// Forward declare the class
 	class BinaryDeserializer;
 
-	// Move concept after the class declaration, or use a trait
 	template<typename T>
 	struct has_deserialize
 	{
@@ -55,37 +54,52 @@ namespace Gravix
 			char magic[9] = {};
 			std::memcpy(magic, m_Data + m_Offset, 8);
 			m_Offset += 8;
-			int version = Read<uint32_t>();
+
+			uint32_t version = Read<uint32_t>();
 
 			bool validMagic = std::memcmp(magic, expectedMagic, 8) == 0;
 			bool validVersion = version == expectedVersion;
 
-			GX_CORE_ASSERT(validMagic, "Wrong magic!");
-			GX_CORE_ASSERT(validVersion, "Wrong version!");
+			// Replace with your assert macro or exceptions
+			if (!validMagic) throw std::runtime_error("Invalid binary magic header!");
+			if (!validVersion) throw std::runtime_error("Binary version mismatch!");
 		}
 
 		template<typename T>
 		T Read()
 		{
-			T value{};
 			if constexpr (std::is_same_v<T, std::string>)
 			{
 				return ReadString();
 			}
+			else if constexpr (is_vector<T>::value)
+			{
+				using ElemType = typename T::value_type;
+				return ReadVector<ElemType>();
+			}
+			else if constexpr (is_map<T>::value)
+			{
+				using K = typename T::key_type;
+				using V = typename T::mapped_type;
+				return ReadMap<K, V>();
+			}
 			else if constexpr (has_deserialize_v<T>)
 			{
+				T value{};
 				value.Deserialize(*this);
+				return value;
 			}
 			else if constexpr (std::is_trivially_copyable_v<T>)
 			{
+				T value{};
 				std::memcpy(&value, m_Data + m_Offset, sizeof(T));
 				m_Offset += sizeof(T);
+				return value;
 			}
 			else
 			{
 				static_assert(sizeof(T) == 0, "Type is not deserializable!");
 			}
-			return value;
 		}
 
 		std::string ReadString()
@@ -93,7 +107,6 @@ namespace Gravix
 			size_t len = Read<size_t>();
 			std::string str(reinterpret_cast<const char*>(m_Data + m_Offset), len);
 			m_Offset += len;
-
 			return str;
 		}
 
@@ -105,7 +118,6 @@ namespace Gravix
 			vec.reserve(count);
 			for (size_t i = 0; i < count; ++i)
 				vec.push_back(Read<T>());
-
 			return vec;
 		}
 
@@ -122,13 +134,26 @@ namespace Gravix
 			}
 			return result;
 		}
+
 	private:
 		uint8_t* m_Data;
 		std::vector<uint8_t> m_Buffer;
 		uint32_t m_Offset = 0;
+
+		// type traits for container detection
+		template<typename T>
+		struct is_vector : std::false_type {};
+
+		template<typename T, typename A>
+		struct is_vector<std::vector<T, A>> : std::true_type {};
+
+		template<typename T>
+		struct is_map : std::false_type {};
+
+		template<typename K, typename V, typename C, typename A>
+		struct is_map<std::map<K, V, C, A>> : std::true_type {};
 	};
 
-	// If you prefer the concept, define it after the class
 	template<typename T>
 	concept Deserializable = has_deserialize_v<T>;
 }

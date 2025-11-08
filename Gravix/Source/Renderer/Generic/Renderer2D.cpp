@@ -54,16 +54,19 @@ namespace Gravix
 		s_Data = new Renderer2DData();
 		// Create a 1x1 white texture
 		uint32_t whitePixel = 0xffffffff; // RGBA
-		s_Data->WhiteTexture = Texture2D::Create(&whitePixel, 1, 1);
+		Buffer buffer;
+		buffer.Data = reinterpret_cast<uint8_t*>(&whitePixel);
+		buffer.Size = 4;
+
+		s_Data->WhiteTexture = Texture2D::Create(buffer, 1, 1);
 
 		// Create a default textured material
-		MaterialSpecification matSpec;
+		MaterialSpecification matSpec{};
 		matSpec.DebugName = "DefaultTexturedMaterial";
 		matSpec.ShaderFilePath = "Assets/shaders/texture.slang";
 		matSpec.BlendingMode = Blending::Alphablend;
 		matSpec.RenderTarget = renderTarget;
 		matSpec.EnableDepthTest = true;
-		matSpec.DepthCompareOp = CompareOp::LessOrEqual;
 
 		s_Data->TexturedMaterial = Material::Create(matSpec);
 
@@ -92,7 +95,7 @@ namespace Gravix
 		memset(s_Data->TextureSlots.data(), 0, s_Data->TextureSlots.size() * sizeof(uint32_t));
 	}
 
-	void Renderer2D::BeginScene(Command& cmd, const glm::mat4& viewProjection)
+	void Renderer2D::BeginScene(Command& cmd, Camera& camera, const glm::mat4& transformMatrix)
 	{
 		s_Data->TextureSlotIndex = 1; 
 		s_Data->QuadIndexCount = 0;
@@ -101,10 +104,10 @@ namespace Gravix
 		cmd.SetActiveMaterial(s_Data->TexturedMaterial);
 		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
 
-		s_Data->PushConstants.Set("viewProjMatrix", viewProjection);
+		s_Data->PushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
 	}
 
-	void Renderer2D::BeginScene(Command& cmd, const Camera& camera, const glm::mat4& transform)
+	void Renderer2D::BeginScene(Command& cmd, EditorCamera& camera)
 	{
 		s_Data->TextureSlotIndex = 1;
 		s_Data->QuadIndexCount = 0;
@@ -113,11 +116,10 @@ namespace Gravix
 		cmd.SetActiveMaterial(s_Data->TexturedMaterial);
 		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
 
-		glm::mat4 viewProj = camera.GetProjection() * glm::inverse(transform);
-		s_Data->PushConstants.Set("viewProjMatrix", viewProj);
+		s_Data->PushConstants.Set("viewProjMatrix", camera.GetViewProjection());
 	}
 
-	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
+	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
 	{
 		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
@@ -151,6 +153,7 @@ namespace Gravix
 			vertex.Set("color", color);
 			vertex.Set("texIndex", textureIndex);
 			vertex.Set("tilingFactor", tilingFactor);
+			vertex.Set("entityID", entityID);
 
 			s_Data->QuadVertexBuffer.push_back(vertex);
 		}
@@ -160,11 +163,6 @@ namespace Gravix
 
 	void Renderer2D::EndScene(Command& cmd)
 	{
-		std::sort(s_Data->QuadVertexBuffer.begin(), s_Data->QuadVertexBuffer.end(),
-			[](DynamicStruct& a, DynamicStruct& b) {
-				return a.Get<glm::vec3>("position").z < b.Get<glm::vec3>("position").z;
-			});
-
 		s_Data->QuadMesh->SetVertices(s_Data->QuadVertexBuffer);
 		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 
@@ -176,11 +174,9 @@ namespace Gravix
 
 	void Renderer2D::Flush(Command& cmd)
 	{
-		cmd.BeginRendering();
 		cmd.BindMaterial(s_Data->PushConstants.Data());
 		cmd.BindMesh(s_Data->QuadMesh);
 		cmd.DrawIndexed(s_Data->QuadIndexCount);
-		cmd.EndRendering();
 	}
 
 	void Renderer2D::Destroy()

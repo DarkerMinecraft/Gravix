@@ -1,52 +1,101 @@
 #include "AppLayer.h"
 
+#include "Utils/PlatformUtils.h"
+#include "Serialization/Scene/SceneSerializer.h"
+
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace Orbit
+namespace Gravix
 {
 
 	AppLayer::AppLayer()
 	{
-		Gravix::FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { Gravix::FramebufferTextureFormat::RGBA8 };
 
-		m_MainFramebuffer = Gravix::Framebuffer::Create(fbSpec);
-		m_MainFramebuffer->SetClearColor(0, { 0.3f, 0.3f, 0.3f, 0.3f });
+		FramebufferSpecification fbSpec{};
+		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
+		fbSpec.Multisampled = true;
 
-		Gravix::Renderer2D::Init(m_MainFramebuffer);
+		m_MSAAFramebuffer = Framebuffer::Create(fbSpec);
+		m_MSAAFramebuffer->SetClearColor(0, glm::vec4{ 0.1f, 0.1f, 0.1f, 1.0f });
+		m_MSAAFramebuffer->SetClearColor(1, glm::vec4{ -1.0f, 0.0f, 0.0f, 0.0f });
 
-		m_ActiveScene = CreateRef<Gravix::Scene>();
+		fbSpec.Multisampled = false;
+		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
+
+		Renderer2D::Init(m_MSAAFramebuffer);
+
+		OpenScene(Project::GetActive()->GetConfig().StartScene);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
+
+		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
+		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
+		m_ViewportPanel.SetAppLayer(this);
+
+		m_ContentBrowserPanel = ContentBroswerPanel();
 	}
 
 	AppLayer::~AppLayer()
 	{
-		Gravix::Renderer2D::Destroy();
+		Renderer2D::Destroy();
 	}
 
-	void AppLayer::OnEvent(Gravix::Event& event)
+	void AppLayer::OnEvent(Event& e)
 	{
-
+		m_EditorCamera.OnEvent(e);
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
-		// Ensure viewport is valid before updating camera
-		if (m_ViewportSize.x > 0 && m_ViewportSize.y > 0) 
+		if (m_ViewportPanel.IsViewportValid())
 		{
-			m_MainFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
-			m_Camera.UpdateProjectionMatrix(m_ViewportSize.x, m_ViewportSize.y);
-			m_ActiveScene->OnViewportResize(m_ViewportSize.x, m_ViewportSize.y);
+			auto& viewportSize = m_ViewportPanel.GetViewportSize();
+
+			m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
+			m_ActiveScene->OnViewportResize(viewportSize.x, viewportSize.y);
+
+			m_ViewportPanel.ResizeFramebuffer();
+			m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
+
+			m_ViewportPanel.UpdateViewport();
 		}
 
+		if (m_ViewportPanel.IsViewportHovered())
+			m_EditorCamera.OnUpdate(deltaTime);
+
 		m_ActiveScene->OnEditorUpdate(deltaTime);
+
+		OnShortcuts();
+		m_ViewportPanel.GuizmoShortcuts();
+
+		if (Input::IsMouseDown(Mouse::LeftButton))
+		{
+			if (m_ViewportPanel.IsViewportHovered())
+			{
+				Entity hoveredEntity = m_ViewportPanel.GetHoveredEntity();
+
+				if (hoveredEntity)
+				{
+					m_SceneHierarchyPanel.SetSelectedEntity(hoveredEntity);
+				}
+			}
+		}
 	}
 
 	void AppLayer::OnRender()
 	{
-		Gravix::Command cmd(m_MainFramebuffer, 0, false);
+		{
+			Command cmd(m_MSAAFramebuffer, 0, false);
 
-		//m_ActiveScene->OnEditorRender(cmd);
+			cmd.BeginRendering();
+			m_ActiveScene->OnEditorRender(cmd, m_EditorCamera);
+			cmd.EndRendering();
+
+			cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
+		}
 	}
 
 	void AppLayer::OnImGuiRender()
@@ -97,26 +146,161 @@ namespace Orbit
 		{
 			if (ImGui::BeginMenu("File"))
 			{
+				if (ImGui::MenuItem("New", "Ctrl+N"))
+				{
+					NewScene();
+				}
+
+				if (ImGui::MenuItem("Open... ", "Ctrl+O"))
+				{
+					OpenScene();
+				}
+
+				if (ImGui::MenuItem("Save", "Ctrl+S"))
+				{
+					SaveScene();
+				}
+
+				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
+				{
+					SaveSceneAs();
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();
 		}
 
-		DrawViewportUI();
+		m_ViewportPanel.OnImGuiRender();
+		m_SceneHierarchyPanel.OnImGuiRender();
+		m_InspectorPanel.OnImGuiRender();
+		m_ContentBrowserPanel.OnImGuiRender();
 		ImGui::End();
 	}
 
-	void AppLayer::DrawViewportUI()
+	void AppLayer::OnShortcuts()
 	{
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-		ImGui::Begin("Viewport");
-		ImVec2 avail = ImGui::GetContentRegionAvail();
+		bool ctrlDown = Input::IsKeyDown(Key::LeftControl) || Input::IsKeyDown(Key::RightControl);
+		bool shiftDown = Input::IsKeyDown(Key::LeftShift) || Input::IsKeyDown(Key::RightShift);
 
-		m_ViewportSize = { avail.x, avail.y };
+		if (ctrlDown && Input::IsKeyPressed(Key::S))
+		{
+			if (shiftDown)
+				SaveSceneAs();
+			else
+				SaveScene();
+		}
 
-		ImGui::Image(m_MainFramebuffer->GetColorAttachmentID(0), avail);
-		ImGui::End();
-		ImGui::PopStyleVar();
+		if (ctrlDown && Input::IsKeyPressed(Key::O))
+		{
+			OpenScene();
+		}
+
+		if (ctrlDown && Input::IsKeyPressed(Key::N))
+		{
+			NewScene();
+		}
+	}
+
+	void AppLayer::SaveProject()
+	{
+		if(m_ActiveProjectPath.empty())
+		{
+			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Project (*.orbproj)\0*.orbproj\0");
+			if (filePath.empty())
+				return;
+
+			m_ActiveProjectPath = filePath;
+		}
+		Project::SaveActive(m_ActiveProjectPath);
+	}
+
+	void AppLayer::SaveProjectAs()
+	{
+		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Project (*.orbproj)\0*.orbproj\0");
+		if (filePath.empty())
+			return;
+
+		m_ActiveProjectPath = filePath;
+		Project::SaveActive(m_ActiveProjectPath);
+	}
+
+	void AppLayer::OpenProject()
+	{
+		m_ActiveProjectPath = FileDialogs::OpenFile("Orbit Project (*.orbproj)\0*.orbproj\0");
+		if (m_ActiveProjectPath.empty())
+			return;
+
+		Project::Load(m_ActiveProjectPath);
+	}
+
+	void AppLayer::NewProject()
+	{
+		Project::New();
+	}
+
+	void AppLayer::SaveScene()
+	{
+		if (m_ActiveScenePath.empty())
+		{
+			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
+			if (filePath.empty())
+				return;
+
+			m_ActiveScenePath = filePath;
+		}
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Serialize(m_ActiveScenePath);
+	}
+
+	void AppLayer::SaveSceneAs()
+	{
+		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
+		if (filePath.empty())
+			return;
+		m_ActiveScenePath = filePath;
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Serialize(m_ActiveScenePath);
+	}
+
+	void AppLayer::OpenScene()
+	{
+		std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
+		if (filePath.empty())
+			return;
+		m_ActiveScenePath = filePath;
+
+		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetNoneSelected();
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Deserialize(filePath);
+	}
+
+	void AppLayer::OpenScene(const std::filesystem::path& path)
+	{
+		m_ActiveScenePath = Project::GetAssetDirectory() / path;
+
+		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetNoneSelected();
+
+		SceneSerializer serializer(m_ActiveScene);
+		serializer.Deserialize(m_ActiveScenePath);
+	}
+
+	void AppLayer::NewScene()
+	{
+		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetNoneSelected();
+
+		m_ActiveScenePath = std::filesystem::path();
 	}
 
 }

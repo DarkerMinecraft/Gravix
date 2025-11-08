@@ -17,12 +17,18 @@
 	path = ThirdParties/ImGui
 	url = https://github.com/DarkerMinecraft/imgui.git
 	branch = docking
-[submodule "ThirdParties/Slang"]
-	path = ThirdParties/Slang
-	url = https://github.com/shader-slang/slang.git
 [submodule "ThirdParties/stb"]
 	path = ThirdParties/stb
 	url = https://github.com/nothings/stb.git
 [submodule "ThirdParties/Entt"]
 	path = ThirdParties/Entt
 	url = https://github.com/skypjack/entt.git
+[submodule "ThirdParties/yaml"]
+	path = ThirdParties/yaml
+	url = https://github.com/jbeder/yaml-cpp
+[submodule "ThirdParties/ImGuizmo"]
+	path = ThirdParties/ImGuizmo
+	url = https://github.com/DarkerMinecraft/ImGuizmo.git
+[submodule "Slang"]
+	path = ThirdParties/Slang
+	url = https://github.com/DarkerMinecraft/slang.git

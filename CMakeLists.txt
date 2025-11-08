@@ -25,8 +25,8 @@ add_compile_definitions(
     $<$<BOOL:${ENGINE_PLATFORM_WINDOWS}>:ENGINE_PLATFORM_WINDOWS>
     $<$<BOOL:${ENGINE_PLATFORM_LINUX}>:ENGINE_PLATFORM_LINUX>
     $<$<BOOL:${ENGINE_PLATFORM_MACOS}>:ENGINE_PLATFORM_MACOS>
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
 )
-
 
 add_subdirectory(ThirdParties/VkBootstrap)
 set_target_properties(vk-bootstrap PROPERTIES FOLDER "Dependencies")
@@ -43,7 +43,6 @@ set(SLANG_ENABLE_SLANGD OFF CACHE BOOL "" FORCE)          # Disable language ser
 set(SLANG_ENABLE_TESTS OFF CACHE BOOL "" FORCE)           # Disable tests
 set(SLANG_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)        # Disable samples/examples
 set(SLANG_ENABLE_SLANGRT ON CACHE BOOL "" FORCE)          # Enable runtime (reflection, compiler core)
-set(SLANG_LIB_TYPE STATIC CACHE STRING "" FORCE)          # Build static libraries
 
 add_subdirectory(ThirdParties/Slang)
 set_target_properties(slang PROPERTIES FOLDER "Slang/Dependencies")
@@ -55,7 +54,19 @@ set_target_properties(slang-common-objects PROPERTIES FOLDER "Slang/Dependencies
 set_target_properties(compiler-core PROPERTIES FOLDER "Slang/Dependencies")
 set_target_properties(slangi PROPERTIES FOLDER "Slang/Dependencies")
 
+add_subdirectory(ThirdParties/yaml)
+set_target_properties(yaml-cpp PROPERTIES FOLDER "yaml/Dependencies")
+set_target_properties(yaml-cpp-parse PROPERTIES FOLDER "yaml/Dependencies")
+set_target_properties(yaml-cpp-read PROPERTIES FOLDER "yaml/Dependencies")
+set_target_properties(yaml-cpp-sandbox PROPERTIES FOLDER "yaml/Dependencies")
+
+add_subdirectory(ThirdParties/ImGuizmo)
+set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
+
+
 # Add engine modules
+add_subdirectory(Gravix-ScriptCore)
+add_subdirectory(GravixScripting)
 add_subdirectory(Gravix)
 add_subdirectory(Orbit)
 
