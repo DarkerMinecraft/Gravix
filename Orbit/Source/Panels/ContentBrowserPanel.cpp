@@ -285,7 +285,9 @@ namespace Gravix
 
 					// Import the newly copied asset
 					auto relativePath = std::filesystem::relative(destinationPath, m_AssetDirectory);
-					Project::GetActive()->GetEditorAssetManager()->ImportAsset(relativePath);
+					Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
+					assetManager->ImportAsset(relativePath);
+					assetManager->SerializeAssetRegistry();
 					RefreshAssetTree();
 
 					GX_CORE_INFO("Imported external file: {0}", fsPath.filename().string());
@@ -360,6 +362,9 @@ namespace Gravix
 					assetManager->ImportAsset(relativePath);
 				}
 			}
+
+			// Serialize registry after importing new assets
+			assetManager->SerializeAssetRegistry();
 		}
 		catch (const std::filesystem::filesystem_error& e)
 		{
@@ -391,6 +396,9 @@ namespace Gravix
 					// Update the metadata file path
 					auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
 					mutableMetadata.FilePath = std::filesystem::relative(fullNewPath, m_AssetDirectory);
+
+					// Serialize the updated asset registry
+					assetManager->SerializeAssetRegistry();
 
 					// Refresh the asset tree
 					m_TreeNodes.clear();
