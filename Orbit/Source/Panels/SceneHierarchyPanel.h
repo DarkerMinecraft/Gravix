@@ -3,8 +3,10 @@
 #include "Scene/Scene.h"
 #include "Scene/Entity.h"
 
-namespace Gravix 
+namespace Gravix
 {
+
+	class AppLayer;
 
 	class SceneHierarchyPanel
 	{
@@ -15,6 +17,8 @@ namespace Gravix
 
 		void SetContext(const Ref<Scene>& scene);
 		Ref<Scene> GetContext() const { return m_Context; }
+
+		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
 
 		void OnImGuiRender();
 
@@ -27,6 +31,7 @@ namespace Gravix
 	private:
 		Ref<Scene> m_Context;
 		Entity m_SelectedEntity;
+		AppLayer* m_AppLayer = nullptr;
 	};
 
 }

@@ -26,7 +26,7 @@ namespace Gravix
 		Pointer
 	};
 
-	class Window 
+	class Window
 	{
 	public:
 		public:
@@ -42,6 +42,8 @@ namespace Gravix
 			virtual void SetCursorMode(CursorMode mode) = 0;
 
 			virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
+
+			virtual void SetTitle(const std::string& title) = 0;
 
 			virtual Device* GetDevice() = 0;
 
