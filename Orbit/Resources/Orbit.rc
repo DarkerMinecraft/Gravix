@@ -3,10 +3,11 @@
 // Do not duplicate this file's contents elsewhere; it's available in the canvas.
 
 #include <windows.h>
-#include "resource.h"
+
+#define IDI_ORBIT_ICON 101
 
 // Application icon
-IDR_APP_ICON    ICON    "OrbitEditor.ico"
+IDI_ORBIT_ICON    ICON    "OrbitEditor.ico"
 
 // Version information
 1 VERSIONINFO

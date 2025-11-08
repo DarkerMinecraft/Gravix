@@ -34,12 +34,12 @@ namespace Gravix
 		m_ImGuiRender = new ImGuiRender();
 		ComponentRegistry::Get().RegisterAllComponents();
 
-		ScriptEngine::Init("GravixScripting.dll");
+		//ScriptEngine::Init("GravixScripting.dll");
 	}
 
 	Application::~Application()
 	{
-		ScriptEngine::Shutdown();
+		//ScriptEngine::Shutdown();
 	}
 
 	void Application::Run()

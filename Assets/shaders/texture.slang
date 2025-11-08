@@ -22,7 +22,7 @@ struct VSOutput
     float4 position : SV_POSITION;
     float2 uv;
     float4 color;
-    int texIndex;
+    nointerpolation int texIndex;
     float tilingFactor;
     nointerpolation float entityID;
 };

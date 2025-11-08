@@ -87,22 +87,9 @@ add_dependencies(Orbit CopyRootAssets CopyEditorAssets)
 # SCRIPTING DLL COPYING
 # ============================================================================
 
-add_custom_target(CopyScripting ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.dll"
-        "$<TARGET_FILE_DIR:Orbit>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_BINARY_DIR}/GravixScripting/Managed/GravixScripting.runtimeconfig.json"
-        "$<TARGET_FILE_DIR:Orbit>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_BINARY_DIR}/GravixScripting/nethost.dll"
-        "$<TARGET_FILE_DIR:Orbit>"
-    COMMENT "Copying GravixScripting config and managed DLLs"
-)
-
 # Make CopyScripting wait for GravixScripting to build first
-add_dependencies(CopyScripting GravixScripting)
-add_dependencies(Orbit CopyScripting)
+#add_dependencies(CopyScripting GravixScripting)
+#add_dependencies(Orbit CopyScripting)
 
 # Copy Slang DLL
 add_custom_command(TARGET Orbit POST_BUILD

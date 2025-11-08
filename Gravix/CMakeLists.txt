@@ -21,6 +21,50 @@ if(ENGINE_USE_VULKAN)
     add_compile_definitions(Gravix PRIVATE ENGINE_USE_VULKAN)
 endif()
 
+# --- Platform-specific .NET paths ---
+if(WIN32)
+    # Windows: Use installed .NET SDK
+    set(DOTNET_ROOT "C:/Program Files/dotnet")
+    set(NETHOST_PATH "${DOTNET_ROOT}/packs/Microsoft.NETCore.App.Host.win-x64/9.0.10/runtimes/win-x64/native")
+    
+    target_include_directories(Gravix PRIVATE ${NETHOST_PATH})
+    
+        find_library(NETHOST_LIB
+        NAMES nethost
+        PATHS ${NETHOST_PATH}
+        REQUIRED
+    )
+    target_link_libraries(Gravix PUBLIC ${NETHOST_LIB})
+    
+elseif(UNIX AND NOT APPLE)
+    # Linux: Use installed .NET SDK
+    set(DOTNET_ROOT "/usr/share/dotnet")
+    set(NETHOST_PATH "${DOTNET_ROOT}/packs/Microsoft.NETCore.App.Host.linux-x64/9.0.0/runtimes/linux-x64/native")
+    
+    target_include_directories(Gravix PRIVATE ${NETHOST_PATH})
+    
+    find_library(NETHOST_LIB
+        NAMES nethost
+        PATHS ${NETHOST_PATH}
+        REQUIRED
+    )
+    target_link_libraries(Gravix PUBLIC ${NETHOST_LIB} dl pthread)
+    
+elseif(APPLE)
+    # macOS: Use installed .NET SDK
+    set(DOTNET_ROOT "/usr/local/share/dotnet")
+    set(NETHOST_PATH "${DOTNET_ROOT}/packs/Microsoft.NETCore.App.Host.osx-x64/9.0.0/runtimes/osx-x64/native")
+    
+    target_include_directories(Gravix PRIVATE ${NETHOST_PATH})
+    
+    find_library(NETHOST_LIB
+        NAMES nethost
+        PATHS ${NETHOST_PATH}
+        REQUIRED
+    )
+    target_link_libraries(Gravix PUBLIC ${NETHOST_LIB})
+endif()
+
 target_include_directories(Gravix 
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/
@@ -49,6 +93,4 @@ target_link_libraries(Gravix
         ImGuizmo
         slang
         yaml-cpp
-    PUBLIC
-        GravixScripting
 )
