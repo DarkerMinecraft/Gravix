@@ -2,7 +2,6 @@
 #include "EditorAssetManager.h"
 
 #include "AssetImporter.h"
-#include "Importers/SceneImporter.h"
 #include "Project/Project.h"
 
 #include <yaml-cpp/yaml.h>
@@ -49,9 +48,48 @@ namespace Gravix
 				delete request;
 				continue;
 			}
-			if (request->State == AssetState::ReadyForGPU) 
+			if (request->State == AssetState::ReadyForGPU)
 			{
 				AssetMetadata metadata = GetAssetMetadata(request->Handle);
+
+				// If this is a scene, process dependencies first
+				if (metadata.Type == AssetType::Scene)
+				{
+					if (auto* sceneData = std::get_if<AsyncLoadRequest::SceneData>(&request->CPUData))
+					{
+						// Queue dependencies for async loading
+						for (AssetHandle depHandle : sceneData->Dependencies)
+						{
+							// Only load if not already loaded or loading
+							if (!IsAssetLoaded(depHandle) && !m_LoadingAssets.contains(depHandle))
+							{
+								if (IsAssetHandleValid(depHandle))
+								{
+									AssetMetadata depMetadata = GetAssetMetadata(depHandle);
+
+									AsyncLoadRequest* depRequest = new AsyncLoadRequest();
+									depRequest->Handle = depHandle;
+									depRequest->FilePath = depMetadata.FilePath;
+									depRequest->State = AssetState::NotLoaded;
+									depRequest->Priority = LoadPriority::High; // Dependencies get high priority
+
+									m_LoadingAssets[depHandle] = depRequest;
+
+									AsyncLoadTask* depLoadTask = new AsyncLoadTask(1);
+									depLoadTask->LoadRequests.push_back(depRequest);
+									Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(depLoadTask);
+
+									GX_CORE_INFO("Auto-loading scene dependency: {0}", depMetadata.FilePath.string());
+								}
+								else
+								{
+									GX_CORE_WARN("Scene dependency {0} not found in registry", static_cast<uint64_t>(depHandle));
+								}
+							}
+						}
+					}
+				}
+
 				Ref<Asset> asset = AssetImporter::ImportAsset(request->Handle, metadata);
 				if (!asset)
 				{
@@ -76,25 +114,6 @@ namespace Gravix
 	{
 		AssetMetadata metadata;
 		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
-
-		// If it's a scene, extract and register dependencies
-		if (metadata.Type == AssetType::Scene)
-		{
-			std::vector<AssetHandle> dependencies;
-			std::filesystem::path fullPath = Project::GetAssetDirectory() / filePath;
-			SceneImporter::LoadSceneToYAML(fullPath, &dependencies);
-
-			// Auto-register dependencies if they aren't already in the registry
-			for (AssetHandle depHandle : dependencies)
-			{
-				if (!m_AssetRegistry.contains(depHandle))
-				{
-					// Find the asset metadata for this dependency
-					// Dependencies should already have metadata generated, but if not, skip
-					GX_CORE_WARN("Scene dependency {0} not found in registry", static_cast<uint64_t>(depHandle));
-				}
-			}
-		}
 
 		AsyncLoadRequest* request = new AsyncLoadRequest();
 		request->Handle = handle;
