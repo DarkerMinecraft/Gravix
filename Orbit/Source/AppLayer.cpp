@@ -67,9 +67,6 @@ namespace Gravix
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
-		// Process async asset loads every frame
-		Project::GetActive()->GetEditorAssetManager()->ProcessAsyncLoads();
-
 		// Check if pending scene has finished loading
 		if (m_PendingSceneHandle != 0 && AssetManager::IsAssetLoaded(m_PendingSceneHandle))
 		{
