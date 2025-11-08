@@ -1,4 +1,8 @@
 #include "ContentBrowserPanel.h"
+#include "AppLayer.h"
+
+#include "Serialization/Scene/SceneSerializer.h"
+#include "Scene/Scene.h"
 
 #include <filesystem>
 #include <imgui.h>
@@ -52,7 +56,7 @@ namespace Gravix
 
 			if (ImGui::MenuItem("Scene"))
 			{
-				// TODO: Create new scene file
+				CreateNewScene();
 				ImGui::CloseCurrentPopup();
 			}
 
@@ -66,7 +70,25 @@ namespace Gravix
 
 			if (ImGui::MenuItem("Folder"))
 			{
-				// TODO: Create new folder
+				// Create new folder in current directory
+				std::filesystem::path newFolderPath = m_CurrentDirectory / "New Folder";
+				int counter = 1;
+				while (std::filesystem::exists(newFolderPath))
+				{
+					newFolderPath = m_CurrentDirectory / ("New Folder " + std::to_string(counter++));
+				}
+
+				try
+				{
+					std::filesystem::create_directory(newFolderPath);
+					GX_CORE_INFO("Created folder: {0}", newFolderPath.filename().string());
+					RefreshAssetTree();
+				}
+				catch (const std::filesystem::filesystem_error& e)
+				{
+					GX_CORE_ERROR("Failed to create folder: {0}", e.what());
+				}
+
 				ImGui::CloseCurrentPopup();
 			}
 
@@ -303,6 +325,8 @@ namespace Gravix
 	void ContentBrowserPanel::RefreshAssetTree()
 	{
 		const auto& assetRegistry = Project::GetActive()->GetEditorAssetManager()->GetAssetRegistry();
+
+		// First, add all files from the asset registry
 		for(const auto& [handle, metadata] : assetRegistry)
 		{
 			uint32_t currentNodeIndex = 0;
@@ -323,6 +347,42 @@ namespace Gravix
 					currentNodeIndex = m_TreeNodes.size() - 1;
 				}
 			}
+		}
+
+		// Now scan for all directories (including empty ones) and add them to the tree
+		try
+		{
+			for (const auto& entry : std::filesystem::recursive_directory_iterator(m_AssetDirectory))
+			{
+				if (!entry.is_directory())
+					continue;
+
+				auto relativePath = std::filesystem::relative(entry.path(), m_AssetDirectory);
+				uint32_t currentNodeIndex = 0;
+
+				// Navigate/create the path in the tree
+				for (const auto& p : relativePath)
+				{
+					auto it = m_TreeNodes[currentNodeIndex].Children.find(p.generic_string());
+					if(it != m_TreeNodes[currentNodeIndex].Children.end())
+					{
+						currentNodeIndex = it->second;
+					}
+					else
+					{
+						TreeNode newNode(p, 0); // Directories don't have asset handles
+						newNode.Parent = currentNodeIndex;
+						m_TreeNodes.push_back(newNode);
+
+						m_TreeNodes[currentNodeIndex].Children[p] = m_TreeNodes.size() - 1;
+						currentNodeIndex = m_TreeNodes.size() - 1;
+					}
+				}
+			}
+		}
+		catch (const std::filesystem::filesystem_error& e)
+		{
+			GX_CORE_ERROR("Failed to scan directories: {0}", e.what());
 		}
 	}
 
@@ -413,6 +473,48 @@ namespace Gravix
 		catch (const std::filesystem::filesystem_error& e)
 		{
 			GX_CORE_ERROR("Failed to rename asset: {0}", e.what());
+		}
+	}
+
+	void ContentBrowserPanel::CreateNewScene()
+	{
+		// Generate a unique scene file name
+		std::filesystem::path newScenePath = m_CurrentDirectory / "NewScene.scene";
+		int counter = 1;
+		while (std::filesystem::exists(newScenePath))
+		{
+			newScenePath = m_CurrentDirectory / ("NewScene" + std::to_string(counter++) + ".scene");
+		}
+
+		try
+		{
+			// Create a new empty scene
+			Ref<Scene> newScene = CreateRef<Scene>();
+
+			// Serialize the scene to a file
+			SceneSerializer serializer(newScene);
+			serializer.Serialize(newScenePath);
+
+			// Import the scene into the asset manager
+			auto relativePath = std::filesystem::relative(newScenePath, m_AssetDirectory);
+			Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
+			AssetHandle sceneHandle = assetManager->ImportAsset(relativePath);
+			assetManager->SerializeAssetRegistry();
+
+			// Refresh the asset tree to show the new scene
+			RefreshAssetTree();
+
+			GX_CORE_INFO("Created new scene: {0}", newScenePath.filename().string());
+
+			// Open the newly created scene
+			if (m_AppLayer)
+			{
+				m_AppLayer->OpenScene(sceneHandle, true);
+			}
+		}
+		catch (const std::exception& e)
+		{
+			GX_CORE_ERROR("Failed to create new scene: {0}", e.what());
 		}
 	}
 
