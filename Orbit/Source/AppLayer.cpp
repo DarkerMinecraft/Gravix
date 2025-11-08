@@ -67,6 +67,18 @@ namespace Gravix
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
+		// Process async asset loads every frame
+		Project::GetActive()->GetEditorAssetManager()->ProcessAsyncLoads();
+
+		// Check if pending scene has finished loading
+		if (m_PendingSceneHandle != 0 && AssetManager::IsAssetLoaded(m_PendingSceneHandle))
+		{
+			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
+			AssetHandle sceneToLoad = m_PendingSceneHandle;
+			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
+			OpenScene(sceneToLoad, true); // Load with deserialization
+		}
+
 		if (m_ViewportPanel.IsViewportValid())
 		{
 			auto& viewportSize = m_ViewportPanel.GetViewportSize();
@@ -325,8 +337,9 @@ namespace Gravix
 		}
 		else
 		{
-			// Scene is loading asynchronously, keep the current scene for now
-			GX_CORE_INFO("Scene {0} is loading asynchronously, will be available shortly", static_cast<uint64_t>(handle));
+			// Scene is loading asynchronously, track it so we can auto-load when ready
+			m_PendingSceneHandle = handle;
+			GX_CORE_INFO("Scene {0} is loading asynchronously, will auto-switch when ready", static_cast<uint64_t>(handle));
 		}
 	}
 
