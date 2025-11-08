@@ -62,6 +62,7 @@ namespace Gravix
 		Ref<RuntimeAssetManager> GetRuntimeAssetManager() { return Cast<RuntimeAssetManager>(m_AssetManager); }
 
 		static Ref<Project> New();
+		static Ref<Project> New(const std::filesystem::path& workingDirectory);
 		static Ref<Project> Load(const std::filesystem::path& path);
 		static void SaveActive(const std::filesystem::path& path);
 	private:

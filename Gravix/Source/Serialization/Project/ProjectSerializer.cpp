@@ -11,6 +11,14 @@ namespace Gravix
 	{
 		const auto& config = m_Project->GetConfig();
 
+		// Get the project directory (where the .orbproj file will be saved)
+		std::filesystem::path projectDirectory = path.parent_path();
+
+		// Convert absolute paths to relative paths for portability
+		std::filesystem::path relativeAssetDir = std::filesystem::relative(config.AssetDirectory, projectDirectory);
+		std::filesystem::path relativeLibraryDir = std::filesystem::relative(config.LibraryDirectory, projectDirectory);
+		std::filesystem::path relativeScriptPath = std::filesystem::relative(config.ScriptPath, projectDirectory);
+
 		YAML::Emitter out;
 		out << YAML::BeginMap;
 		out << YAML::Key << "Project" << YAML::Value;
@@ -18,9 +26,9 @@ namespace Gravix
 		out << YAML::BeginMap;
 		out << YAML::Key << "Name" << YAML::Value << config.Name;
 		out << YAML::Key << "StartScene" << YAML::Value << (uint64_t)config.StartScene;
-		out << YAML::Key << "AssetDirectory" << YAML::Value << config.AssetDirectory.string();
-		out << YAML::Key << "LibraryDirectory" << YAML::Value << config.LibraryDirectory.string();
-		out << YAML::Key << "ScriptPath" << YAML::Value << config.ScriptPath.string();
+		out << YAML::Key << "AssetDirectory" << YAML::Value << relativeAssetDir.string();
+		out << YAML::Key << "LibraryDirectory" << YAML::Value << relativeLibraryDir.string();
+		out << YAML::Key << "ScriptPath" << YAML::Value << relativeScriptPath.string();
 		out << YAML::EndMap;
 
 		out << YAML::EndMap;

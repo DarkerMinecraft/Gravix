@@ -4,6 +4,7 @@
 #include "Core/Application.h"
 
 #include <commdlg.h>
+#include <shlobj.h>
 
 namespace Gravix 
 {
@@ -28,7 +29,7 @@ namespace Gravix
 		return std::filesystem::path();
 	}
 
-	std::filesystem::path FileDialogs::SaveFile(const char* filter) 
+	std::filesystem::path FileDialogs::SaveFile(const char* filter)
 	{
 		OPENFILENAMEA ofn;
 		CHAR szFile[260] = { 0 };
@@ -44,6 +45,27 @@ namespace Gravix
 		if (GetSaveFileNameA(&ofn) == TRUE)
 		{
 			return std::filesystem::path(ofn.lpstrFile);
+		}
+		return std::filesystem::path();
+	}
+
+	std::filesystem::path FileDialogs::OpenFolder(const char* title)
+	{
+		BROWSEINFOA bi = { 0 };
+		bi.hwndOwner = (HWND)Application::Get().GetWindow().GetWindowHandle();
+		bi.lpszTitle = title;
+		bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_USENEWUI;
+
+		LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
+		if (pidl != nullptr)
+		{
+			CHAR szPath[MAX_PATH];
+			if (SHGetPathFromIDListA(pidl, szPath))
+			{
+				CoTaskMemFree(pidl);
+				return std::filesystem::path(szPath);
+			}
+			CoTaskMemFree(pidl);
 		}
 		return std::filesystem::path();
 	}
