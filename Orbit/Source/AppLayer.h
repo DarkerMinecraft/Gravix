@@ -29,6 +29,9 @@ namespace Gravix
 
 		void OpenScene(AssetHandle handle, bool deserialize = false);
 		void MarkSceneDirty();
+		void UpdateWindowTitle();
+
+		AssetHandle GetActiveSceneHandle() const { return m_ActiveSceneHandle; }
 	private:
 		bool OnKeyPressed(KeyPressedEvent& e);
 		bool OnFileDrop(WindowFileDropEvent& e);
@@ -42,8 +45,6 @@ namespace Gravix
 
 		void ShowStartupDialog();
 		void InitializeProject();
-
-		void UpdateWindowTitle();
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
