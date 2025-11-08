@@ -26,7 +26,7 @@ namespace Gravix
 		return nullptr;
 	}
 
-	Ref<Texture2D> Texture2D::Create(void* data, uint32_t width /*= 1*/, uint32_t height /*= 1*/, const TextureSpecification& specification /*= TextureSpecification()*/)
+	Ref<Texture2D> Texture2D::Create(Buffer data, uint32_t width /*= 1*/, uint32_t height /*= 1*/, const TextureSpecification& specification /*= TextureSpecification()*/)
 	{
 		Device* device = Application::Get().GetWindow().GetDevice();
 

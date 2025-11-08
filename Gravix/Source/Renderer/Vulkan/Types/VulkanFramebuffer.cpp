@@ -320,7 +320,10 @@ namespace Gravix
 			if (isDepthAttachment) 
 			{
 				m_DepthAttachmentIndex = i;
-				m_DepthAttachment = VulkanInitializers::AttachmentInfo(image.ImageView, nullptr, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+				VkClearValue depthClear{};
+				depthClear.depthStencil.depth = 1.0f;  // Far plane for LESS compare
+				depthClear.depthStencil.stencil = 0;
+				m_DepthAttachment = VulkanInitializers::AttachmentInfo(image.ImageView, &depthClear, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 			}
 			else 
 			{
@@ -381,7 +384,10 @@ namespace Gravix
 		
 		if (isDepthAttachment)
 		{
-			m_DepthAttachment = VulkanInitializers::AttachmentInfo(image.ImageView, nullptr, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+			VkClearValue depthClear{};
+			depthClear.depthStencil.depth = 1.0f;  // Far plane for LESS compare
+			depthClear.depthStencil.stencil = 0;
+			m_DepthAttachment = VulkanInitializers::AttachmentInfo(image.ImageView, &depthClear, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 		}
 		else
 		{

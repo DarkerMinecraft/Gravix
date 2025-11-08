@@ -14,7 +14,7 @@ namespace Gravix
 	{
 	public:
 		VulkanTexture2D(Device* device, const std::filesystem::path& path, const TextureSpecification& specification);
-		VulkanTexture2D(Device* device, void* data, uint32_t width, uint32_t height, const TextureSpecification& specification);
+		VulkanTexture2D(Device* device, Buffer data, uint32_t width, uint32_t height, const TextureSpecification& specification);
 		virtual ~VulkanTexture2D();
 
 		// Inherited from Texture
@@ -48,8 +48,8 @@ namespace Gravix
 		VkDescriptorImageInfo GetDescriptorInfo() const;
 	private:
 		void LoadFromFile(const std::filesystem::path& path);
-		void CreateFromData(const void* data, uint32_t width, uint32_t height, uint32_t channels);
-		void CreateVulkanResources(const void* data, uint32_t dataSize);
+		void CreateFromData(Buffer data, uint32_t width, uint32_t height, uint32_t channels);
+		void CreateVulkanResources(Buffer data, uint32_t dataSize);
 		void CreateSampler();
 		void Cleanup();
 

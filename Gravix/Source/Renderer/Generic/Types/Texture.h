@@ -2,6 +2,7 @@
 
 #include "Renderer/Specification.h"
 
+#include "Core/Buffer.h"
 #include "Core/UUID.h"
 
 #include "Asset/Asset.h"
@@ -50,7 +51,7 @@ namespace Gravix
 		virtual void DestroyImGuiDescriptor() = 0;
 
 		static Ref<Texture2D> Create(const std::filesystem::path& path, const TextureSpecification& specification = TextureSpecification());
-		static Ref<Texture2D> Create(void* data, uint32_t width = 1, uint32_t height = 1, const TextureSpecification& specification = TextureSpecification());
+		static Ref<Texture2D> Create(Buffer data, uint32_t width = 1, uint32_t height = 1, const TextureSpecification& specification = TextureSpecification());
 	};
 
 }

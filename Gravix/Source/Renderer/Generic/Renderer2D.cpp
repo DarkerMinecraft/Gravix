@@ -54,7 +54,11 @@ namespace Gravix
 		s_Data = new Renderer2DData();
 		// Create a 1x1 white texture
 		uint32_t whitePixel = 0xffffffff; // RGBA
-		s_Data->WhiteTexture = Texture2D::Create(&whitePixel, 1, 1);
+		Buffer buffer;
+		buffer.Data = reinterpret_cast<uint8_t*>(&whitePixel);
+		buffer.Size = 4;
+
+		s_Data->WhiteTexture = Texture2D::Create(buffer, 1, 1);
 
 		// Create a default textured material
 		MaterialSpecification matSpec{};
