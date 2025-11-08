@@ -51,23 +51,46 @@ namespace Gravix
 
 	std::filesystem::path FileDialogs::OpenFolder(const char* title)
 	{
-		BROWSEINFOA bi = { 0 };
-		bi.hwndOwner = (HWND)Application::Get().GetWindow().GetWindowHandle();
-		bi.lpszTitle = title;
-		bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_USENEWUI;
+		std::filesystem::path result;
 
-		LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
-		if (pidl != nullptr)
+		IFileDialog* pFileDialog = nullptr;
+		HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pFileDialog));
+		if (SUCCEEDED(hr))
 		{
-			CHAR szPath[MAX_PATH];
-			if (SHGetPathFromIDListA(pidl, szPath))
+			DWORD options = 0;
+			if (SUCCEEDED(pFileDialog->GetOptions(&options)))
+				pFileDialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+
+			if (title)
 			{
-				CoTaskMemFree(pidl);
-				return std::filesystem::path(szPath);
+				// Convert title to wide string
+				std::wstring wtitle(title, title + strlen(title));
+				pFileDialog->SetTitle(wtitle.c_str());
 			}
-			CoTaskMemFree(pidl);
+
+			hr = pFileDialog->Show((HWND)Application::Get().GetWindow().GetWindowHandle());
+			if (SUCCEEDED(hr))
+			{
+				IShellItem* pItem = nullptr;
+				if (SUCCEEDED(pFileDialog->GetResult(&pItem)))
+				{
+					PWSTR pszFolderPath = nullptr;
+					if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFolderPath)))
+					{
+						char path[MAX_PATH];
+						WideCharToMultiByte(CP_ACP, 0, pszFolderPath, -1, path, MAX_PATH, nullptr, nullptr);
+						result = std::filesystem::path(path);
+						CoTaskMemFree(pszFolderPath);
+					}
+					pItem->Release();
+				}
+			}
+
+			pFileDialog->Release();
 		}
-		return std::filesystem::path();
+
+		return result;
 	}
+
 
 }

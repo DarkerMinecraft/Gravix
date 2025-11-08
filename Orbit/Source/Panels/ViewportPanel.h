@@ -26,7 +26,7 @@ namespace Gravix
 		void SetFramebuffer(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex) { m_Framebuffer = framebuffer; m_RenderIndex = renderIndex; }
 		void SetEditorCamera(EditorCamera* camera) { m_EditorCamera = camera; }
 		void SetSceneHierarchyPanel(SceneHierarchyPanel* panel) { m_SceneHierarchyPanel = panel; }
-		void ResizeFramebuffer() { m_Framebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y); }
+		void ResizeFramebuffer() { if(m_Framebuffer != nullptr) m_Framebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y); }
 
 		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
 

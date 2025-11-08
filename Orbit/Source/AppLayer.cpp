@@ -13,6 +13,19 @@ namespace Gravix
 
 	AppLayer::AppLayer()
 	{
+		// Check if a project has been loaded
+		if (Project::HasActiveProject())
+		{
+			InitializeProject();
+		}
+		else
+		{
+			// Show startup dialog to prompt user to open/create a project
+			m_ShowStartupDialog = true;
+
+			NewProject();
+		}
+
 		FramebufferSpecification fbSpec{};
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
 		fbSpec.Multisampled = true;
@@ -25,20 +38,6 @@ namespace Gravix
 		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
 
 		Renderer2D::Init(m_MSAAFramebuffer);
-
-		// Check if a project has been loaded
-		if (Project::HasActiveProject())
-		{
-			InitializeProject();
-		}
-		else
-		{
-			// Show startup dialog to prompt user to open/create a project
-			m_ShowStartupDialog = true;
-
-			// Create a minimal scene to prevent nullptr issues
-			m_ActiveScene = CreateRef<Scene>();
-		}
 	}
 
 	void AppLayer::InitializeProject()
