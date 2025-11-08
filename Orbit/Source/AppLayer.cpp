@@ -66,13 +66,36 @@ namespace Gravix
 
 		// Try to open the start scene if it's valid
 		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
-		if (startScene != 0)
+		if (startScene != 0 && AssetManager::GetAssetType(startScene) == AssetType::Scene)
 		{
-			OpenScene(startScene, false); // AssetManager handles deserialization
+			// Load scene synchronously during initialization to ensure it's ready
+			auto& assetManager = Project::GetActive()->GetEditorAssetManager();
+			const auto& metadata = assetManager->GetAssetMetadata(startScene);
+			const auto& filePath = Project::GetAssetDirectory() / metadata.FilePath;
+
+			if (std::filesystem::exists(filePath))
+			{
+				// Create and deserialize the scene
+				m_ActiveScene = CreateRef<Scene>();
+				SceneSerializer serializer(m_ActiveScene);
+				serializer.Deserialize(filePath);
+
+				m_ActiveSceneHandle = startScene;
+				m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+				m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+				m_SceneHierarchyPanel.SetNoneSelected();
+
+				GX_CORE_INFO("Loaded start scene: {0}", filePath.string());
+			}
+			else
+			{
+				GX_CORE_WARN("Start scene file not found: {0}", filePath.string());
+			}
 		}
 
 		m_ProjectInitialized = true;
 		m_ShowStartupDialog = false;
+		m_SceneDirty = false;
 
 		// Update window title with scene name
 		UpdateWindowTitle();
@@ -469,16 +492,35 @@ namespace Gravix
 
 	void AppLayer::SaveScene()
 	{
-		if (AssetManager::GetAssetType(m_ActiveSceneHandle) != AssetType::Scene)
+		// Check if we have a valid active scene
+		if (!m_ActiveScene)
 		{
-			GX_CORE_ERROR("Asset with handle {0} is not a scene!", static_cast<uint64_t>(m_ActiveSceneHandle));
+			GX_CORE_ERROR("No active scene to save!");
 			return;
 		}
 
+		// Check if the scene has a valid asset handle and file path
+		if (m_ActiveSceneHandle == 0 || AssetManager::GetAssetType(m_ActiveSceneHandle) != AssetType::Scene)
+		{
+			GX_CORE_WARN("Scene doesn't have a valid file path. Cannot save without a file location.");
+			// TODO: Implement SaveSceneAs dialog here
+			return;
+		}
+
+		// Get the scene file path
 		const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
 
+		// Save the scene
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Serialize(filePath);
+		GX_CORE_INFO("Saved scene to: {0}", filePath.string());
+
+		// Also save the project settings
+		if (!m_ActiveProjectPath.empty())
+		{
+			Project::SaveActive(m_ActiveProjectPath);
+			GX_CORE_INFO("Saved project to: {0}", m_ActiveProjectPath.string());
+		}
 
 		m_SceneDirty = false;
 		UpdateWindowTitle();
@@ -492,11 +534,45 @@ namespace Gravix
 			return;
 		}
 
-		// Try to get the scene asset (may return nullptr if loading asynchronously)
-		Ref<Scene> scene = AssetManager::GetAsset<Scene>(handle);
+		// Get scene file path
+		auto& assetManager = Project::GetActive()->GetEditorAssetManager();
+		const auto& metadata = assetManager->GetAssetMetadata(handle);
+		const auto& filePath = Project::GetAssetDirectory() / metadata.FilePath;
 
-		// Only update the active scene if we successfully loaded it
-		// If it's nullptr (async loading), keep the current scene
+		Ref<Scene> scene = nullptr;
+
+		// If we need to deserialize or if the asset isn't loaded yet, load synchronously
+		if (deserialize || !AssetManager::IsAssetLoaded(handle))
+		{
+			if (std::filesystem::exists(filePath))
+			{
+				// Create a new scene and deserialize it from file
+				scene = CreateRef<Scene>();
+				SceneSerializer serializer(scene);
+				serializer.Deserialize(filePath);
+				GX_CORE_INFO("Loaded scene from: {0}", filePath.string());
+			}
+			else
+			{
+				GX_CORE_ERROR("Scene file not found: {0}", filePath.string());
+				return;
+			}
+		}
+		else
+		{
+			// Try to get the already-loaded scene asset
+			scene = AssetManager::GetAsset<Scene>(handle);
+
+			if (!scene)
+			{
+				// Scene is loading asynchronously, track it so we can auto-load when ready
+				m_PendingSceneHandle = handle;
+				GX_CORE_INFO("Scene {0} is loading asynchronously, will auto-switch when ready", static_cast<uint64_t>(handle));
+				return;
+			}
+		}
+
+		// Update the active scene
 		if (scene)
 		{
 			m_ActiveSceneHandle = handle;
@@ -505,25 +581,8 @@ namespace Gravix
 			m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 			m_SceneHierarchyPanel.SetNoneSelected();
 
-			if(!deserialize)
-			{
-				m_SceneDirty = false;
-				UpdateWindowTitle();
-				return;
-			}
-
-			const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
-			SceneSerializer serializer(m_ActiveScene);
-			serializer.Deserialize(filePath);
-
 			m_SceneDirty = false;
 			UpdateWindowTitle();
-		}
-		else
-		{
-			// Scene is loading asynchronously, track it so we can auto-load when ready
-			m_PendingSceneHandle = handle;
-			GX_CORE_INFO("Scene {0} is loading asynchronously, will auto-switch when ready", static_cast<uint64_t>(handle));
 		}
 	}
 
