@@ -68,7 +68,9 @@ namespace Gravix
 
 	void InspectorPanel::DrawAddComponents(Entity entity)
 	{
-		// Unity-style "Add Component" button - full width
+		ImGuiIO& io = ImGui::GetIO();
+
+		// Unity-style "Add Component" button - full width with bold text
 		float buttonWidth = ImGui::GetContentRegionAvail().x;
 		ImVec2 buttonSize = ImVec2(buttonWidth, 0.0f);
 
@@ -76,14 +78,22 @@ namespace Gravix
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.443f, 0.443f, 0.443f, 1.0f));
+		ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
 
 		if (ImGui::Button("Add Component", buttonSize))
 			ImGui::OpenPopup("AddComponent");
 
+		ImGui::PopFont();
 		ImGui::PopStyleColor(3);
 
 		if (ImGui::BeginPopup("AddComponent"))
 		{
+			// Bold header
+			ImGui::PushFont(io.Fonts->Fonts[1]);
+			ImGui::TextColored(ImVec4(0.267f, 0.529f, 0.808f, 1.0f), "Add Component");
+			ImGui::PopFont();
+			ImGui::Separator();
+
 			// Search filter for components (Unity-style)
 			static char searchBuffer[256] = "";
 			ImGui::SetNextItemWidth(-1);

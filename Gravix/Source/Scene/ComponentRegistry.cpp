@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ComponentRegistry.h"
+#include "ImGuiHelpers.h"
 
 #include "Components.h"
 
@@ -80,74 +81,6 @@ namespace Gravix
 		return out;
 	}
 
-	static void DrawVec3Control(const char* label, glm::vec3& values, float resetValue = 0.0f, float columnWidth = 100.0f)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-
-		ImGui::PushID(label);
-
-		// Unity-style two-column layout
-		ImGui::Columns(2);
-		ImGui::SetColumnWidth(0, columnWidth);
-		ImGui::PushFont(io.Fonts->Fonts[1], 0.0f);
-		ImGui::Text("%s", label);
-		ImGui::PopFont();
-		ImGui::NextColumn();
-
-		ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 2, 0 });  // Slight spacing between controls
-
-		float lineHeight = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
-		ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
-
-		// X Axis (Red) - Unity-style vibrant red
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.7f, 0.1f, 0.1f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.85f, 0.2f, 0.2f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.95f, 0.3f, 0.3f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f });
-		if (ImGui::Button("X", buttonSize))
-			values.x = resetValue;
-		ImGui::PopStyleColor(4);
-
-		ImGui::SameLine();
-		ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
-		ImGui::PopItemWidth();
-		ImGui::SameLine();
-
-		// Y Axis (Green) - Unity-style vibrant green
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.15f, 0.65f, 0.15f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.75f, 0.25f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.35f, 0.85f, 0.35f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f });
-		if (ImGui::Button("Y", buttonSize))
-			values.y = resetValue;
-		ImGui::PopStyleColor(4);
-
-		ImGui::SameLine();
-		ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
-		ImGui::PopItemWidth();
-		ImGui::SameLine();
-
-		// Z Axis (Blue) - Unity-style vibrant blue
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.3f, 0.8f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.4f, 0.9f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.3f, 0.5f, 1.0f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f });
-		if (ImGui::Button("Z", buttonSize))
-			values.z = resetValue;
-		ImGui::PopStyleColor(4);
-
-		ImGui::SameLine();
-		ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
-		ImGui::PopItemWidth();
-
-		ImGui::PopStyleVar();
-
-		ImGui::Columns(1);
-
-		ImGui::PopID();
-	};
-
 	void ComponentRegistry::RegisterAllComponents()
 	{
 		RegisterComponent<TagComponent>(
@@ -161,9 +94,18 @@ namespace Gravix
 			nullptr,
 			[](TagComponent& c)
 			{
+				ImGuiIO& io = ImGui::GetIO();
+
+				// Bold "Tag" label with input on the same line
+				ImGui::PushFont(io.Fonts->Fonts[1]);
+				ImGui::Text("Tag");
+				ImGui::PopFont();
+				ImGui::SameLine();
+
 				char buffer[256];
 				memset(buffer, 0, sizeof(buffer));
 				strcpy_s(buffer, c.Name.c_str());
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 				if (ImGui::InputText("##TagComponentName", buffer, sizeof(buffer)))
 				{
 					c.Name = std::string(buffer);
@@ -192,9 +134,9 @@ namespace Gravix
 			[](TransformComponent& c)
 			{
 				// Draw the Transform component UI
-				DrawVec3Control("Position", c.Position);
-				DrawVec3Control("Rotation", c.Rotation);
-				DrawVec3Control("Scale", c.Scale, 1.0f);
+				ImGuiHelpers::DrawVec3Control("Position", c.Position);
+				ImGuiHelpers::DrawVec3Control("Rotation", c.Rotation);
+				ImGuiHelpers::DrawVec3Control("Scale", c.Scale, 1.0f);
 				// Update the transform matrix when values change
 				c.CalculateTransform();
 			}
@@ -243,8 +185,16 @@ namespace Gravix
 				const char* currentProjectionTypeString = projectionTypeStrings[(int)c.Camera.GetProjectionType()];
 
 				auto& camera = c.Camera;
-				ImGui::Checkbox("Primary", &c.Primary);
-				if (ImGui::BeginCombo("Projection", currentProjectionTypeString))
+
+				// Primary checkbox
+				ImGuiHelpers::BeginPropertyRow("Primary");
+				ImGui::Checkbox("##Primary", &c.Primary);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Projection type combo
+				ImGuiHelpers::BeginPropertyRow("Projection");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				if (ImGui::BeginCombo("##Projection", currentProjectionTypeString))
 				{
 					for (int i = 0; i < 2; i++)
 					{
@@ -261,37 +211,59 @@ namespace Gravix
 
 					ImGui::EndCombo();
 				}
+				ImGuiHelpers::EndPropertyRow();
 
 				if (camera.GetProjectionType() == ProjectionType::Orthographic)
 				{
+					ImGuiHelpers::BeginPropertyRow("Size");
 					float orthoSize = camera.GetOrthographicSize();
-					if (ImGui::DragFloat("Size", &orthoSize))
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					if (ImGui::DragFloat("##Size", &orthoSize))
 						camera.SetOrthographicSize(orthoSize);
+					ImGuiHelpers::EndPropertyRow();
 
+					ImGuiHelpers::BeginPropertyRow("Near Clip");
 					float nearClip = camera.GetOrthographicNearClip();
-					if (ImGui::DragFloat("Near Clip", &nearClip))
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					if (ImGui::DragFloat("##NearClip", &nearClip))
 						camera.SetOrthographicNearClip(nearClip);
+					ImGuiHelpers::EndPropertyRow();
 
+					ImGuiHelpers::BeginPropertyRow("Far Clip");
 					float farClip = camera.GetOrthographicFarClip();
-					if (ImGui::DragFloat("Far Clip", &farClip))
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					if (ImGui::DragFloat("##FarClip", &farClip))
 						camera.SetOrthographicFarClip(farClip);
+					ImGuiHelpers::EndPropertyRow();
 				}
 
 				if (camera.GetProjectionType() == ProjectionType::Perspective)
 				{
+					ImGuiHelpers::BeginPropertyRow("Vertical FOV");
 					float fov = camera.GetPerspectiveFOV();
-					if (ImGui::DragFloat("Vertical FOV", &fov))
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					if (ImGui::DragFloat("##VerticalFOV", &fov))
 						camera.SetPerspectiveFOV(fov);
+					ImGuiHelpers::EndPropertyRow();
 
+					ImGuiHelpers::BeginPropertyRow("Near Clip");
 					float nearClip = camera.GetPerspectiveNearClip();
-					if (ImGui::DragFloat("Near Clip", &nearClip))
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					if (ImGui::DragFloat("##NearClip", &nearClip))
 						camera.SetPerspectiveNearClip(nearClip);
+					ImGuiHelpers::EndPropertyRow();
 
+					ImGuiHelpers::BeginPropertyRow("Far Clip");
 					float farClip = camera.GetPerspectiveFarClip();
-					if (ImGui::DragFloat("Far Clip", &farClip))
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					if (ImGui::DragFloat("##FarClip", &farClip))
 						camera.SetPerspectiveFarClip(farClip);
+					ImGuiHelpers::EndPropertyRow();
 				}
-				ImGui::Checkbox("Fixed Aspect Ratio", &c.FixedAspectRatio);
+
+				ImGuiHelpers::BeginPropertyRow("Fixed Aspect");
+				ImGui::Checkbox("##FixedAspectRatio", &c.FixedAspectRatio);
+				ImGuiHelpers::EndPropertyRow();
 			}
 		);
 
@@ -313,31 +285,36 @@ namespace Gravix
 			},
 			[](SpriteRendererComponent& c)
 			{
-				ImGui::ColorEdit4("Color", glm::value_ptr(c.Color));
+				// Color property
+				ImGuiHelpers::BeginPropertyRow("Color");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::ColorEdit4("##Color", glm::value_ptr(c.Color));
+				ImGuiHelpers::EndPropertyRow();
+
+				// Texture property
+				ImGuiHelpers::BeginPropertyRow("Texture");
 
 				std::string label = "None";
 				bool validTexture = false;
-				if (c.Texture != 0) 
+				if (c.Texture != 0)
 				{
-					if (AssetManager::IsValidAssetHandle(c.Texture) && AssetManager::GetAssetType(c.Texture) == AssetType::Texture2D) 
+					if (AssetManager::IsValidAssetHandle(c.Texture) && AssetManager::GetAssetType(c.Texture) == AssetType::Texture2D)
 					{
 						const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(c.Texture);
 						label = metadata.FilePath.filename().string();
-
 						validTexture = true;
 					}
-					else 
+					else
 					{
 						label = "Invalid";
 					}
 				}
 
-				ImVec2 buttonLabelSize = ImGui::CalcTextSize(label.c_str());
-				buttonLabelSize.x += 20;
+				float availWidth = ImGui::GetContentRegionAvail().x;
+				float buttonWidth = validTexture ? availWidth - 30.0f : availWidth;
 
-				float buttonLabelWidth = glm::max<float>(100.0f, buttonLabelSize.x);
-				ImGui::Button(label.c_str(), { buttonLabelWidth, 0.0f });
-				if (ImGui::BeginDragDropTarget()) 
+				ImGui::Button(label.c_str(), { buttonWidth, 0.0f });
+				if (ImGui::BeginDragDropTarget())
 				{
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
 					{
@@ -351,16 +328,17 @@ namespace Gravix
 				if (validTexture)
 				{
 					ImGui::SameLine();
-					ImVec2 labelSize = ImGui::CalcTextSize("X");
-					float buttonSize = labelSize.y + ImGui::GetStyle().FramePadding.y * 2.0f;
-					if (ImGui::Button("X", { buttonSize, buttonSize }))
+					if (ImGui::Button("X", { 26.0f, 0.0f }))
 						c.Texture = 0;
-
-					ImGui::SameLine();
-					ImGui::Text("Texture");
 				}
 
-				ImGui::DragFloat("Tiling Factor", &c.TilingFactor);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Tiling Factor property
+				ImGuiHelpers::BeginPropertyRow("Tiling Factor");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat("##TilingFactor", &c.TilingFactor);
+				ImGuiHelpers::EndPropertyRow();
 			}
 		);
 	}

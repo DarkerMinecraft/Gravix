@@ -22,10 +22,66 @@ namespace Gravix
 	{
 		ImGui::Begin("Content Browser");
 
+		ImGuiIO& io = ImGui::GetIO();
+
+		// Top toolbar with modern styling
+		ImGui::BeginGroup();
+
+		// Mode toggle button
 		const char* label = m_Mode == Mode::FileSystem ? "File" : "Asset";
-		if (ImGui::Button(label)) 
+		if (ImGui::Button(label, ImVec2(60.0f, 0.0f)))
 		{
 			m_Mode = m_Mode == Mode::Asset ? Mode::FileSystem : Mode::Asset;
+		}
+
+		// Create button with dropdown menu
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.529f, 0.808f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.353f, 0.627f, 0.902f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.208f, 0.471f, 0.749f, 1.0f));
+		ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
+		if (ImGui::Button("+ Create", ImVec2(80.0f, 0.0f)))
+		{
+			ImGui::OpenPopup("CreateAssetPopup");
+		}
+		ImGui::PopFont();
+		ImGui::PopStyleColor(3);
+
+		// Create asset popup menu
+		if (ImGui::BeginPopup("CreateAssetPopup"))
+		{
+			ImGui::PushFont(io.Fonts->Fonts[1]);
+			ImGui::TextColored(ImVec4(0.267f, 0.529f, 0.808f, 1.0f), "Create New Asset");
+			ImGui::PopFont();
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Scene"))
+			{
+				// TODO: Create new scene file
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (ImGui::MenuItem("Material"))
+			{
+				// TODO: Create new material
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Folder"))
+			{
+				// TODO: Create new folder
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (ImGui::MenuItem("C++ Script"))
+			{
+				// TODO: Create new C++ script
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
 		}
 
 		// Unity-style navigation bar with back button
@@ -43,15 +99,21 @@ namespace Gravix
 			}
 
 			ImGui::PopStyleColor(3);
-
-			ImGui::SameLine();
 		}
 
-		// Display current path (Unity-style breadcrumb)
+		ImGui::EndGroup();
+
+		// Display current path (Unity-style breadcrumb) with bold font
+		ImGui::Spacing();
 		std::string displayPath = std::filesystem::relative(m_CurrentDirectory, m_AssetDirectory).string();
 		if (displayPath.empty() || displayPath == ".")
 			displayPath = "Assets";
-		ImGui::TextDisabled("Path: %s", displayPath.c_str());
+
+		ImGui::PushFont(io.Fonts->Fonts[1]);
+		ImGui::TextColored(ImVec4(0.863f, 0.863f, 0.863f, 1.0f), "Path:");
+		ImGui::PopFont();
+		ImGui::SameLine();
+		ImGui::TextDisabled("%s", displayPath.c_str());
 
 		ImGui::Separator();
 		ImGui::Spacing();
