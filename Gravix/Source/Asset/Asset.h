@@ -16,6 +16,9 @@ namespace Gravix
 		Script,
 	};
 
+	std::string_view AssetTypeToString(AssetType type);
+	AssetType StringToAssetType(const std::string& typeStr);
+
 	class Asset 
 	{
 	public:

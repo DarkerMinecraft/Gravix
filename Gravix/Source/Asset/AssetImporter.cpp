@@ -7,9 +7,10 @@ namespace Gravix
 {
 
 	using AssetImportFunc = std::function<Ref<Asset>(AssetHandle, const AssetMetadata&)>;
+
 	static std::unordered_map<AssetType, AssetImportFunc> s_AssetImportFunc = 
 	{
-		{AssetType::Texture2D, TextureImporter::ImportTexture2D }
+		{ AssetType::Texture2D, &TextureImporter::ImportTexture2D }
 	};
 
 	Ref<Asset> AssetImporter::ImportAsset(AssetHandle handle, const AssetMetadata& metadata)

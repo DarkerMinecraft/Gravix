@@ -17,6 +17,9 @@ namespace Gravix
 		virtual bool IsAssetHandleValid(AssetHandle handle) const override;
 
 		const AssetMetadata& GetAssetMetadata(AssetHandle handle) const;
+
+		void SerializeAssetRegistry();
+		void DeserializeAssetRegistry();
 	private:
 		AssetRegistry m_AssetRegistry;
 		AssetMap m_LoadedAssets;

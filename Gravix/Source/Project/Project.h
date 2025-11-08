@@ -41,6 +41,12 @@ namespace Gravix
 			return s_ActiveProject->m_Config.LibraryDirectory;
 		};
 
+		static std::filesystem::path& GetWorkingDirectory() 
+		{
+			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			return s_ActiveProject->m_WorkingDirectory;
+		}
+
 		ProjectConfig& GetConfig() { return m_Config; }
 
 		static Ref<Project> GetActive() 
@@ -58,6 +64,7 @@ namespace Gravix
 		static void SaveActive(const std::filesystem::path& path);
 	private:
 		ProjectConfig m_Config;
+		std::filesystem::path m_WorkingDirectory;
 
 		Ref<AssetManagerBase> m_AssetManager;
 

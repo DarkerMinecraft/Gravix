@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "TextureImporter.h"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 namespace Gravix 
@@ -20,9 +19,9 @@ namespace Gravix
 		{
 			GX_CORE_ERROR("Failed to load texture: {0} - {1}", metadata.FilePath.string(), stbi_failure_reason());
 
-			m_Width = 4;
-			m_Height = 4;
-			m_Channels = 4;
+			width = 4;
+			height = 4;
+			channels = 4;
 
 			uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 1));
 			uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
@@ -39,7 +38,7 @@ namespace Gravix
 		else 
 		{
 			buf.Data = data;
-			buf.Size = width * height * m_Channels;
+			buf.Size = width * height * channels;
 		}
 
 		TextureSpecification spec;

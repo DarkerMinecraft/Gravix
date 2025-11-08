@@ -2,6 +2,10 @@
 #include "EditorAssetManager.h"
 
 #include "AssetImporter.h"
+#include "Project/Project.h"
+
+#include <yaml-cpp/yaml.h>
+#include <fstream>
 
 namespace Gravix 
 {
@@ -18,6 +22,53 @@ namespace Gravix
 			return m_AssetRegistry.at(handle);
 
 		return invalidMetadata;
+	}
+
+	void EditorAssetManager::SerializeAssetRegistry()
+	{
+		std::filesystem::path registryPath = Project::GetLibraryDirectory() / "AssetRegistry.orbreg";
+
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		out << YAML::Key << "Assets" << YAML::Value << YAML::BeginSeq;
+		for (const auto& [handle, metadata] : m_AssetRegistry)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "Handle" << YAML::Value << static_cast<uint64_t>(handle);
+			out << YAML::Key << "FilePath" << YAML::Value << metadata.FilePath.string();
+			out << YAML::Key << "AssetType" << YAML::Value << AssetTypeToString(metadata.Type);
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
+
+		std::ofstream fout(registryPath);
+		fout << out.c_str();
+	}
+
+	void EditorAssetManager::DeserializeAssetRegistry()
+	{
+		std::filesystem::path registryPath = Project::GetLibraryDirectory() / "AssetRegistry.orbreg";
+		if (!std::filesystem::exists(registryPath))
+			return;
+
+		std::ifstream stream(registryPath);
+		YAML::Node data = YAML::Load(stream);
+
+		YAML::Node assetsNode = data["Assets"];
+		if (assetsNode)
+		{
+			for (const auto& assetNode : assetsNode)
+			{
+				AssetHandle handle = assetNode["Handle"].as<uint64_t>();
+				std::filesystem::path filePath = assetNode["FilePath"].as<std::string>();
+				AssetType type = StringToAssetType(assetNode["AssetType"].as<std::string>());
+				AssetMetadata metadata;
+				metadata.FilePath = filePath;
+				metadata.Type = type;
+
+				m_AssetRegistry[handle] = metadata;
+			}
+		}
 	}
 
 	bool EditorAssetManager::IsAssetLoaded(AssetHandle handle) const

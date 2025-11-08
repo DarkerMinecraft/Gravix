@@ -2,6 +2,7 @@
 #include "Project.h"
 
 #include "Serialization/Project/ProjectSerializer.h"
+#include "Asset/EditorAssetManager.h"
 
 namespace Gravix 
 {
@@ -23,6 +24,8 @@ namespace Gravix
 			project->GetConfig().StartScene = project->GetConfig().AssetDirectory / project->GetConfig().StartScene;
 
 			s_ActiveProject = project;
+			s_ActiveProject->m_AssetManager = CreateRef<EditorAssetManager>();
+			s_ActiveProject->m_WorkingDirectory = path.parent_path();
 
 			return s_ActiveProject;
 		}
