@@ -62,12 +62,12 @@ namespace Gravix
 #ifdef ENGINE_PLATFORM_WINDOWS
 		HMODULE h = ::LoadLibraryW(path);
 		if (!h)
-			std::cerr << "[ScriptEngine] Failed to load library\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to load library: {}", GetLastError());
 		return (void*)h;
 #else
 		void* h = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
 		if (!h)
-			std::cerr << "[ScriptEngine] Failed to load library: " << dlerror() << "\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to load library: {}", dlerror());
 		return h;
 #endif
 	}
@@ -78,12 +78,12 @@ namespace Gravix
 #ifdef ENGINE_PLATFORM_WINDOWS
 		void* f = ::GetProcAddress((HMODULE)lib, name);
 		if (!f)
-			std::cerr << "[ScriptEngine] Failed to get export: " << name << "\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to get export: {}", name);
 		return f;
 #else
 		void* f = dlsym(lib, name);
 		if (!f)
-			std::cerr << "[ScriptEngine] Failed to get export: " << dlerror() << "\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to get export: {}", name);
 		return f;
 #endif
 	}
@@ -95,22 +95,22 @@ namespace Gravix
 		std::wstring wstr(message);
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 		std::string str = converter.to_bytes(wstr);
-		std::cerr << "[HOSTFXR] " << str << "\n";
+		GX_CORE_INFO("[HOSTFXR] {}", str);
 #else
-		std::cerr << "[HOSTFXR] " << message << "\n";
+		GX_CORE_INFO("[HOSTFXR] {}", message);
 #endif
 	}
 
 	// --- Public API ---
 	void ScriptEngine::Init(const std::filesystem::path& assemblyPath)
 	{
-		std::cout << "[ScriptEngine] Initializing Script Engine\n";
+		GX_CORE_ERROR("[ScriptEngine] Initializing Script Engine with assembly: {}", assemblyPath.string());
 		InitDotNet(assemblyPath);
 	}
 
 	void ScriptEngine::Shutdown()
 	{
-		std::cout << "[ScriptEngine] Shutting down Script Engine\n";
+		GX_CORE_INFO("[ScriptEngine] Shutting down Script Engine");
 		ShutdownDotNet();
 	}
 
@@ -118,7 +118,7 @@ namespace Gravix
 	{
 		if (!std::filesystem::exists(assemblyPath))
 		{
-			std::cerr << "[ScriptEngine] Assembly not found: " << assemblyPath.string() << "\n";
+			GX_CORE_ERROR("[ScriptEngine] Assembly not found: {}", assemblyPath.string());
 			return false;
 		}
 
@@ -127,25 +127,25 @@ namespace Gravix
 		// Load hostfxr if not already loaded
 		if (!s_Data.m_HostfxrLib && !LoadHostFxr())
 		{
-			std::cerr << "[ScriptEngine] Failed to load hostfxr\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to load hostfxr");
 			return false;
 		}
 
 		// Initialize the host context for this assembly (self-contained mode)
 		if (!InitializeHostFxrContext(assemblyPath))
 		{
-			std::cerr << "[ScriptEngine] Failed to initialize hostfxr context\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to initialize hostfxr context");
 			return false;
 		}
 
 		// Get the load_assembly_and_get_function_pointer delegate
 		if (!LoadAssemblyAndGetFunctionPointer())
 		{
-			std::cerr << "[ScriptEngine] Failed to get assembly loader delegate\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to get assembly loader delegate");
 			return false;
 		}
 
-		std::cout << "[ScriptEngine] Successfully loaded assembly: " << assemblyPath.filename().string() << "\n";
+		GX_CORE_INFO("[ScriptEngine] Successfully loaded assembly: {}", assemblyPath.string());
 		return true;
 	}
 
@@ -153,7 +153,7 @@ namespace Gravix
 	{
 		if (s_Data.m_AssemblyPath.empty())
 		{
-			std::cerr << "[ScriptEngine] No assembly loaded to reload\n";
+			GX_CORE_ERROR("[ScriptEngine] No assembly loaded to reload");
 			return false;
 		}
 
@@ -172,7 +172,7 @@ namespace Gravix
 	{
 		if (!s_Data.m_LoadAssemblyAndGetFunctionPointer)
 		{
-			std::cerr << "[ScriptEngine] Assembly loader not initialized\n";
+			GX_CORE_ERROR("[ScriptEngine] Assembly loader delegate not initialized");
 			return nullptr;
 		}
 
@@ -200,19 +200,19 @@ namespace Gravix
 
 		if (result != 0 || functionPtr == nullptr)
 		{
-			std::cerr << "[ScriptEngine] Failed to get function pointer: " << typeName
-				<< "::" << methodName << " (error code: " << result << ")\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to get function pointer: {}::{} (error code: {})",
+				typeName, methodName, result);
 			return nullptr;
 		}
 
-		std::cout << "[ScriptEngine] Successfully loaded function: " << typeName << "::" << methodName << "\n";
+		GX_CORE_INFO("[ScriptEngine] Successfully retrieved function pointer: {}::{}", typeName, methodName);
 		return functionPtr;
 	}
 
 	// --- Private Implementation ---
 	void ScriptEngine::InitDotNet(const std::filesystem::path& assemblyPath)
 	{
-		std::cout << "[ScriptEngine] Initializing .NET Runtime\n";
+		GX_CORE_INFO("[ScriptEngine] Initializing .NET Runtime");
 		s_Data = ScriptEngineData{};
 
 		LoadAssembly(assemblyPath);
@@ -270,18 +270,17 @@ namespace Gravix
 			int32_t result = get_hostfxr_path(buffer, &bufferSize, nullptr);
 			if (result != 0)
 			{
-				std::cerr << "[ScriptEngine] Failed to get hostfxr path (error code: " << result << ")\n";
-				std::cerr << "[ScriptEngine] Make sure to publish your .NET assembly as self-contained\n";
+				GX_CORE_ERROR("[ScriptEngine] get_hostfxr_path failed (error code: {0})", result);
 				return false;
 			}
 
 			hostfxrPath = buffer;
 			isGlobalHostfxr = true;
-			std::cout << "[ScriptEngine] Using system hostfxr: " << hostfxrPath << "\n";
+			GX_CORE_INFO("[ScriptEngine] Using global hostfxr: {}", hostfxrPath.string());
 		}
 		else
 		{
-			std::cout << "[ScriptEngine] Using local hostfxr (self-contained): " << hostfxrPath << "\n";
+			GX_CORE_INFO("[ScriptEngine] Using local hostfxr: {}", hostfxrPath.string());
 		}
 
 		// Load the hostfxr library
@@ -293,7 +292,7 @@ namespace Gravix
 
 		if (!s_Data.m_HostfxrLib)
 		{
-			std::cerr << "[ScriptEngine] Failed to load hostfxr library from: " << hostfxrPath << "\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to load library");
 			return false;
 		}
 
@@ -312,7 +311,7 @@ namespace Gravix
 
 		if (!s_Data.m_InitFxrForCommandLine || !s_Data.m_GetRuntimeDelegate || !s_Data.m_Close)
 		{
-			std::cerr << "[ScriptEngine] Failed to load required hostfxr functions\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to load required hostfxr functions");
 			return false;
 		}
 
@@ -322,7 +321,7 @@ namespace Gravix
 			s_Data.m_SetErrorWriter(HostfxrErrorWriter);
 		}
 
-		std::cout << "[ScriptEngine] Successfully loaded hostfxr\n";
+		GX_CORE_ERROR("[ScriptEngine] Successfully loaded hostfxr");
 		return true;
 	}
 
@@ -360,12 +359,12 @@ namespace Gravix
 
 		if (result != 0 || s_Data.m_HostContext == nullptr)
 		{
-			std::cerr << "[ScriptEngine] Failed to initialize hostfxr context (error code: " << result << ")\n";
-			std::cerr << "[ScriptEngine] Make sure assembly is published as self-contained with .NET 9\n";
+			GX_CORE_ERROR("[ScriptEngine] hostfxr_initialize_for_dotnet_command_line failed (error code: {0})", result);
+			GX_CORE_ERROR("[ScriptEngine] Make sure to publish your .NET assembly as self-contained");
 			return false;
 		}
 
-		std::cout << "[ScriptEngine] Successfully initialized hostfxr context (self-contained mode)\n";
+		GX_CORE_INFO("[ScriptEngine] Successfully initialized hostfxr context");
 		return true;
 	}
 
@@ -380,8 +379,7 @@ namespace Gravix
 
 		if (result != 0 || loadAssemblyDelegate == nullptr)
 		{
-			std::cerr << "[ScriptEngine] Failed to get load_assembly_and_get_function_pointer delegate (error code: "
-				<< result << ")\n";
+			GX_CORE_ERROR("[ScriptEngine] Failed to get load_assembly_and_get_function_pointer delegate (error code: {0})", result);
 			return false;
 		}
 

@@ -66,7 +66,6 @@ set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
 
 # Add engine modules
 add_subdirectory(Gravix-ScriptCore)
-add_subdirectory(GravixScripting)
 add_subdirectory(Gravix)
 add_subdirectory(Orbit)
 
