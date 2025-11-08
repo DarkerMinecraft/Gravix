@@ -36,6 +36,9 @@ namespace Gravix
 		void NewProject();
 
 		void SaveScene();
+
+		void ShowStartupDialog();
+		void InitializeProject();
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
@@ -55,6 +58,9 @@ namespace Gravix
 		AssetHandle m_ActiveSceneHandle;
 		AssetHandle m_PendingSceneHandle = 0; // Track scene waiting to load asynchronously
 		std::filesystem::path m_ActiveProjectPath;
+
+		bool m_ProjectInitialized = false;
+		bool m_ShowStartupDialog = false;
 	};
 
 }

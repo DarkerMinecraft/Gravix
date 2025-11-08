@@ -21,7 +21,8 @@
 		appSpec.Height = 720;
 		appSpec.Title = "Orbit";
 
-		Gravix::Project::Load("C:/Dev/Orbit/Testing/Testing.orbproj");
+		// Optional: Load a default project on startup
+		// Gravix::Project::Load("C:/Dev/Orbit/Testing/Testing.orbproj");
 
 		Gravix::Application app(appSpec);
 		app.PushLayer<Gravix::AppLayer>();

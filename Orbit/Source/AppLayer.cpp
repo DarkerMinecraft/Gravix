@@ -13,7 +13,6 @@ namespace Gravix
 
 	AppLayer::AppLayer()
 	{
-
 		FramebufferSpecification fbSpec{};
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
 		fbSpec.Multisampled = true;
@@ -27,8 +26,28 @@ namespace Gravix
 
 		Renderer2D::Init(m_MSAAFramebuffer);
 
+		// Check if a project has been loaded
+		if (Project::GetActive())
+		{
+			InitializeProject();
+		}
+		else
+		{
+			// Show startup dialog to prompt user to open/create a project
+			m_ShowStartupDialog = true;
+
+			// Create a minimal scene to prevent nullptr issues
+			m_ActiveScene = CreateRef<Scene>();
+		}
+	}
+
+	void AppLayer::InitializeProject()
+	{
 		// Always create a default empty scene to prevent nullptr issues
-		m_ActiveScene = CreateRef<Scene>();
+		if (!m_ActiveScene)
+		{
+			m_ActiveScene = CreateRef<Scene>();
+		}
 
 		// Try to open the start scene if it's valid
 		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
@@ -47,11 +66,17 @@ namespace Gravix
 		m_ViewportPanel.SetAppLayer(this);
 
 		m_ContentBrowserPanel = ContentBrowserPanel();
+
+		m_ProjectInitialized = true;
+		m_ShowStartupDialog = false;
 	}
 
 	AppLayer::~AppLayer()
 	{
-		Project::GetActive()->GetEditorAssetManager()->ClearLoadedAssets();
+		if (Project::GetActive())
+		{
+			Project::GetActive()->GetEditorAssetManager()->ClearLoadedAssets();
+		}
 		Renderer2D::Destroy();
 	}
 
@@ -61,12 +86,20 @@ namespace Gravix
 		dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(AppLayer::OnKeyPressed));
 		dispatcher.Dispatch<WindowFileDropEvent>(BIND_EVENT_FN(AppLayer::OnFileDrop));
 
-		m_EditorCamera.OnEvent(e);
-		m_ViewportPanel.OnEvent(e);
+		// Only forward events to panels if project is initialized
+		if (m_ProjectInitialized)
+		{
+			m_EditorCamera.OnEvent(e);
+			m_ViewportPanel.OnEvent(e);
+		}
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
+		// Only update if project is initialized
+		if (!m_ProjectInitialized)
+			return;
+
 		// Check if pending scene has finished loading
 		if (m_PendingSceneHandle != 0 && AssetManager::IsAssetLoaded(m_PendingSceneHandle))
 		{
@@ -110,6 +143,10 @@ namespace Gravix
 
 	void AppLayer::OnRender()
 	{
+		// Only render if project is initialized
+		if (!m_ProjectInitialized)
+			return;
+
 		{
 			Command cmd(m_MSAAFramebuffer, 0, false);
 
@@ -179,12 +216,12 @@ namespace Gravix
 					OpenProject();
 				}
 
-				if (ImGui::MenuItem("Save", "Ctrl+S"))
+				if (m_ProjectInitialized && ImGui::MenuItem("Save", "Ctrl+S"))
 				{
 					SaveScene();
 				}
 
-				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
+				if (m_ProjectInitialized && ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
 				{
 					//SaveSceneAs();
 				}
@@ -193,10 +230,20 @@ namespace Gravix
 			ImGui::EndMenuBar();
 		}
 
-		m_ViewportPanel.OnImGuiRender();
-		m_SceneHierarchyPanel.OnImGuiRender();
-		m_InspectorPanel.OnImGuiRender();
-		m_ContentBrowserPanel.OnImGuiRender();
+		// Show startup dialog if no project is loaded
+		if (m_ShowStartupDialog)
+		{
+			ShowStartupDialog();
+		}
+
+		// Only render panels if project is initialized
+		if (m_ProjectInitialized)
+		{
+			m_ViewportPanel.OnImGuiRender();
+			m_SceneHierarchyPanel.OnImGuiRender();
+			m_InspectorPanel.OnImGuiRender();
+			m_ContentBrowserPanel.OnImGuiRender();
+		}
 		ImGui::End();
 	}
 
@@ -282,7 +329,19 @@ namespace Gravix
 		if (m_ActiveProjectPath.empty())
 			return;
 
-		Project::Load(m_ActiveProjectPath);
+		if (Project::Load(m_ActiveProjectPath))
+		{
+			// Initialize project panels if this is the first project loaded
+			if (!m_ProjectInitialized)
+			{
+				InitializeProject();
+			}
+			else
+			{
+				// Refresh panels if project was already initialized
+				m_ContentBrowserPanel = ContentBrowserPanel();
+			}
+		}
 	}
 
 	void AppLayer::NewProject()
@@ -300,6 +359,94 @@ namespace Gravix
 		Project::SaveActive(m_ActiveProjectPath);
 
 		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
+
+		// Initialize project panels if this is the first project loaded
+		if (!m_ProjectInitialized)
+		{
+			InitializeProject();
+		}
+		else
+		{
+			// Refresh panels if project was already initialized
+			m_ContentBrowserPanel = ContentBrowserPanel();
+		}
+	}
+
+	void AppLayer::ShowStartupDialog()
+	{
+		// Center the modal dialog
+		ImGuiIO& io = ImGui::GetIO();
+		ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+		ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Always);
+
+		// Open the modal on first frame
+		if (!ImGui::IsPopupOpen("Welcome to Orbit"))
+		{
+			ImGui::OpenPopup("Welcome to Orbit");
+		}
+
+		// Use a modal window
+		if (ImGui::BeginPopupModal("Welcome to Orbit", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
+		{
+			ImGui::Spacing();
+			ImGui::Spacing();
+
+			// Title
+			ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Welcome to Orbit Editor").x) * 0.5f);
+			ImGui::Text("Welcome to Orbit Editor");
+			ImGui::PopFont();
+
+			ImGui::Spacing();
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Spacing();
+			ImGui::Spacing();
+
+			// Description
+			ImGui::TextWrapped("To get started, please create a new project or open an existing one.");
+
+			ImGui::Spacing();
+			ImGui::Spacing();
+			ImGui::Spacing();
+
+			// Center the buttons
+			float buttonWidth = 150.0f;
+			float spacing = 20.0f;
+			float totalWidth = buttonWidth * 2 + spacing;
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
+
+			// New Project button
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.529f, 0.808f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.353f, 0.627f, 0.902f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.208f, 0.471f, 0.749f, 1.0f));
+
+			if (ImGui::Button("New Project", ImVec2(buttonWidth, 40)))
+			{
+				NewProject();
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor(3);
+
+			ImGui::SameLine(0, spacing);
+
+			// Open Project button
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.443f, 0.443f, 0.443f, 1.0f));
+
+			if (ImGui::Button("Open Project", ImVec2(buttonWidth, 40)))
+			{
+				OpenProject();
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor(3);
+
+			ImGui::EndPopup();
+		}
 	}
 
 	void AppLayer::SaveScene()
