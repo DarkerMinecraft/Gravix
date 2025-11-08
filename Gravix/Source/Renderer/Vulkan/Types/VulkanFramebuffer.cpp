@@ -24,10 +24,12 @@ namespace Gravix
 			return VK_FORMAT_R32G32B32A32_SFLOAT;
 		case FramebufferTextureFormat::RGBA32UI:
 			return VK_FORMAT_R32G32B32A32_UINT;
-		case FramebufferTextureFormat::DEPTH24STENCIL8:
+		case FramebufferTextureFormat::Depth24SStencil8:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
-		case FramebufferTextureFormat::DEPTH32FSTENCIL8:
+		case FramebufferTextureFormat::Depth32FStencil8:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
+		case FramebufferTextureFormat::Depth32:
+			return VK_FORMAT_D32_SFLOAT;
 		case FramebufferTextureFormat::RedInt:
 			return VK_FORMAT_R32_SINT;
 		case FramebufferTextureFormat::RedFloat:
@@ -304,7 +306,11 @@ namespace Gravix
 				continue;
 
 			VkImageUsageFlags attachmentUsage;
-			bool isDepthAttachment = (attachment == FramebufferTextureFormat::DEPTH24STENCIL8 || attachment == FramebufferTextureFormat::DEPTH32FSTENCIL8);
+			bool isDepthAttachment = (attachment == FramebufferTextureFormat::Depth24SStencil8 
+				|| attachment == FramebufferTextureFormat::Depth32FStencil8 
+				|| attachment == FramebufferTextureFormat::Depth32);
+			bool isStencilAttachment = (attachment == FramebufferTextureFormat::Depth24SStencil8 
+				|| attachment == FramebufferTextureFormat::Depth32FStencil8);
 
 			if (isDepthAttachment)
 				attachmentUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;

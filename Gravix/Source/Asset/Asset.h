@@ -14,7 +14,6 @@ namespace Gravix
 		Texture2D,
 		Material,
 		Script,
-		Mesh
 	};
 
 	class Asset 

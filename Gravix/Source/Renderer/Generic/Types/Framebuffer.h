@@ -18,11 +18,12 @@ namespace Gravix
 		RedInt = 5,
 		RedFloat = 6,
 		// Depth/stencil
-		DEPTH24STENCIL8 = 10,
-		DEPTH32FSTENCIL8 = 11,
+		Depth32 = 10,
+		Depth24SStencil8 = 11,
+		Depth32FStencil8 = 12,
 		// Defaults
 		Default = RGBA8,
-		Depth = DEPTH24STENCIL8
+		Depth = Depth32
 	};
 
 	struct FramebufferSpecification

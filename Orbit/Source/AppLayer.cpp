@@ -13,7 +13,7 @@ namespace Gravix
 	{
 
 		FramebufferSpecification fbSpec{};
-		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat };
+		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
 		fbSpec.Multisampled = true;
 
 		m_MSAAFramebuffer = Framebuffer::Create(fbSpec);

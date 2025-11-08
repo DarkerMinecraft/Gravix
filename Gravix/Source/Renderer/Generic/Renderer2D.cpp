@@ -62,6 +62,7 @@ namespace Gravix
 		matSpec.ShaderFilePath = "Assets/shaders/texture.slang";
 		matSpec.BlendingMode = Blending::Alphablend;
 		matSpec.RenderTarget = renderTarget;
+		matSpec.EnableDepthTest = true;
 
 		s_Data->TexturedMaterial = Material::Create(matSpec);
 

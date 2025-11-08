@@ -11,6 +11,9 @@ namespace Gravix
 		static void TransitionImage(VkCommandBuffer cmd, VkImage image, VkFormat format, VkImageLayout currentLayout, VkImageLayout newLayout);
 		static void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize, VkExtent2D dstSize);
 		static void ResolveImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D size);
+
+		static bool IsDepthFormat(VkFormat format);
+		static bool IsStencilFormat(VkFormat format);
 	};
 
 	struct PipelineBuilder
