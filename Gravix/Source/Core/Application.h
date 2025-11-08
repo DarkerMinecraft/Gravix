@@ -38,7 +38,7 @@ namespace Gravix
 		void OnEvent(Event& event);
 
         template<typename TLayer>
-        requires(std::is_base_of<Layer, TLayer>::value)
+        requires(std::is_base_of_v<Layer, TLayer>)
         void PushLayer()
         {
             m_LayerStack.push_back(std::make_shared<TLayer>());
