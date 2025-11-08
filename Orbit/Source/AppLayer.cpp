@@ -54,7 +54,7 @@ namespace Gravix
 		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
 		if (startScene != 0)
 		{
-			OpenScene(startScene, true);
+			OpenScene(startScene, false); // AssetManager handles deserialization
 		}
 
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
@@ -112,7 +112,7 @@ namespace Gravix
 			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
 			AssetHandle sceneToLoad = m_PendingSceneHandle;
 			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
-			OpenScene(sceneToLoad, true); // Deserialize the scene
+			OpenScene(sceneToLoad, false); // AssetManager already deserialized the scene
 		}
 
 		if (m_ViewportPanel.IsViewportValid())
@@ -287,27 +287,18 @@ namespace Gravix
 
 				if (ImGui::Button("Rename", ImVec2(buttonWidth, 0)))
 				{
-					if (strlen(m_SceneNameBuffer) > 0)
+					if (strlen(m_SceneNameBuffer) > 0 && m_ActiveScene)
 					{
-						// Get the current scene file path
-						const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
-						std::filesystem::path oldPath = Project::GetAssetDirectory() / metadata.FilePath;
-						std::filesystem::path newPath = oldPath.parent_path() / (std::string(m_SceneNameBuffer) + oldPath.extension().string());
+						// Update the scene's internal name
+						m_ActiveScene->SetName(m_SceneNameBuffer);
 
-						// Rename the file
-						if (std::filesystem::exists(oldPath))
-						{
-							std::filesystem::rename(oldPath, newPath);
+						// Save the scene to persist the name change
+						SaveScene();
 
-							// Update the asset metadata
-							auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
-							mutableMetadata.FilePath = std::filesystem::relative(newPath, Project::GetAssetDirectory());
+						// Update window title
+						UpdateWindowTitle();
 
-							// Update window title
-							UpdateWindowTitle();
-
-							GX_CORE_INFO("Renamed scene to: {0}", m_SceneNameBuffer);
-						}
+						GX_CORE_INFO("Renamed scene to: {0}", m_SceneNameBuffer);
 
 						m_ShowRenameSceneDialog = false;
 						ImGui::CloseCurrentPopup();
@@ -610,10 +601,9 @@ namespace Gravix
 
 		std::string sceneName = "Untitled";
 
-		if (m_ActiveSceneHandle != 0 && AssetManager::IsValidAssetHandle(m_ActiveSceneHandle))
+		if (m_ActiveScene)
 		{
-			const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
-			sceneName = metadata.FilePath.stem().string();
+			sceneName = m_ActiveScene->GetName();
 		}
 
 		std::string title = "Orbit - " + sceneName;
@@ -634,15 +624,14 @@ namespace Gravix
 
 	void AppLayer::RenameScene()
 	{
-		if (m_ActiveSceneHandle == 0 || !AssetManager::IsValidAssetHandle(m_ActiveSceneHandle))
+		if (!m_ActiveScene)
 		{
 			GX_CORE_WARN("No active scene to rename");
 			return;
 		}
 
-		// Get current scene name
-		const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
-		std::string currentName = metadata.FilePath.stem().string();
+		// Get current scene name from the scene itself
+		std::string currentName = m_ActiveScene->GetName();
 		strncpy(m_SceneNameBuffer, currentName.c_str(), sizeof(m_SceneNameBuffer) - 1);
 
 		m_ShowRenameSceneDialog = true;

@@ -21,7 +21,7 @@ namespace Gravix
 	public:
 		Scene();
 		~Scene();
-		
+
 		virtual AssetType GetAssetType() const override { return AssetType::Scene; }
 
 		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID(), uint32_t creationIndex = (uint32_t)-1);
@@ -39,9 +39,13 @@ namespace Gravix
 
 		uint32_t GetViewportWidth() const { return m_ViewportWidth; }
 		uint32_t GetViewportHeight() const { return m_ViewportHeight; }
+
+		const std::string& GetName() const { return m_Name; }
+		void SetName(const std::string& name) { m_Name = name; }
 	private:
 		entt::registry m_Registry;
 
+		std::string m_Name = "Untitled";
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 		uint32_t m_NextCreationIndex = 0;
 
