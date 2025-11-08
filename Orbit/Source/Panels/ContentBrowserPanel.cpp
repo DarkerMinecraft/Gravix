@@ -164,7 +164,8 @@ namespace Gravix
 
 		for (const auto& [item, treeNodeIndex] : node->Children)
 		{
-			bool isDirectory = std::filesystem::is_directory(m_AssetDirectory / item);
+			std::filesystem::path fullPath = m_CurrentDirectory / item.filename();
+			bool isDirectory = std::filesystem::is_directory(fullPath);
 			std::string itemStr = item.generic_string();
 
 			ImGui::PushID(itemStr.c_str());
@@ -193,7 +194,6 @@ namespace Gravix
 			}
 
 			// Right-click context menu
-			std::filesystem::path fullPath = m_AssetDirectory / item;
 			if (ImGui::BeginPopupContextItem())
 			{
 				if (ImGui::MenuItem("Rename"))
@@ -465,6 +465,12 @@ namespace Gravix
 					m_TreeNodes.push_back(TreeNode(".", 0));
 					RefreshAssetTree();
 
+					// Update window title if this is the active scene
+					if (m_AppLayer && metadata.Type == AssetType::Scene && handle == m_AppLayer->GetActiveSceneHandle())
+					{
+						m_AppLayer->UpdateWindowTitle();
+					}
+
 					GX_CORE_INFO("Renamed asset: {0} -> {1}", oldPath.string(), mutableMetadata.FilePath.string());
 					break;
 				}
@@ -479,11 +485,11 @@ namespace Gravix
 	void ContentBrowserPanel::CreateNewScene()
 	{
 		// Generate a unique scene file name
-		std::filesystem::path newScenePath = m_CurrentDirectory / "NewScene.scene";
+		std::filesystem::path newScenePath = m_CurrentDirectory / "NewScene.orbscene";
 		int counter = 1;
 		while (std::filesystem::exists(newScenePath))
 		{
-			newScenePath = m_CurrentDirectory / ("NewScene" + std::to_string(counter++) + ".scene");
+			newScenePath = m_CurrentDirectory / ("NewScene" + std::to_string(counter++) + ".orbscene");
 		}
 
 		try
@@ -498,6 +504,7 @@ namespace Gravix
 			// Import the scene into the asset manager
 			auto relativePath = std::filesystem::relative(newScenePath, m_AssetDirectory);
 			Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
+			assetManager->ImportAsset(relativePath);
 			assetManager->SerializeAssetRegistry();
 
 			// Refresh the asset tree to show the new scene
