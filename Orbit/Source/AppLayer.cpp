@@ -370,17 +370,12 @@ namespace Gravix
 
 		if (Project::Load(m_ActiveProjectPath))
 		{
-			// Initialize project panels if this is the first project loaded
-			if (!m_ProjectInitialized)
-			{
-				InitializeProject();
-			}
-			else
-			{
-				// Refresh panels if project was already initialized
-				m_ContentBrowserPanel.emplace();
-				m_ContentBrowserPanel->SetAppLayer(this);
-			}
+			// Always initialize the project to load StartScene
+			InitializeProject();
+
+			// Refresh content browser panel
+			m_ContentBrowserPanel.emplace();
+			m_ContentBrowserPanel->SetAppLayer(this);
 		}
 	}
 
@@ -400,17 +395,12 @@ namespace Gravix
 
 		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
 
-		// Initialize project panels if this is the first project loaded
-		if (!m_ProjectInitialized)
-		{
-			InitializeProject();
-		}
-		else
-		{
-			// Refresh panels if project was already initialized
-			m_ContentBrowserPanel.emplace();
-			m_ContentBrowserPanel->SetAppLayer(this);
-		}
+		// Always initialize the project to load StartScene
+		InitializeProject();
+
+		// Refresh content browser panel
+		m_ContentBrowserPanel.emplace();
+		m_ContentBrowserPanel->SetAppLayer(this);
 	}
 
 	void AppLayer::ShowStartupDialog()
