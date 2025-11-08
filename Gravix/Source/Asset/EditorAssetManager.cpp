@@ -57,6 +57,7 @@ namespace Gravix
 				request->State = AssetState::Loaded;
 				m_AssetRegistry[request->Handle] = metadata;
 				m_LoadedAssets[request->Handle] = asset;
+				m_LoadingAssets.erase(request->Handle);
 				GX_CORE_INFO("Asynchronously loaded asset: {0}", request->FilePath.string());
 			}
 		}
@@ -66,7 +67,17 @@ namespace Gravix
 
 	void EditorAssetManager::ImportAsset(const std::filesystem::path& filePath)
 	{
-		
+		AssetMetadata metadata;
+		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
+
+		AsyncLoadRequest* request = new AsyncLoadRequest();
+		request->Handle = handle;
+		request->FilePath = metadata.FilePath;
+		request->State = AssetState::NotLoaded;
+		request->Priority = LoadPriority::Normal;
+
+		m_LoadingAssets[handle] = request;
+		m_AssetRegistry[handle] = metadata;
 	}
 
 	const AssetMetadata& EditorAssetManager::GetAssetMetadata(AssetHandle handle) const
@@ -145,6 +156,11 @@ namespace Gravix
 			return nullptr;
 
 		Ref<Asset> asset;
+		if(m_LoadingAssets.contains(handle)) 
+		{
+			GX_CORE_INFO("Asset is still loading: {0}", GetAssetMetadata(handle).FilePath.string());
+			return nullptr; // Asset is still loading
+		}
 		if (IsAssetLoaded(handle))
 		{
 			asset = m_LoadedAssets.at(handle);
@@ -152,12 +168,14 @@ namespace Gravix
 		else
 		{
 			const AssetMetadata& metadata = GetAssetMetadata(handle);
-			asset = AssetImporter::ImportAsset(handle, metadata);
-			if (!asset) 
-			{
-				GX_CORE_ERROR("Failed to load asset: {0}", metadata.FilePath.string());
-				return nullptr;
-			}
+			AsyncLoadRequest* request = new AsyncLoadRequest();
+			request->Handle = handle;
+			request->FilePath = metadata.FilePath;
+			request->State = AssetState::NotLoaded;
+			request->Priority = LoadPriority::Normal;
+
+			m_LoadingAssets[handle] = request;
+			
 		}
 		return asset;
 	}

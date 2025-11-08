@@ -5,6 +5,7 @@
 
 #include "Asset/AssetManager.h"
 
+#include "Asset/AssetImporter.h"
 #include "Asset/Importers/TextureImporter.h"
 #include "Asset/Importers/SceneImporter.h"
 
@@ -79,13 +80,6 @@ namespace Gravix
 				{
 					AssetMetadata metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(request->Handle);
 					SetCPUDataEditor(request, metadata);
-				}
-				else
-				{
-					AssetHandle handle = Project::GetActive()->GetEditorAssetManager()->ImportAsset(request->FilePath);
-					AssetMetadata metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(handle);
-					SetCPUDataEditor(request, metadata);
-					request->Handle = handle;
 				}
 			}
 		}
