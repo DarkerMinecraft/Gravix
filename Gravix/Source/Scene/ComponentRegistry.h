@@ -92,10 +92,15 @@ namespace Gravix
 						ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
 						ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.294f, 0.294f, 0.294f, 1.0f));
 
+						// Use bold font for component headers
+						ImGuiIO& io = ImGui::GetIO();
+						ImGui::PushFont(io.Fonts->Fonts[3]); // 18px bold font for headers
+
 						bool open = ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(),
 							ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Framed,
 							name.c_str());
 
+						ImGui::PopFont();
 						ImGui::PopStyleColor(3);
 
 						// Unity-style settings button (three dots)
