@@ -3,6 +3,7 @@
 #include "Renderer/Generic/Types/Framebuffer.h"
 #include "Scene/EditorCamera.h"
 #include "SceneHierarchyPanel.h"
+#include "Core/Window.h"
 
 namespace Gravix
 {
@@ -16,6 +17,7 @@ namespace Gravix
 		ViewportPanel(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex);
 		~ViewportPanel() = default;
 
+		void OnEvent(Event& e);
 		void OnImGuiRender();
 
 		void SetFramebuffer(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex) { m_Framebuffer = framebuffer; m_RenderIndex = renderIndex; }
@@ -33,10 +35,9 @@ namespace Gravix
 
 		void UpdateViewport();
 
-		void GuizmoShortcuts();
-
 		const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
 	private:
+		bool OnKeyPressed(KeyPressedEvent& e);
 		Ref<Framebuffer> m_Framebuffer;
 		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f };
 		std::array<glm::vec2, 2> m_ViewportBounds;
@@ -52,6 +53,7 @@ namespace Gravix
 		AppLayer* m_AppLayer;
 
 		Entity m_HoveredEntity;
+		CursorMode m_CurrentCursorMode = CursorMode::Normal;
 
 		uint32_t m_RenderIndex = 0;
 	};

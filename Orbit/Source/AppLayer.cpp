@@ -2,6 +2,7 @@
 
 #include "Utils/PlatformUtils.h"
 #include "Serialization/Scene/SceneSerializer.h"
+#include "Events/KeyEvents.h"
 
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -46,7 +47,11 @@ namespace Gravix
 
 	void AppLayer::OnEvent(Event& e)
 	{
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(AppLayer::OnKeyPressed));
+
 		m_EditorCamera.OnEvent(e);
+		m_ViewportPanel.OnEvent(e);
 	}
 
 	void AppLayer::OnUpdate(float deltaTime)
@@ -68,9 +73,6 @@ namespace Gravix
 			m_EditorCamera.OnUpdate(deltaTime);
 
 		m_ActiveScene->OnEditorUpdate(deltaTime);
-
-		OnShortcuts();
-		m_ViewportPanel.GuizmoShortcuts();
 
 		if (Input::IsMouseDown(Mouse::LeftButton))
 		{
@@ -178,28 +180,51 @@ namespace Gravix
 		ImGui::End();
 	}
 
-	void AppLayer::OnShortcuts()
+	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
 	{
+		// Don't process shortcuts if ImGui wants keyboard input
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.WantCaptureKeyboard && (io.WantTextInput || ImGui::IsAnyItemActive()))
+			return false;
+
 		bool ctrlDown = Input::IsKeyDown(Key::LeftControl) || Input::IsKeyDown(Key::RightControl);
 		bool shiftDown = Input::IsKeyDown(Key::LeftShift) || Input::IsKeyDown(Key::RightShift);
 
-		if (ctrlDown && Input::IsKeyPressed(Key::S))
+		switch (e.GetKeyCode())
 		{
-			if (shiftDown) {}
-				//SaveSceneAs();
-			else
-				SaveScene();
+		case Key::N:
+			if (ctrlDown)
+			{
+				NewProject();
+				return true;
+			}
+			break;
+
+		case Key::O:
+			if (ctrlDown)
+			{
+				OpenProject();
+				return true;
+			}
+			break;
+
+		case Key::S:
+			if (ctrlDown)
+			{
+				if (shiftDown)
+				{
+					// SaveSceneAs();
+				}
+				else
+				{
+					SaveScene();
+				}
+				return true;
+			}
+			break;
 		}
 
-		if (ctrlDown && Input::IsKeyPressed(Key::O))
-		{
-			OpenProject();
-		}
-
-		if (ctrlDown && Input::IsKeyPressed(Key::N))
-		{
-			NewProject();
-		}
+		return false;
 	}
 
 	void AppLayer::SaveProject()
