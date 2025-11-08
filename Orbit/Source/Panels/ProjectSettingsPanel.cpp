@@ -129,10 +129,7 @@ namespace Gravix
 				config.LibraryDirectory = m_LibraryDirectoryBuffer;
 				config.ScriptPath = m_ScriptPathBuffer;
 
-				// Save project - we need the project path
-				// For now, we'll just update the config in memory
-				// The actual save will happen when the user saves the project normally
-				GX_CORE_INFO("Project settings updated");
+				Project::SaveActive(Project::GetActive()->GetWorkingDirectory() / ".orbproj");
 			}
 
 			ImGui::SameLine();
