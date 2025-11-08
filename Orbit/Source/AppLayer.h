@@ -53,6 +53,7 @@ namespace Gravix
 		ContentBrowserPanel m_ContentBrowserPanel;
 
 		AssetHandle m_ActiveSceneHandle;
+		AssetHandle m_PendingSceneHandle = 0; // Track scene waiting to load asynchronously
 		std::filesystem::path m_ActiveProjectPath;
 	};
 

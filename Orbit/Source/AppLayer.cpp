@@ -27,7 +27,16 @@ namespace Gravix
 
 		Renderer2D::Init(m_MSAAFramebuffer);
 
-		OpenScene((AssetHandle)Project::GetActive()->GetConfig().StartScene);
+		// Always create a default empty scene to prevent nullptr issues
+		m_ActiveScene = CreateRef<Scene>();
+
+		// Try to open the start scene if it's valid
+		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
+		if (startScene != 0)
+		{
+			OpenScene(startScene);
+		}
+
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
@@ -58,6 +67,15 @@ namespace Gravix
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
+		// Check if pending scene has finished loading
+		if (m_PendingSceneHandle != 0 && AssetManager::IsAssetLoaded(m_PendingSceneHandle))
+		{
+			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
+			AssetHandle sceneToLoad = m_PendingSceneHandle;
+			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
+			OpenScene(sceneToLoad, true); // Load with deserialization
+		}
+
 		if (m_ViewportPanel.IsViewportValid())
 		{
 			auto& viewportSize = m_ViewportPanel.GetViewportSize();
@@ -288,24 +306,38 @@ namespace Gravix
 
 	void AppLayer::OpenScene(AssetHandle handle, bool deserialize)
 	{
-		if(AssetManager::GetAssetType(handle) != AssetType::Scene) 	
+		if(AssetManager::GetAssetType(handle) != AssetType::Scene)
 		{
 			GX_CORE_ERROR("Asset with handle {0} is not a scene!", static_cast<uint64_t>(handle));
 			return;
 		}
-		m_ActiveSceneHandle = handle;
 
-		m_ActiveScene = AssetManager::GetAsset<Scene>(handle);
-		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-		m_SceneHierarchyPanel.SetNoneSelected();
+		// Try to get the scene asset (may return nullptr if loading asynchronously)
+		Ref<Scene> scene = AssetManager::GetAsset<Scene>(handle);
 
-		if(!deserialize)
-			return;
+		// Only update the active scene if we successfully loaded it
+		// If it's nullptr (async loading), keep the current scene
+		if (scene)
+		{
+			m_ActiveSceneHandle = handle;
+			m_ActiveScene = scene;
+			m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
+			m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+			m_SceneHierarchyPanel.SetNoneSelected();
 
-		const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
-		SceneSerializer serializer(m_ActiveScene);
-		serializer.Deserialize(filePath);
+			if(!deserialize)
+				return;
+
+			const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
+			SceneSerializer serializer(m_ActiveScene);
+			serializer.Deserialize(filePath);
+		}
+		else
+		{
+			// Scene is loading asynchronously, track it so we can auto-load when ready
+			m_PendingSceneHandle = handle;
+			GX_CORE_INFO("Scene {0} is loading asynchronously, will auto-switch when ready", static_cast<uint64_t>(handle));
+		}
 	}
 
 }
