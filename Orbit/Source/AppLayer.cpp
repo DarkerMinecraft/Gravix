@@ -232,11 +232,6 @@ namespace Gravix
 					//SaveSceneAs();
 				}
 
-				if (m_ProjectInitialized && ImGui::MenuItem("Rename Scene..."))
-				{
-					RenameScene();
-				}
-
 				ImGui::Separator();
 
 				if (m_ProjectInitialized && ImGui::MenuItem("Preferences..."))
@@ -253,68 +248,6 @@ namespace Gravix
 		if (m_ShowStartupDialog)
 		{
 			ShowStartupDialog();
-		}
-
-		// Show rename scene dialog
-		if (m_ShowRenameSceneDialog)
-		{
-			ImGuiIO& io = ImGui::GetIO();
-			ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
-			ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(400, 150), ImGuiCond_Always);
-
-			if (!ImGui::IsPopupOpen("Rename Scene"))
-			{
-				ImGui::OpenPopup("Rename Scene");
-			}
-
-			if (ImGui::BeginPopupModal("Rename Scene", &m_ShowRenameSceneDialog, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
-			{
-				ImGui::Text("Enter new scene name:");
-				ImGui::Spacing();
-
-				ImGui::SetNextItemWidth(-1);
-				ImGui::InputText("##SceneName", m_SceneNameBuffer, sizeof(m_SceneNameBuffer));
-
-				ImGui::Spacing();
-				ImGui::Separator();
-				ImGui::Spacing();
-
-				float buttonWidth = 100.0f;
-				float spacing = 10.0f;
-				float totalWidth = buttonWidth * 2 + spacing;
-				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
-
-				if (ImGui::Button("Rename", ImVec2(buttonWidth, 0)))
-				{
-					if (strlen(m_SceneNameBuffer) > 0 && m_ActiveScene)
-					{
-						// Update the scene's internal name
-						m_ActiveScene->SetName(m_SceneNameBuffer);
-
-						// Save the scene to persist the name change
-						SaveScene();
-
-						// Update window title
-						UpdateWindowTitle();
-
-						GX_CORE_INFO("Renamed scene to: {0}", m_SceneNameBuffer);
-
-						m_ShowRenameSceneDialog = false;
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::SameLine(0, spacing);
-
-				if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)))
-				{
-					m_ShowRenameSceneDialog = false;
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
 		}
 
 		// Only render panels if project is initialized
@@ -601,9 +534,10 @@ namespace Gravix
 
 		std::string sceneName = "Untitled";
 
-		if (m_ActiveScene)
+		if (m_ActiveSceneHandle != 0 && AssetManager::IsValidAssetHandle(m_ActiveSceneHandle))
 		{
-			sceneName = m_ActiveScene->GetName();
+			const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
+			sceneName = metadata.FilePath.stem().string();
 		}
 
 		std::string title = "Orbit - " + sceneName;
@@ -620,21 +554,6 @@ namespace Gravix
 			m_SceneDirty = true;
 			UpdateWindowTitle();
 		}
-	}
-
-	void AppLayer::RenameScene()
-	{
-		if (!m_ActiveScene)
-		{
-			GX_CORE_WARN("No active scene to rename");
-			return;
-		}
-
-		// Get current scene name from the scene itself
-		std::string currentName = m_ActiveScene->GetName();
-		strncpy(m_SceneNameBuffer, currentName.c_str(), sizeof(m_SceneNameBuffer) - 1);
-
-		m_ShowRenameSceneDialog = true;
 	}
 
 }

@@ -36,7 +36,7 @@ namespace Gravix
 	{
 		YAML::Emitter out;
 		out << YAML::BeginMap;
-		out << YAML::Key << "Scene" << YAML::Value << m_Scene->GetName();
+		out << YAML::Key << "Scene" << YAML::Value << "Untitled";
 		out << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq;
 
 		// Collect all entities
@@ -83,7 +83,6 @@ namespace Gravix
 			return false;
 
 		std::string sceneName = data["Scene"].as<std::string>();
-		m_Scene->SetName(sceneName);
 		GX_CORE_TRACE("Deserializing scene: {0}", sceneName);
 
 		uint32_t maxCreationIndex = 0;
@@ -207,7 +206,6 @@ namespace Gravix
 			return false;
 
 		std::string sceneName = data["Scene"].as<std::string>();
-		m_Scene->SetName(sceneName);
 		GX_CORE_TRACE("Deserializing scene: {0}", sceneName);
 
 		uint32_t maxCreationIndex = 0;

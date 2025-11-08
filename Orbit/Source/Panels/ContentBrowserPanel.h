@@ -23,6 +23,7 @@ namespace Gravix
 	private:
 		void RefreshAssetTree();
 		void ScanAndImportAssets();
+		void RenameAsset(const std::filesystem::path& oldPath, const std::string& newName);
 	private:
 		std::filesystem::path m_AssetDirectory;
 		std::filesystem::path m_CurrentDirectory;
@@ -43,6 +44,11 @@ namespace Gravix
 		};
 
 		std::vector<TreeNode> m_TreeNodes;
+
+		// Renaming state
+		bool m_IsRenaming = false;
+		std::filesystem::path m_RenamingPath;
+		char m_RenameBuffer[256] = "";
 	};
 
 }
