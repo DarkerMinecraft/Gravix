@@ -95,8 +95,17 @@ namespace Gravix
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
 
-		ImFont* font = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 16.0f);
+		// Load fonts for a professional Unity-like appearance
+		// Main UI font - slightly larger for better readability
+		ImFont* font = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 15.0f);
 		io.FontDefault = font;
+
+		// Add additional font sizes for headers and emphasis (optional, can be used in code)
+		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 18.0f);  // For headers
+		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 20.0f);  // For large headers
+
+		// Configure font rendering for crisp text
+		io.Fonts->Build();
 
 		Application& app = Application::Get();
 		HWND window = static_cast<HWND>(app.GetWindow().GetWindowHandle());
@@ -149,127 +158,134 @@ namespace Gravix
 	{
 		ImGuiStyle& style = ImGui::GetStyle();
 
-		// Rounding and spacing
+		// ===== UNITY-INSPIRED PROFESSIONAL STYLING =====
+
+		// Rounding and spacing - Unity style with subtle polish
 		style.Alpha = 1.0f;
 		style.DisabledAlpha = 0.5f;
-		style.WindowPadding = ImVec2(8.0f, 8.0f);
-		style.WindowRounding = 0.0f;  // Unity uses sharp corners
+		style.WindowPadding = ImVec2(10.0f, 10.0f);
+		style.WindowRounding = 4.0f;  // Subtle rounding for modern look
 		style.WindowBorderSize = 1.0f;
 		style.WindowMinSize = ImVec2(32.0f, 32.0f);
-		style.WindowTitleAlign = ImVec2(0.0f, 0.5f);
+		style.WindowTitleAlign = ImVec2(0.5f, 0.5f);  // Center title like Unity
 		style.WindowMenuButtonPosition = ImGuiDir_Left;
-		style.ChildRounding = 0.0f;
+		style.ChildRounding = 4.0f;
 		style.ChildBorderSize = 1.0f;
-		style.PopupRounding = 0.0f;
+		style.PopupRounding = 4.0f;
 		style.PopupBorderSize = 1.0f;
-		style.FramePadding = ImVec2(4.0f, 3.0f);
-		style.FrameRounding = 2.0f;  // Subtle rounding
+		style.FramePadding = ImVec2(6.0f, 4.0f);
+		style.FrameRounding = 3.0f;
 		style.FrameBorderSize = 0.0f;
-		style.ItemSpacing = ImVec2(8.0f, 4.0f);
-		style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
-		style.CellPadding = ImVec2(4.0f, 2.0f);
+		style.ItemSpacing = ImVec2(8.0f, 6.0f);
+		style.ItemInnerSpacing = ImVec2(6.0f, 4.0f);
+		style.CellPadding = ImVec2(6.0f, 4.0f);
 		style.IndentSpacing = 21.0f;
 		style.ColumnsMinSpacing = 6.0f;
-		style.ScrollbarSize = 14.0f;
-		style.ScrollbarRounding = 0.0f;
-		style.GrabMinSize = 10.0f;
-		style.GrabRounding = 2.0f;
-		style.TabRounding = 0.0f;
+		style.ScrollbarSize = 16.0f;
+		style.ScrollbarRounding = 9.0f;
+		style.GrabMinSize = 12.0f;
+		style.GrabRounding = 3.0f;
+		style.TabRounding = 4.0f;
 		style.TabBorderSize = 0.0f;
 		style.ColorButtonPosition = ImGuiDir_Right;
 		style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
 		style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
 
-		// Unity-inspired color palette
+		// ===== UNITY COLOR PALETTE =====
+		// Carefully crafted to match Unity 2022+ dark theme
 		ImVec4* colors = style.Colors;
 
-		// Backgrounds - Dark gray with slight blue tint
-		colors[ImGuiCol_WindowBg] = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
-		colors[ImGuiCol_ChildBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-		colors[ImGuiCol_PopupBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.98f);
-		colors[ImGuiCol_MenuBarBg] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+		// Backgrounds - Unity's signature dark theme
+		colors[ImGuiCol_WindowBg] = ImVec4(0.196f, 0.196f, 0.196f, 1.00f);  // #323232
+		colors[ImGuiCol_ChildBg] = ImVec4(0.157f, 0.157f, 0.157f, 1.00f);   // #282828
+		colors[ImGuiCol_PopupBg] = ImVec4(0.196f, 0.196f, 0.196f, 0.98f);
+		colors[ImGuiCol_MenuBarBg] = ImVec4(0.157f, 0.157f, 0.157f, 1.00f);
 
-		// Borders
-		colors[ImGuiCol_Border] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+		// Borders - Unity's subtle borders
+		colors[ImGuiCol_Border] = ImVec4(0.098f, 0.098f, 0.098f, 1.00f);    // #191919
 		colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 
-		// Text
-		colors[ImGuiCol_Text] = ImVec4(0.86f, 0.86f, 0.86f, 1.00f);
-		colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-		colors[ImGuiCol_TextSelectedBg] = ImVec4(0.23f, 0.45f, 0.69f, 0.54f);
+		// Text - Unity's text colors
+		colors[ImGuiCol_Text] = ImVec4(0.863f, 0.863f, 0.863f, 1.00f);      // #DCDCDC
+		colors[ImGuiCol_TextDisabled] = ImVec4(0.502f, 0.502f, 0.502f, 1.00f);
+		colors[ImGuiCol_TextSelectedBg] = ImVec4(0.267f, 0.529f, 0.808f, 0.40f);
 
-		// Title bars
-		colors[ImGuiCol_TitleBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
-		colors[ImGuiCol_TitleBgActive] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
-		colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.15f, 0.15f, 0.15f, 0.95f);
+		// Title bars - Unity's window title styling
+		colors[ImGuiCol_TitleBg] = ImVec4(0.125f, 0.125f, 0.125f, 1.00f);
+		colors[ImGuiCol_TitleBgActive] = ImVec4(0.157f, 0.157f, 0.157f, 1.00f);
+		colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.125f, 0.125f, 0.125f, 0.95f);
 
-		// Frames (inputs, etc)
-		colors[ImGuiCol_FrameBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
-		colors[ImGuiCol_FrameBgActive] = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+		// Frames (inputs, text fields)
+		colors[ImGuiCol_FrameBg] = ImVec4(0.251f, 0.251f, 0.251f, 1.00f);   // #404040
+		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.294f, 0.294f, 0.294f, 1.00f);
+		colors[ImGuiCol_FrameBgActive] = ImVec4(0.333f, 0.333f, 0.333f, 1.00f);
 
-		// Buttons
-		colors[ImGuiCol_Button] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
-		colors[ImGuiCol_ButtonHovered] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
-		colors[ImGuiCol_ButtonActive] = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
+		// Buttons - Unity's button styling
+		colors[ImGuiCol_Button] = ImVec4(0.267f, 0.267f, 0.267f, 1.00f);
+		colors[ImGuiCol_ButtonHovered] = ImVec4(0.349f, 0.349f, 0.349f, 1.00f);
+		colors[ImGuiCol_ButtonActive] = ImVec4(0.443f, 0.443f, 0.443f, 1.00f);
 
-		// Headers (collapsing headers, trees)
-		colors[ImGuiCol_Header] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
-		colors[ImGuiCol_HeaderHovered] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
-		colors[ImGuiCol_HeaderActive] = ImVec4(0.38f, 0.38f, 0.38f, 1.00f);
+		// Headers (collapsing headers, tree nodes)
+		colors[ImGuiCol_Header] = ImVec4(0.267f, 0.267f, 0.267f, 1.00f);
+		colors[ImGuiCol_HeaderHovered] = ImVec4(0.349f, 0.349f, 0.349f, 1.00f);
+		colors[ImGuiCol_HeaderActive] = ImVec4(0.384f, 0.384f, 0.384f, 1.00f);
 
-		// Tabs
-		colors[ImGuiCol_Tab] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-		colors[ImGuiCol_TabHovered] = ImVec4(0.32f, 0.32f, 0.32f, 1.00f);
-		colors[ImGuiCol_TabActive] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
-		colors[ImGuiCol_TabUnfocused] = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
-		colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+		// Tabs - Unity's tab bar styling
+		colors[ImGuiCol_Tab] = ImVec4(0.157f, 0.157f, 0.157f, 1.00f);
+		colors[ImGuiCol_TabHovered] = ImVec4(0.267f, 0.529f, 0.808f, 0.80f);  // Unity blue
+		colors[ImGuiCol_TabActive] = ImVec4(0.196f, 0.196f, 0.196f, 1.00f);
+		colors[ImGuiCol_TabUnfocused] = ImVec4(0.125f, 0.125f, 0.125f, 1.00f);
+		colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.157f, 0.157f, 0.157f, 1.00f);
 
 		// Scrollbars
-		colors[ImGuiCol_ScrollbarBg] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
-		colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
-		colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
-		colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.45f, 0.45f, 0.45f, 1.00f);
+		colors[ImGuiCol_ScrollbarBg] = ImVec4(0.157f, 0.157f, 0.157f, 0.80f);
+		colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.392f, 0.392f, 0.392f, 1.00f);
+		colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.478f, 0.478f, 0.478f, 1.00f);
+		colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.549f, 0.549f, 0.549f, 1.00f);
 
-		// Sliders
-		colors[ImGuiCol_SliderGrab] = ImVec4(0.44f, 0.58f, 0.80f, 1.00f);  // Unity blue accent
-		colors[ImGuiCol_SliderGrabActive] = ImVec4(0.52f, 0.67f, 0.90f, 1.00f);
+		// Sliders - Unity blue accent
+		colors[ImGuiCol_SliderGrab] = ImVec4(0.267f, 0.529f, 0.808f, 1.00f);
+		colors[ImGuiCol_SliderGrabActive] = ImVec4(0.353f, 0.627f, 0.902f, 1.00f);
 
-		// Checkmarks
-		colors[ImGuiCol_CheckMark] = ImVec4(0.44f, 0.58f, 0.80f, 1.00f);  // Unity blue accent
+		// Checkmarks - Unity blue accent
+		colors[ImGuiCol_CheckMark] = ImVec4(0.267f, 0.529f, 0.808f, 1.00f);
 
 		// Separators
-		colors[ImGuiCol_Separator] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
-		colors[ImGuiCol_SeparatorHovered] = ImVec4(0.40f, 0.52f, 0.70f, 1.00f);
-		colors[ImGuiCol_SeparatorActive] = ImVec4(0.44f, 0.58f, 0.80f, 1.00f);
+		colors[ImGuiCol_Separator] = ImVec4(0.098f, 0.098f, 0.098f, 1.00f);
+		colors[ImGuiCol_SeparatorHovered] = ImVec4(0.267f, 0.529f, 0.808f, 0.78f);
+		colors[ImGuiCol_SeparatorActive] = ImVec4(0.267f, 0.529f, 0.808f, 1.00f);
 
 		// Resize grip
-		colors[ImGuiCol_ResizeGrip] = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-		colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.44f, 0.58f, 0.80f, 0.67f);
-		colors[ImGuiCol_ResizeGripActive] = ImVec4(0.52f, 0.67f, 0.90f, 0.95f);
+		colors[ImGuiCol_ResizeGrip] = ImVec4(0.267f, 0.267f, 0.267f, 0.25f);
+		colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.267f, 0.529f, 0.808f, 0.67f);
+		colors[ImGuiCol_ResizeGripActive] = ImVec4(0.267f, 0.529f, 0.808f, 0.95f);
+
+		// Docking
+		colors[ImGuiCol_DockingPreview] = ImVec4(0.267f, 0.529f, 0.808f, 0.40f);
+		colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.125f, 0.125f, 0.125f, 1.00f);
 
 		// Tables
-		colors[ImGuiCol_TableHeaderBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-		colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
-		colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
+		colors[ImGuiCol_TableHeaderBg] = ImVec4(0.251f, 0.251f, 0.251f, 1.00f);
+		colors[ImGuiCol_TableBorderStrong] = ImVec4(0.098f, 0.098f, 0.098f, 1.00f);
+		colors[ImGuiCol_TableBorderLight] = ImVec4(0.157f, 0.157f, 0.157f, 1.00f);
 		colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.03f);
+		colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
 
 		// Plot colors
-		colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-		colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.68f, 0.80f, 1.00f, 1.00f);
-		colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-		colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.80f, 0.00f, 1.00f);
+		colors[ImGuiCol_PlotLines] = ImVec4(0.612f, 0.612f, 0.612f, 1.00f);
+		colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.267f, 0.529f, 0.808f, 1.00f);
+		colors[ImGuiCol_PlotHistogram] = ImVec4(0.902f, 0.706f, 0.00f, 1.00f);  // Unity yellow
+		colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.784f, 0.00f, 1.00f);
 
 		// Drag and drop
-		colors[ImGuiCol_DragDropTarget] = ImVec4(0.44f, 0.58f, 0.80f, 0.90f);
+		colors[ImGuiCol_DragDropTarget] = ImVec4(0.267f, 0.529f, 0.808f, 0.90f);
 
-		// Navigation
-		colors[ImGuiCol_NavHighlight] = ImVec4(0.44f, 0.58f, 0.80f, 1.00f);
+		// Navigation highlight
+		colors[ImGuiCol_NavHighlight] = ImVec4(0.267f, 0.529f, 0.808f, 1.00f);
 		colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.20f);
 
-		// Modal windows
+		// Modal window dimming
 		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
 	}
 
