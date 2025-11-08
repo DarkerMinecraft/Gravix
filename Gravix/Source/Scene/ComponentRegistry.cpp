@@ -346,6 +346,50 @@ namespace Gravix
 				ImGuiHelpers::EndPropertyRow();
 			}
 		);
+
+		// ComponentOrderComponent - Hidden component for tracking component addition order
+		RegisterComponent<ComponentOrderComponent>(
+			"ComponentOrder",
+			ComponentSpecification{ .HasNodeTree = false, .CanRemoveComponent = false },
+			nullptr,
+			[](YAML::Emitter& out, ComponentOrderComponent& c)
+			{
+				out << YAML::Key << "Order" << YAML::Value << YAML::BeginSeq;
+				for (const auto& typeIdx : c.ComponentOrder)
+				{
+					// Find the component name by type_index
+					const auto& allComponents = ComponentRegistry::Get().GetAllComponents();
+					auto it = allComponents.find(typeIdx);
+					if (it != allComponents.end())
+					{
+						out << it->second.Name;
+					}
+				}
+				out << YAML::EndSeq;
+			},
+			[](ComponentOrderComponent& c, const YAML::Node& node)
+			{
+				c.ComponentOrder.clear();
+				if (node["Order"])
+				{
+					for (const auto& item : node["Order"])
+					{
+						std::string componentName = item.as<std::string>();
+						// Find the type_index by component name
+						const auto& allComponents = ComponentRegistry::Get().GetAllComponents();
+						for (const auto& [typeIdx, info] : allComponents)
+						{
+							if (info.Name == componentName)
+							{
+								c.ComponentOrder.push_back(typeIdx);
+								break;
+							}
+						}
+					}
+				}
+			},
+			nullptr  // No UI rendering for this hidden component
+		);
 	}
 
 }
