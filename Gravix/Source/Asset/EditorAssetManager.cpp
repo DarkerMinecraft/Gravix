@@ -15,6 +15,36 @@ namespace Gravix
 		return handle != 0 && m_AssetRegistry.contains(handle);
 	}
 
+	AssetType EditorAssetManager::GetAssetType(AssetHandle handle) const
+	{
+		return IsAssetHandleValid(handle) ? m_AssetRegistry.at(handle).Type : AssetType::None;
+	}
+
+	void EditorAssetManager::ImportAsset(const std::filesystem::path& filePath)
+	{
+		AssetMetadata metadata;
+		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
+		
+		if (metadata.Type == AssetType::None)
+		{
+			GX_CORE_WARN("Failed to import asset: {0}", filePath.string());
+			return;
+		}
+
+		Ref<Asset> asset = AssetImporter::ImportAsset(handle, metadata);
+		if (!asset)
+		{
+			GX_CORE_ERROR("Failed to import asset: {0}", filePath.string());
+			return;
+		}
+
+		m_LoadedAssets[handle] = asset;
+		m_AssetRegistry[handle] = metadata;
+
+		GX_CORE_INFO("Imported asset: {0}", filePath.string());
+		SerializeAssetRegistry();
+	}
+
 	const AssetMetadata& EditorAssetManager::GetAssetMetadata(AssetHandle handle) const
 	{
 		static AssetMetadata invalidMetadata{};
@@ -35,7 +65,8 @@ namespace Gravix
 		{
 			out << YAML::BeginMap;
 			out << YAML::Key << "Handle" << YAML::Value << static_cast<uint64_t>(handle);
-			out << YAML::Key << "FilePath" << YAML::Value << metadata.FilePath.string();
+			std::string filePathStr = metadata.FilePath.generic_string();
+			out << YAML::Key << "FilePath" << YAML::Value << filePathStr;
 			out << YAML::Key << "AssetType" << YAML::Value << AssetTypeToString(metadata.Type);
 			out << YAML::EndMap;
 		}
@@ -48,8 +79,11 @@ namespace Gravix
 	void EditorAssetManager::DeserializeAssetRegistry()
 	{
 		std::filesystem::path registryPath = Project::GetLibraryDirectory() / "AssetRegistry.orbreg";
-		if (!std::filesystem::exists(registryPath))
+		if (!std::filesystem::exists(registryPath)) 
+		{
+			GX_CORE_WARN("Asset registry file does not exist: {0}", registryPath.string());
 			return;
+		}
 
 		std::ifstream stream(registryPath);
 		YAML::Node data = YAML::Load(stream);

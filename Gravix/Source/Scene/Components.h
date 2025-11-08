@@ -4,6 +4,8 @@
 
 #include "SceneCamera.h"
 
+#include "Asset/Asset.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -60,14 +62,22 @@ namespace Gravix
 	struct SpriteRendererComponent
 	{
 		glm::vec4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
+		AssetHandle Texture = 0;
+		float TilingFactor = 1.0f;
 
 		SpriteRendererComponent() = default;
 		SpriteRendererComponent(const SpriteRendererComponent&) = default;
-		SpriteRendererComponent(const glm::vec4& color)
-			: Color(color) {}
+		SpriteRendererComponent(const glm::vec4& color, const AssetHandle handle, float tilingFactor)
+			: Color(color), Texture(handle), TilingFactor(tilingFactor) {}
 
 		operator glm::vec4&() { return Color; }
 		operator const glm::vec4&() const { return Color; }
+
+		operator AssetHandle& () { return Texture; }
+		operator const AssetHandle& () const { return Texture; }
+
+		operator float& () { return TilingFactor; }
+		operator const float& () const { return TilingFactor; }
 	};
 
 	struct CameraComponent 

@@ -40,6 +40,7 @@ namespace Gravix
 
 	AppLayer::~AppLayer()
 	{
+		Project::GetActive()->GetEditorAssetManager()->ClearLoadedAssets();
 		Renderer2D::Destroy();
 	}
 

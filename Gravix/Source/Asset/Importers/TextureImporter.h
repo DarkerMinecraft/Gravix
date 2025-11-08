@@ -11,7 +11,11 @@ namespace Gravix
 	class TextureImporter 
 	{
 	public:
+		// AssetMetadata filepath is relative to asset directory
 		static Ref<Texture2D> ImportTexture2D(AssetHandle handle, const AssetMetadata& metadata);
+
+		// Load texture from file path (i.e. path has to absolute or relative to working directory)
+		static Ref<Texture2D> LoadTexture2D(const std::filesystem::path& path);
 	};
 
 }

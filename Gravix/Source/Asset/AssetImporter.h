@@ -10,6 +10,7 @@ namespace Gravix
 	{
 	public:
 		static Ref<Asset> ImportAsset(AssetHandle handle, const AssetMetadata& metadata);
+		static AssetHandle GenerateAssetHandle(const std::filesystem::path& filePath, AssetMetadata* outMetadata);
 	};
 
 }

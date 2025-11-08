@@ -15,8 +15,14 @@ namespace Gravix
 
 		virtual bool IsAssetLoaded(AssetHandle handle) const override;
 		virtual bool IsAssetHandleValid(AssetHandle handle) const override;
+		virtual AssetType GetAssetType(AssetHandle handle) const override;
+
+		void ImportAsset(const std::filesystem::path& filePath);
 
 		const AssetMetadata& GetAssetMetadata(AssetHandle handle) const;
+		const AssetRegistry& GetAssetRegistry() const { return m_AssetRegistry; }
+
+		void ClearLoadedAssets() { m_LoadedAssets.clear(); }
 
 		void SerializeAssetRegistry();
 		void DeserializeAssetRegistry();

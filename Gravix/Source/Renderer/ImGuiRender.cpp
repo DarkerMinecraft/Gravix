@@ -109,9 +109,6 @@ namespace Gravix
 		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 20.0f);  // For large headers
 		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 20.0f);     // For large bold headers
 
-		// Configure font rendering for crisp text
-		io.Fonts->Build();
-
 		Application& app = Application::Get();
 		HWND window = static_cast<HWND>(app.GetWindow().GetWindowHandle());
 		

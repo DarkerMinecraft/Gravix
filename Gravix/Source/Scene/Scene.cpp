@@ -3,6 +3,8 @@
 
 #include "Entity.h"
 
+#include "Asset/AssetManager.h"
+
 #include "Renderer/Generic/Renderer2D.h"
 
 namespace Gravix
@@ -53,8 +55,8 @@ namespace Gravix
 			for (auto entity : group)
 			{
 				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
-
-				Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite);
+				Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
+				Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite, texture, sprite);
 			}
 			Renderer2D::EndScene(cmd);
 		}

@@ -3,6 +3,8 @@
 
 #include "Components.h"
 
+#include "Asset/AssetManager.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -86,7 +88,9 @@ namespace Gravix
 		// Unity-style two-column layout
 		ImGui::Columns(2);
 		ImGui::SetColumnWidth(0, columnWidth);
+		ImGui::PushFont(io.Fonts->Fonts[1], 0.0f);
 		ImGui::Text("%s", label);
+		ImGui::PopFont();
 		ImGui::NextColumn();
 
 		ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
@@ -297,14 +301,32 @@ namespace Gravix
 			[](YAML::Emitter& out, SpriteRendererComponent& c)
 			{
 				out << YAML::Key << "Color" << YAML::Value << c.Color;
+				out << YAML::Key << "Texture" << YAML::Value << (uint64_t)c.Texture;
+				out << YAML::Key << "TilingFactor" << YAML::Value << c.TilingFactor;
 			},
 			[](SpriteRendererComponent& c, const YAML::Node& node)
 			{
 				c.Color = node["Color"].as<glm::vec4>();
+				c.Texture = (AssetHandle)node["Texture"].as<uint64_t>();
+				c.TilingFactor = node["TilingFactor"].as<float>();
 			},
 			[](SpriteRendererComponent& c)
 			{
 				ImGui::ColorEdit4("Color", glm::value_ptr(c.Color));
+
+				ImGui::Button("Texture", ImVec2{ 100, 0 });
+				if (ImGui::BeginDragDropTarget()) 
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+					{
+						AssetHandle textureHandle = *(AssetHandle*)payload->Data;
+						if(AssetManager::GetAssetType(textureHandle) == AssetType::Texture2D)
+							c.Texture = textureHandle;
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				ImGui::DragFloat("Tiling Factor", &c.TilingFactor);
 			}
 		);
 	}
