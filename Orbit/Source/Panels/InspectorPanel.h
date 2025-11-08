@@ -2,10 +2,12 @@
 
 #include "Panels/SceneHierarchyPanel.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
-	class InspectorPanel 
+	class AppLayer;
+
+	class InspectorPanel
 	{
 	public:
 		InspectorPanel() = default;
@@ -13,6 +15,7 @@ namespace Gravix
 		~InspectorPanel() = default;
 
 		void SetSceneHierarchyPanel(SceneHierarchyPanel* sceneHierarchyPanel) { m_SceneHierarchyPanel = sceneHierarchyPanel; }
+		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
 
 		void OnImGuiRender();
 	private:
@@ -20,6 +23,7 @@ namespace Gravix
 		void DrawAddComponents(Entity entity);
 	private:
 		SceneHierarchyPanel* m_SceneHierarchyPanel;
+		AppLayer* m_AppLayer = nullptr;
 	};
 
 }

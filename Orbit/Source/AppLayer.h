@@ -68,6 +68,8 @@ namespace Gravix
 		bool m_ProjectInitialized = false;
 		bool m_ShowStartupDialog = false;
 		bool m_SceneDirty = false;
+		bool m_ShowRenameSceneDialog = false;
+		char m_SceneNameBuffer[256] = "";
 	};
 
 }

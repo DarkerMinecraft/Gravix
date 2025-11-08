@@ -27,6 +27,8 @@ namespace Gravix
 		}
 
 		FramebufferSpecification fbSpec{};
+		fbSpec.Width = 1280;
+		fbSpec.Height = 720;
 		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
 		fbSpec.Multisampled = true;
 
@@ -52,12 +54,13 @@ namespace Gravix
 		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
 		if (startScene != 0)
 		{
-			OpenScene(startScene);
+			OpenScene(startScene, true);
 		}
 
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_SceneHierarchyPanel.SetAppLayer(this);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_InspectorPanel.SetAppLayer(this);
 		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
 
@@ -109,7 +112,7 @@ namespace Gravix
 			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
 			AssetHandle sceneToLoad = m_PendingSceneHandle;
 			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
-			OpenScene(sceneToLoad, false); // Load with deserialization
+			OpenScene(sceneToLoad, true); // Deserialize the scene
 		}
 
 		if (m_ViewportPanel.IsViewportValid())
@@ -229,6 +232,11 @@ namespace Gravix
 					//SaveSceneAs();
 				}
 
+				if (m_ProjectInitialized && ImGui::MenuItem("Rename Scene..."))
+				{
+					RenameScene();
+				}
+
 				ImGui::Separator();
 
 				if (m_ProjectInitialized && ImGui::MenuItem("Preferences..."))
@@ -245,6 +253,77 @@ namespace Gravix
 		if (m_ShowStartupDialog)
 		{
 			ShowStartupDialog();
+		}
+
+		// Show rename scene dialog
+		if (m_ShowRenameSceneDialog)
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+			ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(400, 150), ImGuiCond_Always);
+
+			if (!ImGui::IsPopupOpen("Rename Scene"))
+			{
+				ImGui::OpenPopup("Rename Scene");
+			}
+
+			if (ImGui::BeginPopupModal("Rename Scene", &m_ShowRenameSceneDialog, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
+			{
+				ImGui::Text("Enter new scene name:");
+				ImGui::Spacing();
+
+				ImGui::SetNextItemWidth(-1);
+				ImGui::InputText("##SceneName", m_SceneNameBuffer, sizeof(m_SceneNameBuffer));
+
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
+				float buttonWidth = 100.0f;
+				float spacing = 10.0f;
+				float totalWidth = buttonWidth * 2 + spacing;
+				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
+
+				if (ImGui::Button("Rename", ImVec2(buttonWidth, 0)))
+				{
+					if (strlen(m_SceneNameBuffer) > 0)
+					{
+						// Get the current scene file path
+						const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
+						std::filesystem::path oldPath = Project::GetAssetDirectory() / metadata.FilePath;
+						std::filesystem::path newPath = oldPath.parent_path() / (std::string(m_SceneNameBuffer) + oldPath.extension().string());
+
+						// Rename the file
+						if (std::filesystem::exists(oldPath))
+						{
+							std::filesystem::rename(oldPath, newPath);
+
+							// Update the asset metadata
+							auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
+							mutableMetadata.FilePath = std::filesystem::relative(newPath, Project::GetAssetDirectory());
+
+							// Update window title
+							UpdateWindowTitle();
+
+							GX_CORE_INFO("Renamed scene to: {0}", m_SceneNameBuffer);
+						}
+
+						m_ShowRenameSceneDialog = false;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine(0, spacing);
+
+				if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)))
+				{
+					m_ShowRenameSceneDialog = false;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
 		}
 
 		// Only render panels if project is initialized
@@ -367,7 +446,7 @@ namespace Gravix
 		Project::New(projectFolder);
 
 		// Set the project path and save it
-		m_ActiveProjectPath = projectFolder / "Untitled.orbproj";
+		m_ActiveProjectPath = projectFolder / ".orbproj";
 		Project::SaveActive(m_ActiveProjectPath);
 
 		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
@@ -551,6 +630,22 @@ namespace Gravix
 			m_SceneDirty = true;
 			UpdateWindowTitle();
 		}
+	}
+
+	void AppLayer::RenameScene()
+	{
+		if (m_ActiveSceneHandle == 0 || !AssetManager::IsValidAssetHandle(m_ActiveSceneHandle))
+		{
+			GX_CORE_WARN("No active scene to rename");
+			return;
+		}
+
+		// Get current scene name
+		const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
+		std::string currentName = metadata.FilePath.stem().string();
+		strncpy(m_SceneNameBuffer, currentName.c_str(), sizeof(m_SceneNameBuffer) - 1);
+
+		m_ShowRenameSceneDialog = true;
 	}
 
 }

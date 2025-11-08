@@ -36,14 +36,35 @@ namespace Gravix
 		s_ActiveProject->m_Config.ScriptPath = workingDirectory / "Scripts";
 
 		// Create directories if they don't exist
-		std::filesystem::create_directories(s_ActiveProject->m_Config.AssetDirectory);
-		std::filesystem::create_directories(s_ActiveProject->m_Config.LibraryDirectory);
-		std::filesystem::create_directories(s_ActiveProject->m_Config.ScriptPath);
+		if (!std::filesystem::exists(s_ActiveProject->m_Config.AssetDirectory))
+		{
+			std::filesystem::create_directories(s_ActiveProject->m_Config.AssetDirectory);
+			GX_CORE_INFO("Created Assets directory: {}", s_ActiveProject->m_Config.AssetDirectory.string());
+		}
+		else
+		{
+			GX_CORE_INFO("Assets directory already exists: {}", s_ActiveProject->m_Config.AssetDirectory.string());
+		}
 
-		GX_CORE_INFO("Created project directories:");
-		GX_CORE_INFO("  Assets:  {}", s_ActiveProject->m_Config.AssetDirectory.string());
-		GX_CORE_INFO("  Library: {}", s_ActiveProject->m_Config.LibraryDirectory.string());
-		GX_CORE_INFO("  Scripts: {}", s_ActiveProject->m_Config.ScriptPath.string());
+		if (!std::filesystem::exists(s_ActiveProject->m_Config.LibraryDirectory))
+		{
+			std::filesystem::create_directories(s_ActiveProject->m_Config.LibraryDirectory);
+			GX_CORE_INFO("Created Library directory: {}", s_ActiveProject->m_Config.LibraryDirectory.string());
+		}
+		else
+		{
+			GX_CORE_INFO("Library directory already exists: {}", s_ActiveProject->m_Config.LibraryDirectory.string());
+		}
+
+		if (!std::filesystem::exists(s_ActiveProject->m_Config.ScriptPath))
+		{
+			std::filesystem::create_directories(s_ActiveProject->m_Config.ScriptPath);
+			GX_CORE_INFO("Created Scripts directory: {}", s_ActiveProject->m_Config.ScriptPath.string());
+		}
+		else
+		{
+			GX_CORE_INFO("Scripts directory already exists: {}", s_ActiveProject->m_Config.ScriptPath.string());
+		}
 
 		// Initialize asset manager
 		Ref<EditorAssetManager> editorAssetManager = CreateRef<EditorAssetManager>();
@@ -64,9 +85,12 @@ namespace Gravix
 			project->GetConfig().ScriptPath = path.parent_path() / project->GetConfig().ScriptPath;
 
 			// Create directories if they don't exist
-			std::filesystem::create_directories(project->GetConfig().AssetDirectory);
-			std::filesystem::create_directories(project->GetConfig().LibraryDirectory);
-			std::filesystem::create_directories(project->GetConfig().ScriptPath);
+			if (!std::filesystem::exists(project->GetConfig().AssetDirectory))
+				std::filesystem::create_directories(project->GetConfig().AssetDirectory);
+			if (!std::filesystem::exists(project->GetConfig().LibraryDirectory))
+				std::filesystem::create_directories(project->GetConfig().LibraryDirectory);
+			if (!std::filesystem::exists(project->GetConfig().ScriptPath))
+				std::filesystem::create_directories(project->GetConfig().ScriptPath);
 
 			s_ActiveProject = project;
 			Ref<EditorAssetManager> editorAssetManager = CreateRef<EditorAssetManager>();
