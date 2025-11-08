@@ -515,13 +515,6 @@ namespace Gravix
 		serializer.Serialize(filePath);
 		GX_CORE_INFO("Saved scene to: {0}", filePath.string());
 
-		// Also save the project settings
-		if (!m_ActiveProjectPath.empty())
-		{
-			Project::SaveActive(m_ActiveProjectPath);
-			GX_CORE_INFO("Saved project to: {0}", m_ActiveProjectPath.string());
-		}
-
 		m_SceneDirty = false;
 		UpdateWindowTitle();
 	}
