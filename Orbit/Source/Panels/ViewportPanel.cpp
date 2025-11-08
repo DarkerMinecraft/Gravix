@@ -5,6 +5,7 @@
 #include "AppLayer.h"
 
 #include "Input.h"
+#include "Events/KeyEvents.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -17,6 +18,46 @@ namespace Gravix
 	ViewportPanel::ViewportPanel(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex)
 	{
 		SetFramebuffer(framebuffer, renderIndex);
+	}
+
+	void ViewportPanel::OnEvent(Event& e)
+	{
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(ViewportPanel::OnKeyPressed));
+	}
+
+	bool ViewportPanel::OnKeyPressed(KeyPressedEvent& e)
+	{
+		// Only process shortcuts if viewport is hovered
+		if (!m_ViewportHovered)
+			return false;
+
+		// Don't process shortcuts if ImGui wants keyboard input
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.WantCaptureKeyboard && (io.WantTextInput || ImGui::IsAnyItemActive()))
+			return false;
+
+		// Guizmo shortcuts
+		switch (e.GetKeyCode())
+		{
+		case Key::Q:
+			m_GuizmoType = -1;
+			return true;
+
+		case Key::W:
+			m_GuizmoType = ImGuizmo::OPERATION::TRANSLATE;
+			return true;
+
+		case Key::E:
+			m_GuizmoType = ImGuizmo::OPERATION::ROTATE;
+			return true;
+
+		case Key::R:
+			m_GuizmoType = ImGuizmo::OPERATION::SCALE;
+			return true;
+		}
+
+		return false;
 	}
 
 	void ViewportPanel::OnImGuiRender()
@@ -104,32 +145,19 @@ namespace Gravix
 		int mouseX = (int)mx;
 		int mouseY = (int)my;
 
-		if (mouseX >= 0 && mouseY >= 0 && mouseX < (int)viewportSize.x && mouseY < (int)viewportSize.y) 
+		if (mouseX >= 0 && mouseY >= 0 && mouseX < (int)viewportSize.x && mouseY < (int)viewportSize.y)
 		{
 			int pixel = m_Framebuffer->ReadPixel(1, mouseX, mouseY);
 			m_HoveredEntity = pixel == -1 ? Entity{ entt::null, m_SceneHierarchyPanel->GetContext().get() } : Entity((entt::entity)(uint64_t)(uint32_t)pixel, m_SceneHierarchyPanel->GetContext().get());
-			if (pixel != -1) 
+
+			// Only change cursor mode if it actually needs to change (prevents glitching)
+			CursorMode desiredMode = (pixel != -1) ? CursorMode::Pointer : CursorMode::Normal;
+			if (m_CurrentCursorMode != desiredMode)
 			{
-				Application::Get().GetWindow().SetCursorMode(CursorMode::Pointer);
-			}
-			else
-			{
-				Application::Get().GetWindow().SetCursorMode(CursorMode::Normal);
+				m_CurrentCursorMode = desiredMode;
+				Application::Get().GetWindow().SetCursorMode(desiredMode);
 			}
 		}
-	}
-
-	void ViewportPanel::GuizmoShortcuts()
-	{
-		if(Input::IsKeyPressed(Key::Q))
-			m_GuizmoType = -1;
-
-		if(Input::IsKeyPressed(Key::W))
-			m_GuizmoType = ImGuizmo::OPERATION::TRANSLATE;
-		if (Input::IsKeyPressed(Key::E))
-			m_GuizmoType = ImGuizmo::OPERATION::ROTATE;
-		if (Input::IsKeyPressed(Key::R))
-			m_GuizmoType = ImGuizmo::OPERATION::SCALE;
 	}
 
 }

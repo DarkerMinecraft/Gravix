@@ -24,9 +24,19 @@ namespace Gravix
 	{
 		Entity entity = { m_Registry.create(), this };
 
-		entity.AddComponent<ComponentOrderComponent>();
+		// Add ComponentOrderComponent first
+		auto& orderComponent = m_Registry.emplace<ComponentOrderComponent>(entity);
+
+		// Add default components
 		entity.AddComponent<TagComponent>(name, uuid, creationIndex == (uint32_t)-1 ? m_NextCreationIndex++ : creationIndex);
 		entity.AddComponent<TransformComponent>();
+
+		// Manually initialize the component order with the default components
+		// (AddComponent tracking happens automatically for these, but we need them in the right order)
+		orderComponent.ComponentOrder = {
+			typeid(TagComponent),
+			typeid(TransformComponent)
+		};
 
 		return entity;
 	}
