@@ -5,6 +5,8 @@
 
 #include "Scene/ComponentRegistry.h"
 
+#include "Scripting/ScriptEngine.h"
+
 namespace Gravix
 {
 	Application* Application::s_Instance = nullptr;
@@ -29,11 +31,13 @@ namespace Gravix
 
 		m_ImGuiRender = new ImGuiRender();
 		ComponentRegistry::Get().RegisterAllComponents();
+
+		ScriptEngine::Init("GravixScripting.dll");
 	}
 
 	Application::~Application()
 	{
-		
+		ScriptEngine::Shutdown();
 	}
 
 	void Application::Run()

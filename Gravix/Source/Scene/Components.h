@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
 namespace Gravix
 {
 
@@ -17,11 +20,11 @@ namespace Gravix
 
 		TagComponent() = default;
 		TagComponent(const TagComponent&) = default;
-		TagComponent(const std::string& name)
-			: Name(name), ID() {}
+		TagComponent(const std::string& name, UUID uuid)
+			: Name(name), ID(uuid) {}
 
-		operator std::string& () { return Name; }
-		operator const std::string& () { return Name; }
+		operator std::string&() { return Name; }
+		operator const std::string&() const { return Name; }
 
 		operator UUID&() { return ID; }
 		operator const UUID&() const { return ID; }
@@ -35,16 +38,19 @@ namespace Gravix
 
 		glm::mat4 Transform;
 
-		TransformComponent() = default;
+		TransformComponent()  { CalculateTransform(); }
 		TransformComponent(const TransformComponent&) = default;
 		TransformComponent(const glm::vec3& position, const glm::vec3 rotation, const glm::vec3 scale)
-			: Position(position), Rotation(rotation), Scale(scale)
+			: Position(position), Rotation(rotation), Scale(scale) { CalculateTransform(); }
+
+		void CalculateTransform() 
 		{
-			Transform = glm::translate(glm::mat4(1.0f), position)
-				* glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), { 1.0f, 0.0f, 0.0f })
-				* glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), { 0.0f, 1.0f, 0.0f })
-				* glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), { 0.0f, 0.0f, 1.0f })
-				* glm::scale(glm::mat4(1.0f), scale);
+			glm::vec3 radianRotation = {glm::radians(Rotation.x), glm::radians(Rotation.y), glm::radians(Rotation.z)};
+			glm::mat4 rotation = glm::toMat4(glm::quat(radianRotation));
+
+			Transform = glm::translate(glm::mat4(1.0f), Position)
+				* rotation
+				* glm::scale(glm::mat4(1.0f), Scale);
 		}
 
 		operator glm::mat4&() { return Transform; }

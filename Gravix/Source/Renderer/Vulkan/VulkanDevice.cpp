@@ -254,14 +254,15 @@ namespace Gravix
 
 		// if the format is a depth format, we will need to have it use the correct
 		// aspect flag
-		VkImageAspectFlags aspectFlag;
-		if (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D24_UNORM_S8_UINT)
-		{
-			aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		} else 
-		{
+		VkImageAspectFlags aspectFlag = 0;
+		bool isDepth = VulkanUtils::IsDepthFormat(format);
+		bool isStencil = VulkanUtils::IsStencilFormat(format);
+		if(isDepth)
+			aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+		if (isStencil)
+			aspectFlag |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		if (!isDepth && !isStencil)
 			aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
-		}
 
 		// build a image-view for the image
 		VkImageViewCreateInfo viewInfo = VulkanInitializers::ImageViewCreateInfo(format, newImage.Image, aspectFlag);
@@ -434,7 +435,10 @@ namespace Gravix
 		features11.shaderDrawParameters = true;  // Fixes the DrawParameters capability error
 
 		VkPhysicalDeviceFeatures features{};
-		features.samplerAnisotropy = VK_TRUE;  // Fix the sampler warning too
+		features.samplerAnisotropy = true;  // Fix the sampler warning too
+		features.shaderStorageImageMultisample = true;
+		features.sampleRateShading = true;
+		features.independentBlend = true;
 
 		//We want a gpu that can write to the win32 surface and supports vulkan 1.4 with the correct features
 		vkb::PhysicalDeviceSelector selector{ instRet.value() };

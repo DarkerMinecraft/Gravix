@@ -28,14 +28,16 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui
+        ${CMAKE_SOURCE_DIR}/ThirdParties/ImGuizmo
         ${CMAKE_SOURCE_DIR}/ThirdParties/entt/single_include
     PRIVATE
         ${Vulkan_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src
         ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/enkiTS/src
-        ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include
+        ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include            
         ${CMAKE_SOURCE_DIR}/ThirdParties/stb/
+        ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
 )
 
 target_link_libraries(Gravix
@@ -44,5 +46,9 @@ target_link_libraries(Gravix
         vk-bootstrap
         enkiTS
         ImGui
+        ImGuizmo
         slang
+        yaml-cpp
+    PUBLIC
+        GravixScripting
 )

@@ -144,6 +144,32 @@ namespace Gravix
 		vkCmdEndRendering(m_CommandBuffer);
 	}
 
+	void VulkanCommandImpl::ResolveFramebuffer(Framebuffer* dst, bool shaderUse)
+	{
+		if(m_TargetFramebuffer == nullptr || dst == nullptr)
+			return;
+
+		VulkanFramebuffer* vulkanDst = static_cast<VulkanFramebuffer*>(dst);
+
+		m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vulkanDst->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		for(uint32_t i = 0; i < m_TargetFramebuffer->GetAttachments().size(); i++)
+		{
+			if(i == m_TargetFramebuffer->GetDepthAttachmentIndex())
+				continue;
+
+			VulkanUtils::ResolveImage(m_CommandBuffer, m_TargetFramebuffer->GetImage(i).Image, vulkanDst->GetImage(i).Image, { m_TargetFramebuffer->GetWidth(), m_TargetFramebuffer->GetHeight() });
+		}
+
+		if (shaderUse)
+			vulkanDst->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		else 
+			vulkanDst->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
+
+		m_TargetFramebuffer->TransitionToLayout(m_CommandBuffer, VK_IMAGE_LAYOUT_GENERAL);
+	}
+
 	void VulkanCommandImpl::CopyToSwapchain()
 	{
 		if (m_TargetFramebuffer == nullptr)

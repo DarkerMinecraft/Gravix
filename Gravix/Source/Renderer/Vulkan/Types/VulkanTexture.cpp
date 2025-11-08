@@ -3,6 +3,8 @@
 
 #include "Renderer/Vulkan/Utils/VulkanUtils.h"
 
+#include <backends/imgui_impl_vulkan.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -15,7 +17,7 @@ namespace Gravix
 		LoadFromFile(path);
 	}
 
-	VulkanTexture2D::VulkanTexture2D(Device* device, void* data, uint32_t width, uint32_t height, const TextureSpecification& specification)
+	VulkanTexture2D::VulkanTexture2D(Device* device, Buffer data, uint32_t width, uint32_t height, const TextureSpecification& specification)
 		: m_Device(static_cast<VulkanDevice*>(device))
 		, m_Specification(specification)
 		, m_Width(width)
@@ -28,6 +30,22 @@ namespace Gravix
 	VulkanTexture2D::~VulkanTexture2D()
 	{
 		Cleanup();
+	}
+
+	void* VulkanTexture2D::GetImGuiAttachment()
+	{
+		if (m_DescriptorSet == VK_NULL_HANDLE) 
+			m_DescriptorSet = ImGui_ImplVulkan_AddTexture(m_Sampler, m_Image.ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		return (void*)m_DescriptorSet;
+	}
+
+	void VulkanTexture2D::DestroyImGuiDescriptor()
+	{
+		if(m_DescriptorSet != VK_NULL_HANDLE)
+		{
+			ImGui_ImplVulkan_RemoveTexture(m_DescriptorSet);
+			m_DescriptorSet = VK_NULL_HANDLE;
+		}
 	}
 
 	void VulkanTexture2D::LoadFromFile(const std::filesystem::path& path)
@@ -58,13 +76,17 @@ namespace Gravix
 		m_Height = static_cast<uint32_t>(height);
 		m_Channels = 4; // We forced RGBA above
 
-		CreateFromData(data, m_Width, m_Height, m_Channels);
+		Buffer buf; 
+		buf.Data = data;
+		buf.Size = m_Width * m_Height * m_Channels;
+
+		CreateFromData(buf, m_Width, m_Height, m_Channels);
 
 		// Free stbi memory
 		stbi_image_free(data);
 	}
 
-	void VulkanTexture2D::CreateFromData(const void* data, uint32_t width, uint32_t height, uint32_t channels)
+	void VulkanTexture2D::CreateFromData(Buffer data, uint32_t width, uint32_t height, uint32_t channels)
 	{
 		if (!data)
 		{
@@ -89,7 +111,7 @@ namespace Gravix
 		CreateSampler();
 	}
 
-	void VulkanTexture2D::CreateVulkanResources(const void* data, uint32_t dataSize)
+	void VulkanTexture2D::CreateVulkanResources(Buffer data, uint32_t dataSize)
 	{
 		VkExtent3D imageExtent = { m_Width, m_Height, 1 };
 		VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM; // Standard RGBA format
@@ -102,7 +124,7 @@ namespace Gravix
 		}
 
 		// Use the device's CreateImage method with data - this handles mipmap generation internally
-		m_Image = m_Device->CreateImage(const_cast<void*>(data), imageExtent, imageFormat, usage, m_Specification.GenerateMipmaps);
+		m_Image = m_Device->CreateImage(static_cast<void*>(data.Data), imageExtent, imageFormat, usage, m_Specification.GenerateMipmaps);
 
 		if (m_Image.Image == VK_NULL_HANDLE)
 		{
@@ -191,7 +213,11 @@ namespace Gravix
 			}
 		}
 
-		CreateFromData(pixels.data(), 16, 16, 4);
+		Buffer buf;
+		buf.Data = reinterpret_cast<uint8_t*>(pixels.data());
+		buf.Size = sizeof(uint32_t) * pixels.size();
+
+		CreateFromData(buf, 16, 16, 4);
 	}
 
 	VkFilter VulkanTexture2D::ConvertFilter(TextureFilter filter) const

@@ -14,13 +14,16 @@ namespace Gravix
 	{
 	public:
 		VulkanTexture2D(Device* device, const std::filesystem::path& path, const TextureSpecification& specification);
-		VulkanTexture2D(Device* device, void* data, uint32_t width, uint32_t height, const TextureSpecification& specification);
+		VulkanTexture2D(Device* device, Buffer data, uint32_t width, uint32_t height, const TextureSpecification& specification);
 		virtual ~VulkanTexture2D();
 
 		// Inherited from Texture
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
 		virtual uint32_t GetMipLevels() const override { return m_MipLevels; }
+
+		virtual void* GetImGuiAttachment() override;
+		virtual void DestroyImGuiDescriptor() override;
 
 		virtual UUID GetUUID() override { return m_UUID; }
 
@@ -45,8 +48,8 @@ namespace Gravix
 		VkDescriptorImageInfo GetDescriptorInfo() const;
 	private:
 		void LoadFromFile(const std::filesystem::path& path);
-		void CreateFromData(const void* data, uint32_t width, uint32_t height, uint32_t channels);
-		void CreateVulkanResources(const void* data, uint32_t dataSize);
+		void CreateFromData(Buffer data, uint32_t width, uint32_t height, uint32_t channels);
+		void CreateVulkanResources(Buffer data, uint32_t dataSize);
 		void CreateSampler();
 		void Cleanup();
 
@@ -62,6 +65,8 @@ namespace Gravix
 		uint32_t m_Height = 0;
 		uint32_t m_Channels = 0;
 		uint32_t m_MipLevels = 1;
+
+		VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
 
 		UUID m_UUID;
 

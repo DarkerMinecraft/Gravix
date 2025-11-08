@@ -15,12 +15,15 @@ namespace Gravix
 		RGBA16F = 2,
 		RGBA32F = 3 ,
 		RGBA32UI = 4,
+		RedInt = 5,
+		RedFloat = 6,
 		// Depth/stencil
-		DEPTH24STENCIL8 = 10,
-		DEPTH32FSTENCIL8 = 11,
+		Depth32 = 10,
+		Depth24SStencil8 = 11,
+		Depth32FStencil8 = 12,
 		// Defaults
 		Default = RGBA8,
-		Depth = DEPTH24STENCIL8
+		Depth = Depth32
 	};
 
 	struct FramebufferSpecification
@@ -42,6 +45,8 @@ namespace Gravix
 		virtual void SetClearColor(uint32_t index, const glm::vec4 clearColor) = 0;
 
 		virtual void* GetColorAttachmentID(uint32_t index) = 0;
+
+		virtual int ReadPixel(uint32_t attachmentIndex, int mouseX, int mouseY) = 0;
 
 		virtual void Resize(uint32_t width, uint32_t height) = 0;
 		virtual void DestroyImGuiDescriptors() = 0;

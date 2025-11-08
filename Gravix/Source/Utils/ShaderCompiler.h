@@ -25,6 +25,11 @@ namespace Gravix
 		void ExtractComputeDispatchInfo(slang::EntryPointReflection* entryPoint, ShaderReflection* reflection);
 
 		void ExtractStructs(slang::ProgramLayout* layout, ShaderReflection* reflection);
+		void ExtractStructsFromPointers(slang::ProgramLayout* layout, ShaderReflection* reflection);
+		void ProcessPointerType(slang::TypeLayoutReflection* typeLayout,
+			slang::TypeReflection* type,
+			std::set<std::string>& processedStructs,
+			ShaderReflection* reflection);
 		void ProcessStructType(slang::TypeLayoutReflection* typeLayout,
 			slang::TypeReflection* type,
 			std::set<std::string>& processedStructs,
