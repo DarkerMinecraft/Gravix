@@ -82,18 +82,53 @@ namespace Gravix
 					}
 					else
 					{
-						bool open = ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap, name.c_str());
-						ImGui::SameLine();
-						if (ImGui::Button("+"))
+						// Unity-style component header
+						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
+						ImGui::Separator();
+
+						// Component header with Unity-style colors
+						ImVec4 headerColor = ImVec4(0.196f, 0.196f, 0.196f, 1.0f);
+						ImGui::PushStyleColor(ImGuiCol_Header, headerColor);
+						ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
+						ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.294f, 0.294f, 0.294f, 1.0f));
+
+						bool open = ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(),
+							ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Framed,
+							name.c_str());
+
+						ImGui::PopStyleColor(3);
+
+						// Unity-style settings button (three dots)
+						ImGui::SameLine(ImGui::GetContentRegionAvail().x - 10.0f);
+						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.443f, 0.443f, 0.443f, 1.0f));
+
+						if (ImGui::SmallButton("..."))
 						{
 							ImGui::OpenPopup("ComponentSettings");
 						}
 
+						ImGui::PopStyleColor(3);
+						ImGui::PopStyleVar();
+
+						// Component settings popup
 						if (ImGui::BeginPopup("ComponentSettings"))
 						{
+							if (ImGui::MenuItem("Reset"))
+							{
+								// TODO: Implement component reset
+							}
+
+							if (ImGui::MenuItem("Copy Component"))
+							{
+								// TODO: Implement component copy
+							}
+
 							if (specification.CanRemoveComponent)
 							{
-								if (ImGui::Button("Remove Component"))
+								ImGui::Separator();
+								if (ImGui::MenuItem("Remove Component"))
 								{
 									userSettings->RemoveComponent = true;
 								}
@@ -102,9 +137,12 @@ namespace Gravix
 							ImGui::EndPopup();
 						}
 
+						// Component content
 						if (open)
 						{
+							ImGui::Spacing();
 							imguiRender(*reinterpret_cast<T*>(instance));
+							ImGui::Spacing();
 							ImGui::TreePop();
 						}
 					}

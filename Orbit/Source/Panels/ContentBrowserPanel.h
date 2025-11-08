@@ -7,11 +7,11 @@
 namespace Gravix 
 {
 
-	class ContentBroswerPanel 
+	class ContentBrowserPanel
 	{
 	public:
-		ContentBroswerPanel();
-		~ContentBroswerPanel() = default;
+		ContentBrowserPanel();
+		~ContentBrowserPanel() = default;
 
 		void OnImGuiRender();
 	private:

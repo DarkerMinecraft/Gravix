@@ -97,12 +97,17 @@ namespace Gravix
 
 		// Load fonts for a professional Unity-like appearance
 		// Main UI font - slightly larger for better readability
-		ImFont* font = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 15.0f);
-		io.FontDefault = font;
+		ImFont* fontRegular = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 15.0f);
+		io.FontDefault = fontRegular;
 
-		// Add additional font sizes for headers and emphasis (optional, can be used in code)
+		// Bold font for headers and emphasis
+		ImFont* fontBold = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 15.0f);
+
+		// Additional font sizes for various UI elements
 		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 18.0f);  // For headers
+		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 18.0f);     // For bold headers
 		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 20.0f);  // For large headers
+		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 20.0f);     // For large bold headers
 
 		// Configure font rendering for crisp text
 		io.Fonts->Build();
