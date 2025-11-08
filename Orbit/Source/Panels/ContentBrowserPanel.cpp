@@ -183,51 +183,37 @@ namespace Gravix
 
 		ImGui::Columns(1);
 
-		// Create an invisible button that covers the remaining space for drag and drop
-		ImVec2 contentRegionAvail = ImGui::GetContentRegionAvail();
-		ImGui::InvisibleButton("##ContentBrowserDropZone", contentRegionAvail);
+		ImGui::End();
+	}
 
-		// Handle external file drag and drop (from desktop/file explorer)
-		if (ImGui::BeginDragDropTarget())
+	void ContentBrowserPanel::OnFileDrop(const std::vector<std::string>& paths)
+	{
+		for (const auto& sourcePath : paths)
 		{
-			// Try to accept external files - the payload type may vary by backend
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("EXTERNAL_FILE");
-			if (!payload)
-				payload = ImGui::AcceptDragDropPayload("__IMGUI_PAYLOAD_TYPE_FILE__");
-			if (!payload)
-				payload = ImGui::AcceptDragDropPayload("FILES");
+			std::filesystem::path fsPath(sourcePath);
 
-			if (payload && payload->DataSize > 0)
+			if (std::filesystem::exists(fsPath) && std::filesystem::is_regular_file(fsPath))
 			{
-				const char* droppedFilePath = (const char*)payload->Data;
-				std::filesystem::path sourcePath(droppedFilePath);
+				// Copy file to current directory in Content Browser
+				std::filesystem::path destinationPath = m_CurrentDirectory / fsPath.filename();
 
-				if (std::filesystem::exists(sourcePath) && std::filesystem::is_regular_file(sourcePath))
+				try
 				{
-					// Copy file to current directory in Content Browser
-					std::filesystem::path destinationPath = m_CurrentDirectory / sourcePath.filename();
+					std::filesystem::copy_file(fsPath, destinationPath, std::filesystem::copy_options::overwrite_existing);
 
-					try
-					{
-						std::filesystem::copy_file(sourcePath, destinationPath, std::filesystem::copy_options::overwrite_existing);
+					// Import the newly copied asset
+					auto relativePath = std::filesystem::relative(destinationPath, m_AssetDirectory);
+					Project::GetActive()->GetEditorAssetManager()->ImportAsset(relativePath);
+					RefreshAssetTree();
 
-						// Import the newly copied asset
-						auto relativePath = std::filesystem::relative(destinationPath, m_AssetDirectory);
-						Project::GetActive()->GetEditorAssetManager()->ImportAsset(relativePath);
-						RefreshAssetTree();
-
-						GX_CORE_INFO("Imported external file: {0}", sourcePath.filename().string());
-					}
-					catch (const std::exception& e)
-					{
-						GX_CORE_ERROR("Failed to copy file: {0}", e.what());
-					}
+					GX_CORE_INFO("Imported external file: {0}", fsPath.filename().string());
+				}
+				catch (const std::exception& e)
+				{
+					GX_CORE_ERROR("Failed to copy file: {0}", e.what());
 				}
 			}
-			ImGui::EndDragDropTarget();
 		}
-
-		ImGui::End();
 	}
 
 	void ContentBrowserPanel::RefreshAssetTree()

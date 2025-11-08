@@ -2,6 +2,7 @@
 #include "EditorAssetManager.h"
 
 #include "AssetImporter.h"
+#include "Importers/SceneImporter.h"
 #include "Project/Project.h"
 
 #include <yaml-cpp/yaml.h>
@@ -75,6 +76,25 @@ namespace Gravix
 	{
 		AssetMetadata metadata;
 		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
+
+		// If it's a scene, extract and register dependencies
+		if (metadata.Type == AssetType::Scene)
+		{
+			std::vector<AssetHandle> dependencies;
+			std::filesystem::path fullPath = Project::GetAssetDirectory() / filePath;
+			SceneImporter::LoadSceneToYAML(fullPath, &dependencies);
+
+			// Auto-register dependencies if they aren't already in the registry
+			for (AssetHandle depHandle : dependencies)
+			{
+				if (!m_AssetRegistry.contains(depHandle))
+				{
+					// Find the asset metadata for this dependency
+					// Dependencies should already have metadata generated, but if not, skip
+					GX_CORE_WARN("Scene dependency {0} not found in registry", static_cast<uint64_t>(depHandle));
+				}
+			}
+		}
 
 		AsyncLoadRequest* request = new AsyncLoadRequest();
 		request->Handle = handle;

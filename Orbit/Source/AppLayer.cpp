@@ -3,6 +3,7 @@
 #include "Utils/PlatformUtils.h"
 #include "Serialization/Scene/SceneSerializer.h"
 #include "Events/KeyEvents.h"
+#include "Events/WindowEvents.h"
 
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -49,6 +50,7 @@ namespace Gravix
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(AppLayer::OnKeyPressed));
+		dispatcher.Dispatch<WindowFileDropEvent>(BIND_EVENT_FN(AppLayer::OnFileDrop));
 
 		m_EditorCamera.OnEvent(e);
 		m_ViewportPanel.OnEvent(e);
@@ -225,6 +227,12 @@ namespace Gravix
 		}
 
 		return false;
+	}
+
+	bool AppLayer::OnFileDrop(WindowFileDropEvent& e)
+	{
+		m_ContentBrowserPanel.OnFileDrop(e.GetPaths());
+		return true;
 	}
 
 	void AppLayer::SaveProject()

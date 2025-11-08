@@ -19,6 +19,7 @@ namespace Gravix
 		~ContentBrowserPanel() = default;
 
 		void OnImGuiRender();
+		void OnFileDrop(const std::vector<std::string>& paths);
 	private:
 		void RefreshAssetTree();
 		void ScanAndImportAssets();
