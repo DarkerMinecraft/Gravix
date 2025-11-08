@@ -19,11 +19,12 @@ namespace Gravix
 	{
 		std::string Name;
 		UUID ID;
+		uint32_t CreationIndex = 0;
 
 		TagComponent() = default;
 		TagComponent(const TagComponent&) = default;
-		TagComponent(const std::string& name, UUID uuid)
-			: Name(name), ID(uuid) {}
+		TagComponent(const std::string& name, UUID uuid, uint32_t creationIndex = 0)
+			: Name(name), ID(uuid), CreationIndex(creationIndex) {}
 
 		operator std::string&() { return Name; }
 		operator const std::string&() const { return Name; }

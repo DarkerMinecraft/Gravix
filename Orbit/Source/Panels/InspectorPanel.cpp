@@ -81,7 +81,14 @@ namespace Gravix
 		ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
 
 		if (ImGui::Button("Add Component", buttonSize))
+		{
+			// Position popup at the bottom of the inspector window
+			ImVec2 windowPos = ImGui::GetWindowPos();
+			ImVec2 windowSize = ImGui::GetWindowSize();
+			ImVec2 popupPos = ImVec2(windowPos.x + 10.0f, windowPos.y + windowSize.y - 300.0f);
+			ImGui::SetNextWindowPos(popupPos, ImGuiCond_Appearing);
 			ImGui::OpenPopup("AddComponent");
+		}
 
 		ImGui::PopFont();
 		ImGui::PopStyleColor(3);

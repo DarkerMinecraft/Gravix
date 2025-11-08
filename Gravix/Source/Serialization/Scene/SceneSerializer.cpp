@@ -70,15 +70,16 @@ namespace Gravix
 		std::string sceneName = data["Scene"].as<std::string>();
 		GX_CORE_TRACE("Deserializing scene: {0}", sceneName);
 
+		uint32_t maxCreationIndex = 0;
 		auto entities = data["Entities"];
-		if (entities) 
+		if (entities)
 		{
-			for (auto entity : entities) 
+			for (auto entity : entities)
 			{
 				UUID uuid = (UUID)entity["Entity"].as<uint64_t>();
 				std::string name;
 				auto tagComponent = entity["TagComponent"];
-				if (tagComponent) 
+				if (tagComponent)
 				{
 					name = tagComponent["Name"].as<std::string>();
 				}
@@ -106,8 +107,16 @@ namespace Gravix
 						}
 					}
 				}
+
+				// Track the maximum creation index
+				auto& tag = deserializedEntity.GetComponent<TagComponent>();
+				if (tag.CreationIndex > maxCreationIndex)
+					maxCreationIndex = tag.CreationIndex;
 			}
 		}
+
+		// Set the next creation index to be one more than the maximum
+		m_Scene->m_NextCreationIndex = maxCreationIndex + 1;
 
 		return true;
 	}

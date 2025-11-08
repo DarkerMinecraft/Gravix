@@ -87,11 +87,16 @@ namespace Gravix
 			"Tag",
 			ComponentSpecification{ .HasNodeTree = false, .CanRemoveComponent = false },
 			nullptr,
-			[](YAML::Emitter& out, TagComponent& c) 
+			[](YAML::Emitter& out, TagComponent& c)
 			{
 				out << YAML::Key << "Name" << YAML::Value << c.Name;
+				out << YAML::Key << "CreationIndex" << YAML::Value << c.CreationIndex;
 			},
-			nullptr,
+			[](TagComponent& c, YAML::Node& node)
+			{
+				if (node["CreationIndex"])
+					c.CreationIndex = node["CreationIndex"].as<uint32_t>();
+			},
 			[](TagComponent& c)
 			{
 				ImGuiIO& io = ImGui::GetIO();

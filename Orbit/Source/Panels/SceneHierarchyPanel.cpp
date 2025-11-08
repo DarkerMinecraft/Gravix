@@ -1,5 +1,7 @@
 #include "SceneHierarchyPanel.h"
 #include <imgui.h>
+#include <vector>
+#include <algorithm>
 
 #include "Scene/Components.h"
 
@@ -22,13 +24,26 @@ namespace Gravix
 	{
 		ImGui::Begin("Scene Hierarchy");
 
-		// Unity-style hierarchy rendering
+		// Unity-style hierarchy rendering with entities sorted by creation order
+		std::vector<Entity> sortedEntities;
 		for (auto entityID : m_Context->m_Registry.view<TagComponent>())
 		{
 			Entity entity{ entityID, m_Context.get() };
-
 			if(entity)
-				DrawEntityNode(entity);
+				sortedEntities.push_back(entity);
+		}
+
+		// Sort entities by creation index to maintain insertion order
+		std::sort(sortedEntities.begin(), sortedEntities.end(),
+			[](const Entity& a, const Entity& b)
+			{
+				return a.GetComponent<TagComponent>().CreationIndex < b.GetComponent<TagComponent>().CreationIndex;
+			});
+
+		// Draw entities in sorted order
+		for (auto& entity : sortedEntities)
+		{
+			DrawEntityNode(entity);
 		}
 
 		// Deselect when clicking empty space (using proper enum instead of magic number)
