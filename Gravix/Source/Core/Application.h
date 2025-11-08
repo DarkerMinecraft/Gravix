@@ -22,6 +22,7 @@ namespace Gravix
 		uint32_t Width = 1280;
 		uint32_t Height = 720;
 		const char* Title = "Gravix Engine";
+		bool IsRuntime = false;
 
 		bool VSync = true;
 	};
@@ -44,6 +45,8 @@ namespace Gravix
             m_LayerStack.push_back(std::make_shared<TLayer>());
         }
 
+		bool IsRuntime() { return m_IsRuntime; }
+
 		Window& GetWindow() { return *m_Window; }
 		Scheduler& GetScheduler() { return *m_Scheduler; }
 		ImGuiRender& GetImGui() { return *m_ImGuiRender; }
@@ -60,6 +63,7 @@ namespace Gravix
 
 		bool m_IsRunning = false;
 		bool m_IsMinimize = false;
+		bool m_IsRuntime = false;
 
 		std::vector<Ref<Layer>> m_LayerStack;
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_LastFrameTime;

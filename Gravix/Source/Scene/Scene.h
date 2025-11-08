@@ -27,6 +27,8 @@ namespace Gravix
 		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID(), uint32_t creationIndex = (uint32_t)-1);
 		void DestroyEntity(Entity entity);
 
+		void ExtractSceneDependencies(std::vector<AssetHandle>* outDependencies) const;
+
 		void OnEditorUpdate(float ts);
 		void OnRuntimeUpdate(float ts);
 

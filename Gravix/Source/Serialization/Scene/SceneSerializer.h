@@ -19,6 +19,7 @@ namespace Gravix
 		void SerializeRuntime(const std::filesystem::path& filepath);
 
 		bool Deserialize(const std::filesystem::path& filepath);
+		bool Deserialize(const std::filesystem::path& filepath, YAML::Node* outNode);
 		bool DeserializeRuntime(const std::filesystem::path& filepath);
 	private:
 		Ref<Scene> m_Scene;

@@ -3,6 +3,11 @@
 #include "AssetManagerBase.h"
 #include "AssetMetadata.h"
 
+#include "Core/Scheduler.h"
+
+#include <mutex>
+#include <queue>
+
 namespace Gravix 
 {
 
@@ -16,6 +21,9 @@ namespace Gravix
 		virtual bool IsAssetLoaded(AssetHandle handle) const override;
 		virtual bool IsAssetHandleValid(AssetHandle handle) const override;
 		virtual AssetType GetAssetType(AssetHandle handle) const override;
+
+		virtual void PushToCompletionQueue(AsyncLoadRequest* request) override;
+		virtual void ProcessAsyncLoads() override;
 
 		void ImportAsset(const std::filesystem::path& filePath);
 
@@ -31,5 +39,9 @@ namespace Gravix
 	private:
 		AssetRegistry m_AssetRegistry;
 		AssetMap m_LoadedAssets;
+
+		std::unordered_map<AssetHandle, AsyncLoadRequest*> m_LoadingAssets;
+		std::queue<AsyncLoadRequest*> m_CompletionQueue;
+		std::mutex m_CompletionQueueMutex;
 	};
 }

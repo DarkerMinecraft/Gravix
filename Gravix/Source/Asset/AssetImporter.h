@@ -3,6 +3,8 @@
 #include "Asset.h"
 #include "AssetMetadata.h"
 
+#include "Core/Buffer.h"
+
 namespace Gravix 
 {
 

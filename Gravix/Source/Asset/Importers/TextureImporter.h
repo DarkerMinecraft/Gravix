@@ -16,6 +16,8 @@ namespace Gravix
 
 		// Load texture from file path (i.e. path has to absolute or relative to working directory)
 		static Ref<Texture2D> LoadTexture2D(const std::filesystem::path& path);
+
+		static Buffer LoadTexture2DToBuffer(const std::filesystem::path& metadata, int* width, int* height, int* channels);
 	};
 
 }

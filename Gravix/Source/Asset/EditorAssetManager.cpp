@@ -20,29 +20,53 @@ namespace Gravix
 		return IsAssetHandleValid(handle) ? m_AssetRegistry.at(handle).Type : AssetType::None;
 	}
 
+	void EditorAssetManager::PushToCompletionQueue(AsyncLoadRequest* request)
+	{
+		std::lock_guard<std::mutex> lock(m_CompletionQueueMutex);
+		m_CompletionQueue.push(request);
+	}
+
+	void EditorAssetManager::ProcessAsyncLoads()
+	{
+		std::vector<AsyncLoadRequest*> completedRequests;
+		{
+			std::lock_guard<std::mutex> lock(m_CompletionQueueMutex);
+			while (!m_CompletionQueue.empty())
+			{
+				completedRequests.push_back(m_CompletionQueue.front());
+				m_CompletionQueue.pop();
+			}
+		}
+
+		for(AsyncLoadRequest* request : completedRequests)
+		{
+			if (request->State == AssetState::Failed)
+			{
+				GX_CORE_ERROR("Failed to load asset asynchronously: {0}", request->FilePath.string());
+				continue;
+			}
+			if (request->State == AssetState::ReadyForGPU) 
+			{
+				AssetMetadata metadata = GetAssetMetadata(request->Handle);
+				Ref<Asset> asset = AssetImporter::ImportAsset(request->Handle, metadata);
+				if (!asset)
+				{
+					GX_CORE_ERROR("Failed to import asset after async load: {0}", request->FilePath.string());
+					continue;
+				}
+				request->State = AssetState::Loaded;
+				m_AssetRegistry[request->Handle] = metadata;
+				m_LoadedAssets[request->Handle] = asset;
+				GX_CORE_INFO("Asynchronously loaded asset: {0}", request->FilePath.string());
+			}
+		}
+
+		SerializeAssetRegistry();
+	}
+
 	void EditorAssetManager::ImportAsset(const std::filesystem::path& filePath)
 	{
-		AssetMetadata metadata;
-		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
 		
-		if (metadata.Type == AssetType::None)
-		{
-			GX_CORE_WARN("Failed to import asset: {0}", filePath.string());
-			return;
-		}
-
-		Ref<Asset> asset = AssetImporter::ImportAsset(handle, metadata);
-		if (!asset)
-		{
-			GX_CORE_ERROR("Failed to import asset: {0}", filePath.string());
-			return;
-		}
-
-		m_LoadedAssets[handle] = asset;
-		m_AssetRegistry[handle] = metadata;
-
-		GX_CORE_INFO("Imported asset: {0}", filePath.string());
-		SerializeAssetRegistry();
 	}
 
 	const AssetMetadata& EditorAssetManager::GetAssetMetadata(AssetHandle handle) const

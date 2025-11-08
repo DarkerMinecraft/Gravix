@@ -2,6 +2,8 @@
 
 #include "Asset.h"
 
+#include "Core/Scheduler.h"
+
 #include <unordered_map>
 #include <map>
 
@@ -18,5 +20,8 @@ namespace Gravix
 		virtual bool IsAssetHandleValid(AssetHandle handle) const = 0;
 		virtual bool IsAssetLoaded(AssetHandle handle) const = 0;
 		virtual AssetType GetAssetType(AssetHandle handle) const = 0;
+
+		virtual void PushToCompletionQueue(AsyncLoadRequest* request) = 0;
+		virtual void ProcessAsyncLoads() = 0; 
 	};
 }

@@ -47,6 +47,25 @@ namespace Gravix
 			m_Registry.destroy(entity);
 	}
 
+	void Scene::ExtractSceneDependencies(std::vector<AssetHandle>* outDependencies) const
+	{
+		std::vector<AssetHandle>& outDependenciesRef = outDependencies ? *outDependencies : *(new std::vector<AssetHandle>());
+		auto view = m_Registry.view<SpriteRendererComponent>();
+		for (auto entity : view)
+		{
+			auto& sprite = view.get<SpriteRendererComponent>(entity);
+			if (sprite.Texture != 0)
+			{
+				outDependenciesRef.push_back(sprite.Texture);
+			}
+		}
+
+		std::sort(outDependenciesRef.begin(), outDependenciesRef.end());
+		outDependenciesRef.erase(std::unique(outDependenciesRef.begin(), outDependenciesRef.end()), outDependenciesRef.end());
+
+		outDependencies = &outDependenciesRef;
+	}
+
 	void Scene::OnEditorUpdate(float ts)
 	{
 

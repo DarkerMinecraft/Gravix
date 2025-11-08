@@ -25,6 +25,7 @@ namespace Gravix
 
 		m_IsRunning = true;
 		m_LastFrameTime = std::chrono::high_resolution_clock::now();
+		m_IsRuntime = spec.IsRuntime;
 
 		m_Scheduler = CreateScope<Scheduler>();
 		m_Scheduler->Init(4); // Initialize with 4 threads

@@ -16,6 +16,15 @@ namespace Gravix
 		Script,
 	};
 
+	enum AssetState 
+	{
+		NotLoaded,
+		Loading,
+		ReadyForGPU,
+		Loaded,
+		Failed
+	};
+
 	std::string_view AssetTypeToString(AssetType type);
 	AssetType StringToAssetType(const std::string& typeStr);
 

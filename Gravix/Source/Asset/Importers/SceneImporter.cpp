@@ -17,4 +17,15 @@ namespace Gravix
 		return scene;
 	}
 
+	YAML::Node SceneImporter::LoadSceneToYAML(const std::filesystem::path& path, std::vector<AssetHandle>* outDependencies /*= nullptr*/)
+	{
+		Ref<Scene> scene = CreateRef<Scene>();
+		SceneSerializer serializer(scene);
+		YAML::Node node; 
+		serializer.Deserialize(path, &node);
+
+		scene->ExtractSceneDependencies(outDependencies);
+		return node;
+	}
+
 }
