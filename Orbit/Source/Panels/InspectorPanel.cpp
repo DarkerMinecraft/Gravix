@@ -1,8 +1,11 @@
 #include "InspectorPanel.h"
 #include <imgui.h>
 #include <algorithm>
+#include <vector>
+#include <typeindex>
 
 #include "Scene/Entity.h"
+#include "Scene/Components.h"
 
 namespace Gravix
 {
@@ -43,9 +46,28 @@ namespace Gravix
 
 	void InspectorPanel::DrawComponents(Entity entity)
 	{
-		for (auto typeIndex : ComponentRegistry::Get().GetComponentOrder())
+		// Use ComponentOrderComponent to determine rendering order if it exists
+		std::vector<std::type_index> componentOrder;
+
+		if (entity.HasComponent<ComponentOrderComponent>())
 		{
-			const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
+			const auto& orderComponent = entity.GetComponent<ComponentOrderComponent>();
+			componentOrder = orderComponent.ComponentOrder;
+		}
+		else
+		{
+			// Fallback to registry order if ComponentOrderComponent doesn't exist
+			componentOrder = ComponentRegistry::Get().GetComponentOrder();
+		}
+
+		for (auto typeIndex : componentOrder)
+		{
+			const auto& allComponents = ComponentRegistry::Get().GetAllComponents();
+			auto it = allComponents.find(typeIndex);
+			if (it == allComponents.end())
+				continue;
+
+			const auto& info = it->second;
 			if (info.ImGuiRenderFunc)
 			{
 				if(!entity.HasComponent(typeIndex))

@@ -12,6 +12,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
+#include <vector>
+#include <typeindex>
+
 namespace Gravix
 {
 
@@ -19,11 +22,12 @@ namespace Gravix
 	{
 		std::string Name;
 		UUID ID;
+		uint32_t CreationIndex = 0;
 
 		TagComponent() = default;
 		TagComponent(const TagComponent&) = default;
-		TagComponent(const std::string& name, UUID uuid)
-			: Name(name), ID(uuid) {}
+		TagComponent(const std::string& name, UUID uuid, uint32_t creationIndex = 0)
+			: Name(name), ID(uuid), CreationIndex(creationIndex) {}
 
 		operator std::string&() { return Name; }
 		operator const std::string&() const { return Name; }
@@ -80,7 +84,7 @@ namespace Gravix
 		operator const float& () const { return TilingFactor; }
 	};
 
-	struct CameraComponent 
+	struct CameraComponent
 	{
 		SceneCamera Camera;
 		bool Primary = false;
@@ -88,6 +92,15 @@ namespace Gravix
 
 		CameraComponent() = default;
 		CameraComponent(const CameraComponent&) = default;
+	};
+
+	// Hidden component that tracks the order components were added to an entity
+	struct ComponentOrderComponent
+	{
+		std::vector<std::type_index> ComponentOrder;
+
+		ComponentOrderComponent() = default;
+		ComponentOrderComponent(const ComponentOrderComponent&) = default;
 	};
 
 }

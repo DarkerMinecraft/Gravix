@@ -6,6 +6,7 @@
 #include "ComponentRegistry.h"
 
 #include <typeindex>
+#include <algorithm>
 #include <entt/entt.hpp>
 
 namespace Gravix
@@ -33,6 +34,16 @@ namespace Gravix
 					info->OnCreateFunc(&component, m_Scene);
 			}
 
+			// Track component order (skip for ComponentOrderComponent itself to avoid recursion)
+			if constexpr (!std::is_same_v<T, ComponentOrderComponent>)
+			{
+				if (HasComponent<ComponentOrderComponent>())
+				{
+					auto& order = GetComponent<ComponentOrderComponent>();
+					order.ComponentOrder.push_back(typeid(T));
+				}
+			}
+
 			return component;
 		}
 
@@ -58,6 +69,17 @@ namespace Gravix
 			GX_CORE_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
 
 			m_Scene->m_Registry.remove<T>(m_EntityHandle);
+
+			// Remove from component order tracking
+			if constexpr (!std::is_same_v<T, ComponentOrderComponent>)
+			{
+				if (HasComponent<ComponentOrderComponent>())
+				{
+					auto& order = GetComponent<ComponentOrderComponent>();
+					auto& vec = order.ComponentOrder;
+					vec.erase(std::remove(vec.begin(), vec.end(), typeid(T)), vec.end());
+				}
+			}
 		}
 
 		template<typename T>
@@ -94,10 +116,20 @@ namespace Gravix
 			GX_CORE_ASSERT(!HasComponent(typeIndex), "Entity already has componenet!");
 
 			info->AddComponentFunc(m_Scene->m_Registry, m_EntityHandle);
-			if (info->OnCreateFunc) 
+			if (info->OnCreateFunc)
 			{
 				void* component = info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
 				info->OnCreateFunc(component, m_Scene);
+			}
+
+			// Track component order (skip for ComponentOrderComponent itself)
+			if (typeIndex != typeid(ComponentOrderComponent))
+			{
+				if (HasComponent<ComponentOrderComponent>())
+				{
+					auto& order = GetComponent<ComponentOrderComponent>();
+					order.ComponentOrder.push_back(typeIndex);
+				}
 			}
 		}
 
@@ -109,6 +141,17 @@ namespace Gravix
 			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not have this component!");
 
 			info->RemoveComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+
+			// Remove from component order tracking
+			if (typeIndex != typeid(ComponentOrderComponent))
+			{
+				if (HasComponent<ComponentOrderComponent>())
+				{
+					auto& order = GetComponent<ComponentOrderComponent>();
+					auto& vec = order.ComponentOrder;
+					vec.erase(std::remove(vec.begin(), vec.end(), typeIndex), vec.end());
+				}
+			}
 		}
 
 		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }

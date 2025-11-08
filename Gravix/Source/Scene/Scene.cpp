@@ -24,8 +24,9 @@ namespace Gravix
 	{
 		Entity entity = { m_Registry.create(), this };
 
-		entity.AddComponent<TagComponent>(name, uuid);
+		entity.AddComponent<TagComponent>(name, uuid, m_NextCreationIndex++);
 		entity.AddComponent<TransformComponent>();
+		entity.AddComponent<ComponentOrderComponent>();
 
 		return entity;
 	}
