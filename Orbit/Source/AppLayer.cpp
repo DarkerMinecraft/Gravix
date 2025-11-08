@@ -35,7 +35,7 @@ namespace Gravix
 		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
 		m_ViewportPanel.SetAppLayer(this);
 
-		m_ContentBrowserPanel = ContentBroswerPanel();
+		m_ContentBrowserPanel = ContentBrowserPanel();
 	}
 
 	AppLayer::~AppLayer()
