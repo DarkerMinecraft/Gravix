@@ -7,13 +7,14 @@ namespace Gravix
 {
 
 	ContentBrowserPanel::ContentBrowserPanel()
-		: m_AssetDirectory(Project::GetAssetDirectory())
 	{
 		m_TreeNodes.push_back(TreeNode(".", 0));
-		m_CurrentDirectory = m_AssetDirectory;
 
 		m_DirectoryIcon = Texture2D::Create("EditorAssets/Icons/ContentBrowser/DirectoryIcon.png");
 		m_FileIcon = Texture2D::Create("EditorAssets/Icons/ContentBrowser/FileIcon.png");
+
+		m_AssetDirectory = Project::GetAssetDirectory();
+		m_CurrentDirectory = m_AssetDirectory;
 
 		// Auto-load all assets from filesystem
 		ScanAndImportAssets();
