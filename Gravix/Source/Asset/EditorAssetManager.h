@@ -3,8 +3,6 @@
 #include "AssetManagerBase.h"
 #include "AssetMetadata.h"
 
-#include "Core/Scheduler.h"
-
 #include <mutex>
 #include <queue>
 
@@ -16,7 +14,7 @@ namespace Gravix
 	class EditorAssetManager : public AssetManagerBase
 	{
 	public:
-		virtual Ref<Asset> GetAsset(AssetHandle handle) const override;
+		virtual Ref<Asset> GetAsset(AssetHandle handle) override;
 
 		virtual bool IsAssetLoaded(AssetHandle handle) const override;
 		virtual bool IsAssetHandleValid(AssetHandle handle) const override;

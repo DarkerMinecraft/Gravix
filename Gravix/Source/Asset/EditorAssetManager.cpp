@@ -3,6 +3,8 @@
 
 #include "AssetImporter.h"
 #include "Project/Project.h"
+#include "Core/Scheduler.h"
+#include "Core/Application.h"
 
 #include <yaml-cpp/yaml.h>
 #include <fstream>
@@ -199,7 +201,7 @@ namespace Gravix
 		return m_LoadedAssets.contains(handle);
 	}
 
-	Ref<Asset> EditorAssetManager::GetAsset(AssetHandle handle) const
+	Ref<Asset> EditorAssetManager::GetAsset(AssetHandle handle)
 	{
 		if(!IsAssetHandleValid(handle))
 			return nullptr;
