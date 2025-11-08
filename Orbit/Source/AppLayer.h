@@ -28,6 +28,7 @@ namespace Gravix
 		void OpenScene(AssetHandle handle, bool deserialize = false);
 	private:
 		bool OnKeyPressed(KeyPressedEvent& e);
+		bool OnFileDrop(WindowFileDropEvent& e);
 
 		void SaveProject();
 		void SaveProjectAs();

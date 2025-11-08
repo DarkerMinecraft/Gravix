@@ -48,9 +48,48 @@ namespace Gravix
 				delete request;
 				continue;
 			}
-			if (request->State == AssetState::ReadyForGPU) 
+			if (request->State == AssetState::ReadyForGPU)
 			{
 				AssetMetadata metadata = GetAssetMetadata(request->Handle);
+
+				// If this is a scene, process dependencies first
+				if (metadata.Type == AssetType::Scene)
+				{
+					if (auto* sceneData = std::get_if<AsyncLoadRequest::SceneData>(&request->CPUData))
+					{
+						// Queue dependencies for async loading
+						for (AssetHandle depHandle : sceneData->Dependencies)
+						{
+							// Only load if not already loaded or loading
+							if (!IsAssetLoaded(depHandle) && !m_LoadingAssets.contains(depHandle))
+							{
+								if (IsAssetHandleValid(depHandle))
+								{
+									AssetMetadata depMetadata = GetAssetMetadata(depHandle);
+
+									AsyncLoadRequest* depRequest = new AsyncLoadRequest();
+									depRequest->Handle = depHandle;
+									depRequest->FilePath = depMetadata.FilePath;
+									depRequest->State = AssetState::NotLoaded;
+									depRequest->Priority = LoadPriority::High; // Dependencies get high priority
+
+									m_LoadingAssets[depHandle] = depRequest;
+
+									AsyncLoadTask* depLoadTask = new AsyncLoadTask(1);
+									depLoadTask->LoadRequests.push_back(depRequest);
+									Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(depLoadTask);
+
+									GX_CORE_INFO("Auto-loading scene dependency: {0}", depMetadata.FilePath.string());
+								}
+								else
+								{
+									GX_CORE_WARN("Scene dependency {0} not found in registry", static_cast<uint64_t>(depHandle));
+								}
+							}
+						}
+					}
+				}
+
 				Ref<Asset> asset = AssetImporter::ImportAsset(request->Handle, metadata);
 				if (!asset)
 				{

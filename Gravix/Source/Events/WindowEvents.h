@@ -3,6 +3,7 @@
 #include "Event.h"
 
 #include <sstream>
+#include <vector>
 
 namespace Gravix
 {
@@ -23,7 +24,7 @@ namespace Gravix
 		EVENT_CLASS_CATEGORY(EventCategoryApplication)
 	};
 
-	class WindowResizeEvent : public Event 
+	class WindowResizeEvent : public Event
 	{
 	public:
 		WindowResizeEvent(unsigned int width, unsigned int height)
@@ -32,7 +33,7 @@ namespace Gravix
 		inline unsigned int GetWidth() const { return m_Width; }
 		inline unsigned int GetHeight() const { return m_Height; }
 
-		std::string ToString() const override 
+		std::string ToString() const override
 		{
 			std::stringstream ss;
 			ss << "WindowResizeEvent: " << m_Width << ", " << m_Height;
@@ -43,5 +44,26 @@ namespace Gravix
 		EVENT_CLASS_CATEGORY(EventCategoryApplication)
 	private:
 		unsigned int m_Width, m_Height;
+	};
+
+	class WindowFileDropEvent : public Event
+	{
+	public:
+		WindowFileDropEvent(const std::vector<std::string>& paths)
+			: m_Paths(paths) {}
+
+		const std::vector<std::string>& GetPaths() const { return m_Paths; }
+
+		std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "WindowFileDropEvent: " << m_Paths.size() << " file(s)";
+			return ss.str();
+		}
+
+		EVENT_CLASS_TYPE(WindowFileDrop)
+		EVENT_CLASS_CATEGORY(EventCategoryApplication)
+	private:
+		std::vector<std::string> m_Paths;
 	};
 }

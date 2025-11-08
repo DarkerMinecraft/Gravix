@@ -10,6 +10,7 @@
 #include "Renderer/Vulkan/VulkanDevice.h"
 
 #include <windowsx.h>
+#include <shellapi.h>
 
 #include <imgui.h>
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -223,6 +224,31 @@ namespace Gravix
 
 			MouseMovedEvent e(static_cast<float>(xPos), static_cast<float>(yPos));
 			pData.EventCallback(e);
+			return 0;
+		}
+
+		case WM_DROPFILES:
+		{
+			HDROP hDrop = (HDROP)wParam;
+			UINT fileCount = DragQueryFileA(hDrop, 0xFFFFFFFF, NULL, 0);
+
+			std::vector<std::string> paths;
+			paths.reserve(fileCount);
+
+			for (UINT i = 0; i < fileCount; i++)
+			{
+				UINT pathLength = DragQueryFileA(hDrop, i, NULL, 0);
+				std::string filePath;
+				filePath.resize(pathLength + 1);
+				DragQueryFileA(hDrop, i, &filePath[0], pathLength + 1);
+				filePath.resize(pathLength); // Remove null terminator
+				paths.push_back(filePath);
+			}
+
+			DragFinish(hDrop);
+
+			WindowFileDropEvent event(paths);
+			pData.EventCallback(event);
 			return 0;
 		}
 		}
@@ -450,6 +476,9 @@ namespace Gravix
 		}
 
 		ShowWindow(m_Window, SW_SHOW);
+
+		// Enable drag and drop for files
+		DragAcceptFiles(m_Window, TRUE);
 
 		m_Device = CreateScope<VulkanDevice>(DeviceProperties{ m_Data.Width, m_Data.Height, m_Window, false });
 		UpdateWindow(m_Window);
