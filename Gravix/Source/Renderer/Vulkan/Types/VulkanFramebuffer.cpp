@@ -305,19 +305,15 @@ namespace Gravix
 			if (attachment == FramebufferTextureFormat::None)
 				continue;
 
+			VkFormat format = ConvertTextureFormatToVkFormat(attachment);
 			VkImageUsageFlags attachmentUsage;
-			bool isDepthAttachment = (attachment == FramebufferTextureFormat::Depth24SStencil8 
-				|| attachment == FramebufferTextureFormat::Depth32FStencil8 
-				|| attachment == FramebufferTextureFormat::Depth32);
-			bool isStencilAttachment = (attachment == FramebufferTextureFormat::Depth24SStencil8 
-				|| attachment == FramebufferTextureFormat::Depth32FStencil8);
+			bool isDepthAttachment = VulkanUtils::IsDepthFormat(format);
 
 			if (isDepthAttachment)
 				attachmentUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			else 
 				attachmentUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 			
-			VkFormat format = ConvertTextureFormatToVkFormat(attachment);
 			AllocatedImage image = m_Device->CreateImage(drawImageExtent, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT
 				| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | attachmentUsage, spec.Multisampled);
 
@@ -366,11 +362,11 @@ namespace Gravix
 		AttachmentData oldAttachment = m_Attachments[index];
 
 		VkImageUsageFlags attachmentUsage;
-		bool isDepthAttachment = (oldAttachment.Format == VK_FORMAT_D32_SFLOAT_S8_UINT || oldAttachment.Format == VK_FORMAT_D24_UNORM_S8_UINT);
+		bool isDepthAttachment = VulkanUtils::IsDepthFormat(oldAttachment.Format);
 
-		if (isDepthAttachment) 
+		if (isDepthAttachment)
 			attachmentUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		else 
+		else
 			attachmentUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 			
 
