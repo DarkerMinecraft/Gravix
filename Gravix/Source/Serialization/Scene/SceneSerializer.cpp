@@ -180,6 +180,13 @@ namespace Gravix
 					if (info.DeserializeFunc)
 						info.DeserializeFunc(&tc, transformNode);
 				}
+
+				// Restore the component order to remove any duplicates added during deserialization
+				if (!componentOrder.empty() && deserializedEntity.HasComponent<ComponentOrderComponent>())
+				{
+					auto& orderComponent = deserializedEntity.GetComponent<ComponentOrderComponent>();
+					orderComponent.ComponentOrder = componentOrder;
+				}
 			}
 		}
 

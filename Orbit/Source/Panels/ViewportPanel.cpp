@@ -27,8 +27,8 @@ namespace Gravix
 
 	bool ViewportPanel::OnKeyPressed(KeyPressedEvent& e)
 	{
-		// Only process shortcuts if viewport is hovered
-		if (!m_ViewportHovered)
+		// Only process shortcuts if viewport is focused
+		if (!m_ViewportFocused)
 			return false;
 
 		// Don't process shortcuts if ImGui wants keyboard input
@@ -74,7 +74,7 @@ namespace Gravix
 		// Track if the viewport is hovered and focused
 		m_ViewportHovered = ImGui::IsWindowHovered();
 		m_ViewportFocused = ImGui::IsWindowFocused();
-		Application::Get().GetImGui().BlockEvents(!m_ViewportHovered || m_ViewportFocused);
+		Application::Get().GetImGui().BlockEvents(!m_ViewportFocused);
 
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
