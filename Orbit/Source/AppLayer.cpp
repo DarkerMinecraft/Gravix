@@ -370,17 +370,12 @@ namespace Gravix
 
 		if (Project::Load(m_ActiveProjectPath))
 		{
-			// Initialize project panels if this is the first project loaded
-			if (!m_ProjectInitialized)
-			{
-				InitializeProject();
-			}
-			else
-			{
-				// Refresh panels if project was already initialized
-				m_ContentBrowserPanel.emplace();
-				m_ContentBrowserPanel->SetAppLayer(this);
-			}
+			// Always initialize the project to load StartScene
+			InitializeProject();
+
+			// Refresh content browser panel
+			m_ContentBrowserPanel.emplace();
+			m_ContentBrowserPanel->SetAppLayer(this);
 		}
 	}
 
@@ -391,26 +386,41 @@ namespace Gravix
 		if (projectFolder.empty())
 			return;
 
+		// Check if a project file already exists in this folder
+		std::filesystem::path projectPath = projectFolder / ".orbproj";
+		if (std::filesystem::exists(projectPath))
+		{
+			// Project already exists, open it instead of creating a new one
+			GX_CORE_INFO("Project file already exists at: {0}, opening existing project", projectPath.string());
+			m_ActiveProjectPath = projectPath;
+
+			if (Project::Load(m_ActiveProjectPath))
+			{
+				// Always initialize the project to load StartScene
+				InitializeProject();
+
+				// Refresh content browser panel
+				m_ContentBrowserPanel.emplace();
+				m_ContentBrowserPanel->SetAppLayer(this);
+			}
+			return;
+		}
+
 		// Create the project with default directories
 		Project::New(projectFolder);
 
 		// Set the project path and save it
-		m_ActiveProjectPath = projectFolder / ".orbproj";
+		m_ActiveProjectPath = projectPath;
 		Project::SaveActive(m_ActiveProjectPath);
 
 		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
 
-		// Initialize project panels if this is the first project loaded
-		if (!m_ProjectInitialized)
-		{
-			InitializeProject();
-		}
-		else
-		{
-			// Refresh panels if project was already initialized
-			m_ContentBrowserPanel.emplace();
-			m_ContentBrowserPanel->SetAppLayer(this);
-		}
+		// Always initialize the project to load StartScene
+		InitializeProject();
+
+		// Refresh content browser panel
+		m_ContentBrowserPanel.emplace();
+		m_ContentBrowserPanel->SetAppLayer(this);
 	}
 
 	void AppLayer::ShowStartupDialog()
