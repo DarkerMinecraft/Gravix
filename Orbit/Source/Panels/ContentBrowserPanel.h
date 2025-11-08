@@ -21,6 +21,7 @@ namespace Gravix
 		void OnImGuiRender();
 	private:
 		void RefreshAssetTree();
+		void ScanAndImportAssets();
 	private:
 		std::filesystem::path m_AssetDirectory;
 		std::filesystem::path m_CurrentDirectory;
@@ -28,7 +29,7 @@ namespace Gravix
 		Ref<Texture2D> m_DirectoryIcon;
 		Ref<Texture2D> m_FileIcon;
 
-		struct TreeNode 
+		struct TreeNode
 		{
 			std::filesystem::path Path;
 			AssetHandle Handle = 0;
@@ -41,13 +42,6 @@ namespace Gravix
 		};
 
 		std::vector<TreeNode> m_TreeNodes;
-
-		enum class Mode
-		{
-			Asset = 0, FileSystem = 1
-		};
-
-		Mode m_Mode = Mode::FileSystem;
 	};
 
 }
