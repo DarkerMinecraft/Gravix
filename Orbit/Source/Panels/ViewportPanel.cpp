@@ -61,6 +61,9 @@ namespace Gravix
 
 	void ViewportPanel::OnImGuiRender()
 	{
+		if(m_Framebuffer == nullptr)
+			return;
+
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin("Viewport");
 

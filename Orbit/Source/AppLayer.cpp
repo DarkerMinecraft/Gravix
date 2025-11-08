@@ -39,6 +39,19 @@ namespace Gravix
 		fbSpec.Multisampled = false;
 		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
 
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetAppLayer(this);
+		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_InspectorPanel.SetAppLayer(this);
+		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
+
+		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
+		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
+		m_ViewportPanel.SetAppLayer(this);
+
+		m_ContentBrowserPanel.emplace();
+
 		Renderer2D::Init(m_MSAAFramebuffer);
 	}
 
@@ -56,19 +69,6 @@ namespace Gravix
 		{
 			OpenScene(startScene, false); // AssetManager handles deserialization
 		}
-
-		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-		m_SceneHierarchyPanel.SetAppLayer(this);
-		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
-		m_InspectorPanel.SetAppLayer(this);
-		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
-		m_ViewportPanel.SetFramebuffer(m_FinalFramebuffer, 0);
-
-		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
-		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
-		m_ViewportPanel.SetAppLayer(this);
-
-		m_ContentBrowserPanel.emplace();
 
 		m_ProjectInitialized = true;
 		m_ShowStartupDialog = false;
