@@ -57,6 +57,11 @@ namespace Gravix
 			return s_ActiveProject;
 		}
 
+		static bool HasActiveProject()
+		{
+			return s_ActiveProject != nullptr;
+		}
+
 		Ref<AssetManagerBase> GetAssetManager() { return m_AssetManager; }
 		Ref<EditorAssetManager> GetEditorAssetManager() { return Cast<EditorAssetManager>(m_AssetManager); }
 		Ref<RuntimeAssetManager> GetRuntimeAssetManager() { return Cast<RuntimeAssetManager>(m_AssetManager); }
