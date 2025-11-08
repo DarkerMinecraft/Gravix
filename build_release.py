@@ -65,16 +65,99 @@ class GravixBuilder:
         self.build_type = "Release"
         self.system = platform.system()
 
-        # Determine build directory based on platform
-        if self.system == "Windows":
-            self.build_dir = self.root_dir / "out" / "build" / "x64-Release"
-        else:
-            self.build_dir = self.root_dir / "build" / "Release"
+        # Use consistent build directory across all platforms
+        self.build_dir = self.root_dir / "build" / "Release"
 
         # Distribution output directory
         self.dist_dir = self.root_dir / "dist"
         self.package_name = f"Gravix-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         self.package_dir = self.dist_dir / self.package_name
+
+        # Visual Studio environment variables (set during VS setup)
+        self.vs_env = None
+
+    def setup_visual_studio_env(self):
+        """Set up Visual Studio development environment on Windows"""
+        if self.system != "Windows":
+            return True
+
+        print_step("Setting up Visual Studio development environment...")
+
+        # Common Visual Studio installation paths
+        vs_paths = [
+            r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat",
+            r"C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat",
+            r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat",
+            r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat",
+            r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat",
+            r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat",
+        ]
+
+        vcvarsall_path = None
+        for path in vs_paths:
+            if os.path.exists(path):
+                vcvarsall_path = path
+                break
+
+        if not vcvarsall_path:
+            # Try using vswhere to find Visual Studio
+            try:
+                vswhere_path = r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+                if os.path.exists(vswhere_path):
+                    result = subprocess.run(
+                        [vswhere_path, "-latest", "-property", "installationPath"],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    vs_install_path = result.stdout.strip()
+                    if vs_install_path:
+                        vcvarsall_path = os.path.join(vs_install_path, r"VC\Auxiliary\Build\vcvarsall.bat")
+            except Exception:
+                pass
+
+        if not vcvarsall_path or not os.path.exists(vcvarsall_path):
+            print_error("Visual Studio installation not found!")
+            print_error("Please install Visual Studio 2019 or 2022 with C++ development tools")
+            return False
+
+        print_success(f"Found Visual Studio at: {vcvarsall_path}")
+
+        # Run vcvarsall.bat and capture the environment
+        print_step("Loading Visual Studio environment variables...")
+
+        # Use a batch script to capture environment after running vcvarsall
+        temp_batch = self.root_dir / "temp_env.bat"
+        try:
+            with open(temp_batch, 'w') as f:
+                f.write(f'@echo off\n')
+                f.write(f'call "{vcvarsall_path}" x64\n')
+                f.write(f'set\n')
+
+            result = subprocess.run(
+                [str(temp_batch)],
+                capture_output=True,
+                text=True,
+                shell=True
+            )
+
+            # Parse environment variables from output
+            self.vs_env = os.environ.copy()
+            for line in result.stdout.splitlines():
+                if '=' in line:
+                    key, _, value = line.partition('=')
+                    self.vs_env[key] = value
+
+            print_success("Visual Studio environment loaded successfully")
+            return True
+
+        except Exception as e:
+            print_error(f"Failed to set up Visual Studio environment: {e}")
+            return False
+        finally:
+            # Clean up temp file
+            if temp_batch.exists():
+                temp_batch.unlink()
 
     def clean_build(self):
         """Clean previous build artifacts"""
@@ -113,7 +196,8 @@ class GravixBuilder:
                 cwd=self.root_dir,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                env=self.vs_env if self.vs_env else None
             )
             print_success("CMake configuration completed")
             return True
@@ -139,7 +223,8 @@ class GravixBuilder:
                 cwd=self.root_dir,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                env=self.vs_env if self.vs_env else None
             )
             print_success("Build completed successfully")
             return True
@@ -286,26 +371,31 @@ For issues and support, visit: https://github.com/DarkerMinecraft/Gravix
         print(f"  Output Package: {self.package_name}")
         print()
 
-        # Step 1: Clean (optional)
+        # Step 1: Set up Visual Studio environment (Windows only)
+        if not self.setup_visual_studio_env():
+            print_error("Build process failed at Visual Studio setup")
+            return False
+
+        # Step 2: Clean (optional)
         if clean:
             self.clean_build()
 
-        # Step 2: Configure CMake
+        # Step 3: Configure CMake
         if not self.configure_cmake():
             print_error("Build process failed at CMake configuration")
             return False
 
-        # Step 3: Build project
+        # Step 4: Build project
         if not self.build_project():
             print_error("Build process failed at compilation")
             return False
 
-        # Step 4: Collect files
+        # Step 5: Collect files
         if not self.collect_files():
             print_error("Build process failed at file collection")
             return False
 
-        # Step 5: Create ZIP
+        # Step 6: Create ZIP
         zip_path = self.create_zip()
 
         # Success!
