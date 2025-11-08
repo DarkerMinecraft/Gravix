@@ -155,29 +155,20 @@ namespace Gravix
 		if(!IsAssetHandleValid(handle))
 			return nullptr;
 
-		Ref<Asset> asset;
-		if(m_LoadingAssets.contains(handle)) 
+		if(m_LoadingAssets.contains(handle))
 		{
 			GX_CORE_INFO("Asset is still loading: {0}", GetAssetMetadata(handle).FilePath.string());
 			return nullptr; // Asset is still loading
 		}
+
 		if (IsAssetLoaded(handle))
 		{
-			asset = m_LoadedAssets.at(handle);
-		} 
-		else
-		{
-			const AssetMetadata& metadata = GetAssetMetadata(handle);
-			AsyncLoadRequest* request = new AsyncLoadRequest();
-			request->Handle = handle;
-			request->FilePath = metadata.FilePath;
-			request->State = AssetState::NotLoaded;
-			request->Priority = LoadPriority::Normal;
-
-			m_LoadingAssets[handle] = request;
-			
+			return m_LoadedAssets.at(handle);
 		}
-		return asset;
+
+		// Asset is not loaded and not being loaded - return nullptr
+		// Async loading should be initiated elsewhere
+		return nullptr;
 	}
 
 }

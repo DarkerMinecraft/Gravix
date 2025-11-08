@@ -3,9 +3,13 @@
 #include "Asset/Asset.h"
 #include "Asset/AssetMetadata.h"
 
-namespace Gravix 
+#include <yaml-cpp/yaml.h>
+#include <filesystem>
+#include <vector>
+
+namespace Gravix
 {
-	class SceneImporter 
+	class SceneImporter
 	{
 	public:
 		static Ref<Asset> ImportScene(AssetHandle handle, const AssetMetadata& metadata);
