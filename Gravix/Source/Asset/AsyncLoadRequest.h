@@ -3,7 +3,7 @@
 #include "Asset/Asset.h"
 #include "Core/Buffer.h"
 
-#include <TaskScheduler.h>
+#include "../../../ThirdParties/enkiTS/src/TaskScheduler.h"
 #include <yaml-cpp/yaml.h>
 #include <filesystem>
 #include <vector>

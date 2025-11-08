@@ -244,7 +244,7 @@ namespace Gravix
 
 	void ContentBrowserPanel::ScanAndImportAssets()
 	{
-		auto* assetManager = Project::GetActive()->GetEditorAssetManager();
+		Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
 		const auto& assetRegistry = assetManager->GetAssetRegistry();
 
 		// Build a set of already registered file paths for efficient lookup
