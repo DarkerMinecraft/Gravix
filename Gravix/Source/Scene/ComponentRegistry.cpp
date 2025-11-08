@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ComponentRegistry.h"
+#include "ImGuiHelpers.h"
 
 #include "Components.h"
 
@@ -80,94 +81,6 @@ namespace Gravix
 		return out;
 	}
 
-	// Helper function to draw a property row with label on left and control on right
-	static void BeginPropertyRow(const char* label, float columnWidth = 120.0f)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-
-		ImGui::PushID(label);
-		ImGui::Columns(2);
-		ImGui::SetColumnWidth(0, columnWidth);
-
-		// Bold label on the left
-		ImGui::PushFont(io.Fonts->Fonts[1]);
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s", label);
-		ImGui::PopFont();
-
-		// Draw vertical separator line
-		ImVec2 lineStart = ImGui::GetCursorScreenPos();
-		lineStart.x += columnWidth - 1.0f;
-		lineStart.y -= ImGui::GetTextLineHeightWithSpacing();
-		ImVec2 lineEnd = lineStart;
-		lineEnd.y += ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.0f;
-		ImGui::GetWindowDrawList()->AddLine(lineStart, lineEnd, ImGui::GetColorU32(ImGuiCol_Separator), 1.0f);
-
-		ImGui::NextColumn();
-	}
-
-	static void EndPropertyRow()
-	{
-		ImGui::Columns(1);
-		ImGui::PopID();
-	}
-
-	static void DrawVec3Control(const char* label, glm::vec3& values, float resetValue = 0.0f, float columnWidth = 120.0f)
-	{
-		BeginPropertyRow(label, columnWidth);
-
-		ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 2, 0 });  // Slight spacing between controls
-
-		float lineHeight = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f;
-		ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
-
-		// X Axis (Red) - Unity-style vibrant red
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.7f, 0.1f, 0.1f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.85f, 0.2f, 0.2f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.95f, 0.3f, 0.3f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f });
-		if (ImGui::Button("X", buttonSize))
-			values.x = resetValue;
-		ImGui::PopStyleColor(4);
-
-		ImGui::SameLine();
-		ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
-		ImGui::PopItemWidth();
-		ImGui::SameLine();
-
-		// Y Axis (Green) - Unity-style vibrant green
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.15f, 0.65f, 0.15f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.75f, 0.25f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.35f, 0.85f, 0.35f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f });
-		if (ImGui::Button("Y", buttonSize))
-			values.y = resetValue;
-		ImGui::PopStyleColor(4);
-
-		ImGui::SameLine();
-		ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
-		ImGui::PopItemWidth();
-		ImGui::SameLine();
-
-		// Z Axis (Blue) - Unity-style vibrant blue
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.3f, 0.8f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.4f, 0.9f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.3f, 0.5f, 1.0f, 1.0f });
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f });
-		if (ImGui::Button("Z", buttonSize))
-			values.z = resetValue;
-		ImGui::PopStyleColor(4);
-
-		ImGui::SameLine();
-		ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
-		ImGui::PopItemWidth();
-
-		ImGui::PopStyleVar();
-
-		EndPropertyRow();
-	};
-
 	void ComponentRegistry::RegisterAllComponents()
 	{
 		RegisterComponent<TagComponent>(
@@ -221,9 +134,9 @@ namespace Gravix
 			[](TransformComponent& c)
 			{
 				// Draw the Transform component UI
-				DrawVec3Control("Position", c.Position);
-				DrawVec3Control("Rotation", c.Rotation);
-				DrawVec3Control("Scale", c.Scale, 1.0f);
+				ImGuiHelpers::DrawVec3Control("Position", c.Position);
+				ImGuiHelpers::DrawVec3Control("Rotation", c.Rotation);
+				ImGuiHelpers::DrawVec3Control("Scale", c.Scale, 1.0f);
 				// Update the transform matrix when values change
 				c.CalculateTransform();
 			}
@@ -274,12 +187,12 @@ namespace Gravix
 				auto& camera = c.Camera;
 
 				// Primary checkbox
-				BeginPropertyRow("Primary");
+				ImGuiHelpers::BeginPropertyRow("Primary");
 				ImGui::Checkbox("##Primary", &c.Primary);
-				EndPropertyRow();
+				ImGuiHelpers::EndPropertyRow();
 
 				// Projection type combo
-				BeginPropertyRow("Projection");
+				ImGuiHelpers::BeginPropertyRow("Projection");
 				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 				if (ImGui::BeginCombo("##Projection", currentProjectionTypeString))
 				{
@@ -298,59 +211,59 @@ namespace Gravix
 
 					ImGui::EndCombo();
 				}
-				EndPropertyRow();
+				ImGuiHelpers::EndPropertyRow();
 
 				if (camera.GetProjectionType() == ProjectionType::Orthographic)
 				{
-					BeginPropertyRow("Size");
+					ImGuiHelpers::BeginPropertyRow("Size");
 					float orthoSize = camera.GetOrthographicSize();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 					if (ImGui::DragFloat("##Size", &orthoSize))
 						camera.SetOrthographicSize(orthoSize);
-					EndPropertyRow();
+					ImGuiHelpers::EndPropertyRow();
 
-					BeginPropertyRow("Near Clip");
+					ImGuiHelpers::BeginPropertyRow("Near Clip");
 					float nearClip = camera.GetOrthographicNearClip();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 					if (ImGui::DragFloat("##NearClip", &nearClip))
 						camera.SetOrthographicNearClip(nearClip);
-					EndPropertyRow();
+					ImGuiHelpers::EndPropertyRow();
 
-					BeginPropertyRow("Far Clip");
+					ImGuiHelpers::BeginPropertyRow("Far Clip");
 					float farClip = camera.GetOrthographicFarClip();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 					if (ImGui::DragFloat("##FarClip", &farClip))
 						camera.SetOrthographicFarClip(farClip);
-					EndPropertyRow();
+					ImGuiHelpers::EndPropertyRow();
 				}
 
 				if (camera.GetProjectionType() == ProjectionType::Perspective)
 				{
-					BeginPropertyRow("Vertical FOV");
+					ImGuiHelpers::BeginPropertyRow("Vertical FOV");
 					float fov = camera.GetPerspectiveFOV();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 					if (ImGui::DragFloat("##VerticalFOV", &fov))
 						camera.SetPerspectiveFOV(fov);
-					EndPropertyRow();
+					ImGuiHelpers::EndPropertyRow();
 
-					BeginPropertyRow("Near Clip");
+					ImGuiHelpers::BeginPropertyRow("Near Clip");
 					float nearClip = camera.GetPerspectiveNearClip();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 					if (ImGui::DragFloat("##NearClip", &nearClip))
 						camera.SetPerspectiveNearClip(nearClip);
-					EndPropertyRow();
+					ImGuiHelpers::EndPropertyRow();
 
-					BeginPropertyRow("Far Clip");
+					ImGuiHelpers::BeginPropertyRow("Far Clip");
 					float farClip = camera.GetPerspectiveFarClip();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 					if (ImGui::DragFloat("##FarClip", &farClip))
 						camera.SetPerspectiveFarClip(farClip);
-					EndPropertyRow();
+					ImGuiHelpers::EndPropertyRow();
 				}
 
-				BeginPropertyRow("Fixed Aspect");
+				ImGuiHelpers::BeginPropertyRow("Fixed Aspect");
 				ImGui::Checkbox("##FixedAspectRatio", &c.FixedAspectRatio);
-				EndPropertyRow();
+				ImGuiHelpers::EndPropertyRow();
 			}
 		);
 
@@ -373,13 +286,13 @@ namespace Gravix
 			[](SpriteRendererComponent& c)
 			{
 				// Color property
-				BeginPropertyRow("Color");
+				ImGuiHelpers::BeginPropertyRow("Color");
 				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 				ImGui::ColorEdit4("##Color", glm::value_ptr(c.Color));
-				EndPropertyRow();
+				ImGuiHelpers::EndPropertyRow();
 
 				// Texture property
-				BeginPropertyRow("Texture");
+				ImGuiHelpers::BeginPropertyRow("Texture");
 
 				std::string label = "None";
 				bool validTexture = false;
@@ -419,13 +332,13 @@ namespace Gravix
 						c.Texture = 0;
 				}
 
-				EndPropertyRow();
+				ImGuiHelpers::EndPropertyRow();
 
 				// Tiling Factor property
-				BeginPropertyRow("Tiling Factor");
+				ImGuiHelpers::BeginPropertyRow("Tiling Factor");
 				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 				ImGui::DragFloat("##TilingFactor", &c.TilingFactor);
-				EndPropertyRow();
+				ImGuiHelpers::EndPropertyRow();
 			}
 		);
 	}
