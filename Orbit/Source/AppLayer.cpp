@@ -287,7 +287,19 @@ namespace Gravix
 
 	void AppLayer::NewProject()
 	{
-		Project::New();
+		// Prompt user to select a folder for the new project
+		std::filesystem::path projectFolder = FileDialogs::OpenFolder("Select Project Location");
+		if (projectFolder.empty())
+			return;
+
+		// Create the project with default directories
+		Project::New(projectFolder);
+
+		// Set the project path and save it
+		m_ActiveProjectPath = projectFolder / "Untitled.orbproj";
+		Project::SaveActive(m_ActiveProjectPath);
+
+		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
 	}
 
 	void AppLayer::SaveScene()

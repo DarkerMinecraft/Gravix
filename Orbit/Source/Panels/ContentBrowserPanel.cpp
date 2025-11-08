@@ -244,6 +244,13 @@ namespace Gravix
 
 	void ContentBrowserPanel::ScanAndImportAssets()
 	{
+		// Check if asset directory exists
+		if (!std::filesystem::exists(m_AssetDirectory))
+		{
+			GX_CORE_WARN("Asset directory does not exist: {0}", m_AssetDirectory.string());
+			return;
+		}
+
 		Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
 		const auto& assetRegistry = assetManager->GetAssetRegistry();
 
@@ -255,19 +262,26 @@ namespace Gravix
 		}
 
 		// Recursively scan all files in the asset directory
-		for (const auto& entry : std::filesystem::recursive_directory_iterator(m_AssetDirectory))
+		try
 		{
-			if (!entry.is_regular_file())
-				continue;
-
-			auto relativePath = std::filesystem::relative(entry.path(), m_AssetDirectory);
-
-			// Check if this file is already in the registry
-			if (registeredPaths.find(relativePath) == registeredPaths.end())
+			for (const auto& entry : std::filesystem::recursive_directory_iterator(m_AssetDirectory))
 			{
-				// Not in registry, import it asynchronously
-				assetManager->ImportAsset(relativePath);
+				if (!entry.is_regular_file())
+					continue;
+
+				auto relativePath = std::filesystem::relative(entry.path(), m_AssetDirectory);
+
+				// Check if this file is already in the registry
+				if (registeredPaths.find(relativePath) == registeredPaths.end())
+				{
+					// Not in registry, import it asynchronously
+					assetManager->ImportAsset(relativePath);
+				}
 			}
+		}
+		catch (const std::filesystem::filesystem_error& e)
+		{
+			GX_CORE_ERROR("Failed to scan asset directory: {0}", e.what());
 		}
 	}
 
