@@ -5,6 +5,9 @@
 #include "SceneHierarchyPanel.h"
 #include "Core/Window.h"
 
+#include "Events/KeyEvents.h"
+
+
 namespace Gravix
 {
 
@@ -38,6 +41,7 @@ namespace Gravix
 		const glm::vec2& GetViewportSize() const { return m_ViewportSize; }
 	private:
 		bool OnKeyPressed(KeyPressedEvent& e);
+	private:
 		Ref<Framebuffer> m_Framebuffer;
 		glm::vec2 m_ViewportSize = { 1280.0f, 720.0f };
 		std::array<glm::vec2, 2> m_ViewportBounds;
