@@ -21,7 +21,6 @@ namespace Gravix
 		{
 			project->GetConfig().AssetDirectory = path.parent_path() / project->GetConfig().AssetDirectory;
 			project->GetConfig().LibraryDirectory = path.parent_path() / project->GetConfig().LibraryDirectory;
-			project->GetConfig().StartScene = project->GetConfig().AssetDirectory / project->GetConfig().StartScene;
 
 			s_ActiveProject = project;
 			Ref<EditorAssetManager> editorAssetManager = CreateRef<EditorAssetManager>();

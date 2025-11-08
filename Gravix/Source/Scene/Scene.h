@@ -6,6 +6,8 @@
 
 #include "Core/UUID.h"
 
+#include "Asset/Asset.h"
+
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
@@ -14,12 +16,14 @@ namespace Gravix
 
 	class Entity;
 
-	class Scene 
+	class Scene : public Asset
 	{
 	public:
 		Scene();
 		~Scene();
 		
+		virtual AssetType GetAssetType() const override { return AssetType::Scene; }
+
 		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID());
 		void DestroyEntity(Entity entity);
 

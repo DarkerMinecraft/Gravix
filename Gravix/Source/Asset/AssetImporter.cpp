@@ -2,20 +2,38 @@
 #include "AssetImporter.h"
 
 #include "Project/Project.h"
+
 #include "Importers/TextureImporter.h"
+#include "Importers/SceneImporter.h"
+
+#include "Asset/AssetManager.h"
 
 namespace Gravix 
 {
+
+	static std::unordered_map<std::string, AssetType> s_ExtensionToAssetType = 
+	{
+		{ ".png", AssetType::Texture2D },
+		{ ".jpg", AssetType::Texture2D },
+		{ ".jpeg", AssetType::Texture2D },
+		{ ".bmp", AssetType::Texture2D },
+		{ ".tga", AssetType::Texture2D },
+		{ ".orbscene", AssetType::Scene },
+	};
 
 	using AssetImportFunc = std::function<Ref<Asset>(AssetHandle, const AssetMetadata&)>;
 
 	static std::unordered_map<AssetType, AssetImportFunc> s_AssetImportFunc = 
 	{
-		{ AssetType::Texture2D, &TextureImporter::ImportTexture2D }
+		{ AssetType::Texture2D, &TextureImporter::ImportTexture2D },
+		{ AssetType::Scene, &SceneImporter::ImportScene },
 	};
 
 	Ref<Asset> AssetImporter::ImportAsset(AssetHandle handle, const AssetMetadata& metadata)
 	{
+		if(AssetManager::IsAssetLoaded(handle))
+			return Project::GetActive()->GetAssetManager()->GetAsset(handle);
+
 		if (!s_AssetImportFunc.contains(metadata.Type))
 		{
 			GX_CORE_ERROR("No importer found for asset type: {0}", static_cast<int>(metadata.Type));
@@ -30,9 +48,9 @@ namespace Gravix
 		outMetadata->FilePath = filePath;
 		std::string extension = filePath.extension().string();
 
-		if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" || extension == ".bmp" || extension == ".tga")
+		if (s_ExtensionToAssetType.contains(extension))
 		{
-			outMetadata->Type = AssetType::Texture2D;
+			outMetadata->Type = s_ExtensionToAssetType.at(extension);
 		}
 		else
 		{

@@ -17,6 +17,8 @@
 #include "Log.h"
 #include "Input.h"
 
+#include "Project/Project.h"
+
 // Events
 #include "Events/Event.h"
 #include "Events/KeyEvents.h"
@@ -33,3 +35,6 @@
 #include "Scene/EditorCamera.h"
 
 #include "Maths/Maths.h"
+
+#include "Asset/Asset.h"
+#include "Asset/AssetManager.h"

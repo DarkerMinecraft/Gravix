@@ -25,7 +25,7 @@ namespace Gravix
 
 		Renderer2D::Init(m_MSAAFramebuffer);
 
-		OpenScene(Project::GetActive()->GetConfig().StartScene);
+		OpenScene((AssetHandle)Project::GetActive()->GetConfig().StartScene);
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_ViewportPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
@@ -149,12 +149,12 @@ namespace Gravix
 			{
 				if (ImGui::MenuItem("New", "Ctrl+N"))
 				{
-					NewScene();
+					NewProject();
 				}
 
 				if (ImGui::MenuItem("Open... ", "Ctrl+O"))
 				{
-					OpenScene();
+					OpenProject();
 				}
 
 				if (ImGui::MenuItem("Save", "Ctrl+S"))
@@ -164,7 +164,7 @@ namespace Gravix
 
 				if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
 				{
-					SaveSceneAs();
+					//SaveSceneAs();
 				}
 				ImGui::EndMenu();
 			}
@@ -185,20 +185,20 @@ namespace Gravix
 
 		if (ctrlDown && Input::IsKeyPressed(Key::S))
 		{
-			if (shiftDown)
-				SaveSceneAs();
+			if (shiftDown) {}
+				//SaveSceneAs();
 			else
 				SaveScene();
 		}
 
 		if (ctrlDown && Input::IsKeyPressed(Key::O))
 		{
-			OpenScene();
+			OpenProject();
 		}
 
 		if (ctrlDown && Input::IsKeyPressed(Key::N))
 		{
-			NewScene();
+			NewProject();
 		}
 	}
 
@@ -241,67 +241,35 @@ namespace Gravix
 
 	void AppLayer::SaveScene()
 	{
-		if (m_ActiveScenePath.empty())
+		if (AssetManager::GetAssetType(m_ActiveSceneHandle) != AssetType::Scene) 
 		{
-			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
-			if (filePath.empty())
-				return;
-
-			m_ActiveScenePath = filePath;
+			GX_CORE_ERROR("Asset with handle {0} is not a scene!", static_cast<uint64_t>(m_ActiveSceneHandle));
+			return;
 		}
 
-		SceneSerializer serializer(m_ActiveScene);
-		serializer.Serialize(m_ActiveScenePath);
-	}
-
-	void AppLayer::SaveSceneAs()
-	{
-		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
-		if (filePath.empty())
-			return;
-		m_ActiveScenePath = filePath;
+		const auto& filePath = Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
 
 		SceneSerializer serializer(m_ActiveScene);
-		serializer.Serialize(m_ActiveScenePath);
+		serializer.Serialize(filePath);
 	}
 
-	void AppLayer::OpenScene()
+	void AppLayer::OpenScene(AssetHandle handle)
 	{
-		std::filesystem::path filePath = FileDialogs::OpenFile("Orbit Scene (*.orbscene)\0*.orbscene\0");
-		if (filePath.empty())
+		if(AssetManager::GetAssetType(handle) != AssetType::Scene) 	
+		{
+			GX_CORE_ERROR("Asset with handle {0} is not a scene!", static_cast<uint64_t>(handle));
 			return;
-		m_ActiveScenePath = filePath;
+		}
+		m_ActiveSceneHandle = handle;
 
-		m_ActiveScene = CreateRef<Scene>();
+		m_ActiveScene = AssetManager::GetAsset<Scene>(handle);
 		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
 		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
 		m_SceneHierarchyPanel.SetNoneSelected();
 
+		const auto& filePath = Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Deserialize(filePath);
-	}
-
-	void AppLayer::OpenScene(const std::filesystem::path& path)
-	{
-		m_ActiveScenePath = Project::GetAssetDirectory() / path;
-
-		m_ActiveScene = CreateRef<Scene>();
-		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-		m_SceneHierarchyPanel.SetNoneSelected();
-
-		SceneSerializer serializer(m_ActiveScene);
-		serializer.Deserialize(m_ActiveScenePath);
-	}
-
-	void AppLayer::NewScene()
-	{
-		m_ActiveScene = CreateRef<Scene>();
-		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-		m_SceneHierarchyPanel.SetNoneSelected();
-
-		m_ActiveScenePath = std::filesystem::path();
 	}
 
 }

@@ -4,6 +4,7 @@
 #include "Components.h"
 
 #include "Asset/AssetManager.h"
+#include "Project/Project.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -314,7 +315,28 @@ namespace Gravix
 			{
 				ImGui::ColorEdit4("Color", glm::value_ptr(c.Color));
 
-				ImGui::Button("Texture", ImVec2{ 100, 0 });
+				std::string label = "None";
+				bool validTexture = false;
+				if (c.Texture != 0) 
+				{
+					if (AssetManager::IsValidAssetHandle(c.Texture) && AssetManager::GetAssetType(c.Texture) == AssetType::Texture2D) 
+					{
+						const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(c.Texture);
+						label = metadata.FilePath.filename().string();
+
+						validTexture = true;
+					}
+					else 
+					{
+						label = "Invalid";
+					}
+				}
+
+				ImVec2 buttonLabelSize = ImGui::CalcTextSize(label.c_str());
+				buttonLabelSize.x += 20;
+
+				float buttonLabelWidth = glm::max<float>(100.0f, buttonLabelSize.x);
+				ImGui::Button(label.c_str(), { buttonLabelWidth, 0.0f });
 				if (ImGui::BeginDragDropTarget()) 
 				{
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
@@ -324,6 +346,18 @@ namespace Gravix
 							c.Texture = textureHandle;
 					}
 					ImGui::EndDragDropTarget();
+				}
+
+				if (validTexture)
+				{
+					ImGui::SameLine();
+					ImVec2 labelSize = ImGui::CalcTextSize("X");
+					float buttonSize = labelSize.y + ImGui::GetStyle().FramePadding.y * 2.0f;
+					if (ImGui::Button("X", { buttonSize, buttonSize }))
+						c.Texture = 0;
+
+					ImGui::SameLine();
+					ImGui::Text("Texture");
 				}
 
 				ImGui::DragFloat("Tiling Factor", &c.TilingFactor);

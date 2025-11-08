@@ -53,15 +53,11 @@ struct PSOutput
 [shader("pixel")]
 PSOutput mainPS(VSOutput input)
 {
-    PSOutput output; 
+    PSOutput output;
 
     float4 texColor = texture[input.texIndex].Sample(input.uv * input.tilingFactor);
 
-    if (texColor.a * input.color.a < 0.2)
-        discard;
-
     output.outColor = texColor * input.color;
     output.entityID = input.entityID;
-
     return output;
 }

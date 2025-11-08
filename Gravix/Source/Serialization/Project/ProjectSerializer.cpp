@@ -17,7 +17,7 @@ namespace Gravix
 
 		out << YAML::BeginMap;
 		out << YAML::Key << "Name" << YAML::Value << config.Name;
-		out << YAML::Key << "StartScene" << YAML::Value << config.StartScene.string();
+		out << YAML::Key << "StartScene" << YAML::Value << (uint64_t)config.StartScene;
 		out << YAML::Key << "AssetDirectory" << YAML::Value << config.AssetDirectory.string();
 		out << YAML::Key << "LibraryDirectory" << YAML::Value << config.LibraryDirectory.string();
 		out << YAML::Key << "ScriptPath" << YAML::Value << config.ScriptPath.string();
@@ -50,7 +50,7 @@ namespace Gravix
 		}
 
 		config.Name = projectNode["Name"].as<std::string>();
-		config.StartScene = projectNode["StartScene"].as<std::string>();
+		config.StartScene = (AssetHandle)projectNode["StartScene"].as<uint64_t>();
 		config.AssetDirectory = projectNode["AssetDirectory"].as<std::string>();
 		config.LibraryDirectory = projectNode["LibraryDirectory"].as<std::string>();
 		config.ScriptPath = projectNode["ScriptPath"].as<std::string>();

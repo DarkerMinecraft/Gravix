@@ -22,6 +22,8 @@ namespace Gravix
 		const AssetMetadata& GetAssetMetadata(AssetHandle handle) const;
 		const AssetRegistry& GetAssetRegistry() const { return m_AssetRegistry; }
 
+		const std::filesystem::path& GetAssetFilePath(AssetHandle handle) const;
+
 		void ClearLoadedAssets() { m_LoadedAssets.clear(); }
 
 		void SerializeAssetRegistry();

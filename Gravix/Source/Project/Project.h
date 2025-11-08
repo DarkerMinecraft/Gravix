@@ -8,6 +8,8 @@
 #include "Asset/EditorAssetManager.h"
 #include "Asset/RuntimeAssetManager.h"
 
+#include "Asset/Asset.h"
+
 #include <filesystem>
 
 namespace Gravix 
@@ -17,7 +19,7 @@ namespace Gravix
 	{
 		std::string Name = "Untitled";
 		
-		std::filesystem::path StartScene;
+		AssetHandle StartScene;
 
 		std::filesystem::path AssetDirectory;
 		std::filesystem::path LibraryDirectory;

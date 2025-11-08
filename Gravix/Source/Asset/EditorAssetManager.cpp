@@ -54,6 +54,11 @@ namespace Gravix
 		return invalidMetadata;
 	}
 
+	const std::filesystem::path& EditorAssetManager::GetAssetFilePath(AssetHandle handle) const
+	{
+		return GetAssetMetadata(handle).FilePath;
+	}
+
 	void EditorAssetManager::SerializeAssetRegistry()
 	{
 		std::filesystem::path registryPath = Project::GetLibraryDirectory() / "AssetRegistry.orbreg";

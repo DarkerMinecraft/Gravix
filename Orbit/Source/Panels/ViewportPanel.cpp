@@ -44,8 +44,8 @@ namespace Gravix
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) 
 			{
-				const wchar_t* path = (const wchar_t*)payload->Data;
-				m_AppLayer->OpenScene(path);
+				AssetHandle sceneHandle = *(AssetHandle*)payload->Data;
+				m_AppLayer->OpenScene(sceneHandle);
 			}
 			ImGui::EndDragDropTarget();
 		}

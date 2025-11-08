@@ -25,7 +25,7 @@ namespace Gravix
 
 		virtual void OnImGuiRender() override;
 
-		void OpenScene(const std::filesystem::path& path);
+		void OpenScene(AssetHandle handle);
 	private:
 		void OnShortcuts();
 
@@ -35,9 +35,6 @@ namespace Gravix
 		void NewProject();
 
 		void SaveScene();
-		void SaveSceneAs();
-		void OpenScene();
-		void NewScene();
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
@@ -54,7 +51,7 @@ namespace Gravix
 		ViewportPanel m_ViewportPanel;
 		ContentBrowserPanel m_ContentBrowserPanel;
 
-		std::filesystem::path m_ActiveScenePath;
+		AssetHandle m_ActiveSceneHandle;
 		std::filesystem::path m_ActiveProjectPath;
 	};
 
