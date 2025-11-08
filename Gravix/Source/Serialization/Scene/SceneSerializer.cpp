@@ -36,7 +36,6 @@ namespace Gravix
 	{
 		YAML::Emitter out;
 		out << YAML::BeginMap;
-		out << YAML::Key << "Scene" << YAML::Value;
 		out << YAML::Key << "Entities" << YAML::Value << YAML::BeginSeq;
 
 		// Collect all entities
@@ -79,9 +78,6 @@ namespace Gravix
 		std::stringstream strStream;
 
 		YAML::Node data = YAML::Load(stream);
-		if (!data["Scene"])
-			return false;
-
 		uint32_t maxCreationIndex = 0;
 
 		auto entities = data["Entities"];

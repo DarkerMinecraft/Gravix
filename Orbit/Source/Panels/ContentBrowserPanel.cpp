@@ -468,6 +468,7 @@ namespace Gravix
 					m_TreeNodes.clear();
 					m_TreeNodes.push_back(TreeNode(".", 0));
 					RefreshAssetTree();
+					ScanAndImportAssets();
 
 					// Update window title if this is the active scene
 					if (m_AppLayer && metadata.Type == AssetType::Scene && handle == m_AppLayer->GetActiveSceneHandle())

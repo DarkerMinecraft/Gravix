@@ -69,7 +69,7 @@ namespace Gravix
 		if (startScene != 0 && AssetManager::GetAssetType(startScene) == AssetType::Scene)
 		{
 			// Load scene synchronously during initialization to ensure it's ready
-			auto& assetManager = Project::GetActive()->GetEditorAssetManager();
+			const auto& assetManager = Project::GetActive()->GetEditorAssetManager();
 			const auto& metadata = assetManager->GetAssetMetadata(startScene);
 			const auto& filePath = Project::GetAssetDirectory() / metadata.FilePath;
 
@@ -538,7 +538,7 @@ namespace Gravix
 		}
 
 		// Get scene file path
-		auto& assetManager = Project::GetActive()->GetEditorAssetManager();
+		const auto& assetManager = Project::GetActive()->GetEditorAssetManager();
 		const auto& metadata = assetManager->GetAssetMetadata(handle);
 		const auto& filePath = Project::GetAssetDirectory() / metadata.FilePath;
 
