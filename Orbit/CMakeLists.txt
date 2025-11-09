@@ -30,12 +30,6 @@ set(ORBIT_SOURCES
 
 add_executable(Orbit ${ORBIT_SOURCES})
 
-# Ensure Visual Studio tracks changes properly
-set_target_properties(Orbit PROPERTIES
-    FOLDER "Editor"
-    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
 # UTF-8 support for MSVC
 if(MSVC)
     target_compile_options(Orbit PRIVATE /utf-8)

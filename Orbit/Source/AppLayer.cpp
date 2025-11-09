@@ -159,13 +159,19 @@ namespace Gravix
 		}
 
 		if (m_SceneState == SceneState::Edit)
+		{
 			m_ActiveScene->OnEditorUpdate(deltaTime);
+
+			if (m_ViewportPanel.IsViewportHovered())
+				m_EditorCamera.OnUpdate(deltaTime);
+		}
 		else
+		{
 			m_ActiveScene->OnRuntimeUpdate(deltaTime);
+		}
 
 		if (m_SceneState == SceneState::Play)
 		{
-
 			if (m_ViewportPanel.IsViewportHovered())
 				m_EditorCamera.OnUpdate(deltaTime);
 
@@ -341,6 +347,10 @@ namespace Gravix
 	void AppLayer::OnScenePlay()
 	{
 		m_SceneState = SceneState::Play;
+
+		// Ensure scene cameras have the current viewport size when entering play mode
+		auto& viewportSize = m_ViewportPanel.GetViewportSize();
+		m_ActiveScene->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
 	}
 
 	void AppLayer::OnSceneStop()

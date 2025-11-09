@@ -179,12 +179,6 @@ add_library(Gravix STATIC
     ${GRAVIX_VULKAN_SOURCES}
 )
 
-# Ensure Visual Studio tracks changes properly
-set_target_properties(Gravix PROPERTIES
-    FOLDER "Engine"
-    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
 # Precompiled header
 target_precompile_headers(Gravix PRIVATE Source/pch.h)
 

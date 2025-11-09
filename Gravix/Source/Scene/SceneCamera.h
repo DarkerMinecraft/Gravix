@@ -11,10 +11,10 @@ namespace Gravix
 		Orthographic = 1
 	};
 
-	class SceneCamera : public Camera 
+	class SceneCamera : public Camera
 	{
 	public:
-		SceneCamera() = default;
+		SceneCamera();
 		virtual ~SceneCamera() = default;
 		
 		void SetOrthographic(float size, float nearClip, float farClip);
@@ -47,7 +47,7 @@ namespace Gravix
 		float m_PerspectiveFOV = 45.0f;
 		float m_PerspectiveNear = 0.01f, m_PerspectiveFar = 1000.0f;
 
-		float m_AspectRatio = 0.0f;
+		float m_AspectRatio = 1.778f; // Default to 16:9 aspect ratio
 	};
 
 }

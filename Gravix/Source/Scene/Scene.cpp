@@ -102,7 +102,12 @@ namespace Gravix
 				if (camera.Primary)
 				{
 					mainCamera = camera.Camera;
-					cameraTransform = transform.Transform;
+
+					// Calculate camera transform without scale (cameras should only use position and rotation)
+					glm::vec3 radianRotation = { glm::radians(transform.Rotation.x), glm::radians(transform.Rotation.y), glm::radians(transform.Rotation.z) };
+					glm::mat4 rotation = glm::toMat4(glm::quat(radianRotation));
+					cameraTransform = glm::translate(glm::mat4(1.0f), transform.Position) * rotation;
+
 					foundCamera = true;
 				}
 			});
@@ -114,7 +119,8 @@ namespace Gravix
 
 			auto view = m_Registry.view<TransformComponent, SpriteRendererComponent>();
 			view.each([&](auto entity, auto& transform, auto& sprite) {
-				Renderer2D::DrawQuad(transform, -1, sprite);
+				Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
+				Renderer2D::DrawQuad(transform, -1, sprite, texture, sprite);
 			});
 
 			Renderer2D::EndScene(cmd);

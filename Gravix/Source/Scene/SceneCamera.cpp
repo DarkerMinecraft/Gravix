@@ -3,8 +3,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace Gravix 
+namespace Gravix
 {
+
+	SceneCamera::SceneCamera()
+	{
+	}
 
 	void SceneCamera::SetOrthographic(float size, float nearClip, float farClip)
 	{
@@ -30,18 +34,20 @@ namespace Gravix
 
 	void SceneCamera::SetViewportSize(uint32_t width, uint32_t height)
 	{
-		m_AspectRatio = (float)width / (float)height;
+		if(width == 0 || height == 0)
+			return;
 
+		m_AspectRatio = (float)width / (float)height;
 		RecalculateProjection();
 	}
 
 	void SceneCamera::RecalculateProjection()
 	{
-		if (m_ProjectionType == ProjectionType::Perspective) 
+		if (m_ProjectionType == ProjectionType::Perspective)
 		{
 			m_ProjectionMatrix = glm::perspective(glm::radians(m_PerspectiveFOV), m_AspectRatio, m_PerspectiveNear, m_PerspectiveFar);
 		}
-		else if (m_ProjectionType == ProjectionType::Orthographic) 
+		else if (m_ProjectionType == ProjectionType::Orthographic)
 		{
 			float orthoLeft = -0.5f * m_AspectRatio * m_OrthographicSize;
 			float orthoRight = 0.5f * m_AspectRatio * m_OrthographicSize;
@@ -50,8 +56,6 @@ namespace Gravix
 
 			m_ProjectionMatrix = glm::ortho(orthoLeft, orthoRight, orthoBottom, orthoTop, m_OrthographicNear, m_OrthographicFar);
 		}
-
-		m_ProjectionMatrix[1][1] *= -1;
 	}
 
 }
