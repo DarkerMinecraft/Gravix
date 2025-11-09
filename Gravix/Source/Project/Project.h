@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Core.h"
+#include "Core/RefCounted.h"
 #include "Core/Log.h"
 
 #include "Asset/AssetManagerBase.h"
@@ -12,13 +13,13 @@
 
 #include <filesystem>
 
-namespace Gravix 
+namespace Gravix
 {
-	
+
 	struct ProjectConfig
 	{
 		std::string Name = "Untitled";
-		
+
 		AssetHandle StartScene;
 
 		std::filesystem::path AssetDirectory;
@@ -26,7 +27,7 @@ namespace Gravix
 		std::filesystem::path ScriptPath;
 	};
 
-	class Project 
+	class Project : public RefCounted
 	{
 	public:
 		Project() = default;

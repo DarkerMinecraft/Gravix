@@ -1,11 +1,12 @@
 #pragma once
 
+#include "RefCounted.h"
 #include "Events/Event.h"
 
 namespace Gravix 
 {
 
-	class Layer
+	class Layer : public RefCounted
 	{
 	public:
 		Layer() = default;

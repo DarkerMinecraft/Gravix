@@ -10,6 +10,7 @@
 
 #include <entt/entt.hpp>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <yaml-cpp/yaml.h>
 
 namespace Gravix
@@ -24,6 +25,7 @@ namespace Gravix
 	struct ComponentUserSettings
 	{
 		bool RemoveComponent = false;
+		bool WasModified = false;
 	};
 
 	struct ComponentInfo
@@ -76,6 +78,11 @@ namespace Gravix
 				};
 			info.ImGuiRenderFunc = [name, imguiRender, specification](void* instance, ComponentUserSettings* userSettings) -> void
 				{
+					// Track if any items were edited by checking ImGui's internal state before/after rendering
+					ImGuiContext& g = *ImGui::GetCurrentContext();
+					ImGuiID activeIdBefore = g.ActiveId;
+					bool wasEditingBefore = g.ActiveIdHasBeenEditedThisFrame;
+
 					if (!specification.HasNodeTree)
 					{
 						imguiRender(*reinterpret_cast<T*>(instance));
@@ -150,6 +157,18 @@ namespace Gravix
 							ImGui::Spacing();
 							ImGui::TreePop();
 						}
+					}
+
+					// Detect if any item was edited during the component rendering
+					// Check if an item was deactivated after being edited
+					if (!wasEditingBefore && g.ActiveIdHasBeenEditedThisFrame)
+					{
+						userSettings->WasModified = true;
+					}
+					// Also check if we went from active to inactive (item deactivated)
+					else if (activeIdBefore != 0 && g.ActiveId == 0)
+					{
+						userSettings->WasModified = true;
 					}
 				};
 

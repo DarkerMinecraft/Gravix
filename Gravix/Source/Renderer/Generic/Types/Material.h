@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/RefCounted.h"
 #include "Renderer/Specification.h"
 #include "Renderer/Generic/Types/Framebuffer.h"
 
@@ -8,10 +9,10 @@
 #include <string>
 #include <filesystem>
 
-namespace Gravix 
+namespace Gravix
 {
 
-	struct MaterialSpecification 
+	struct MaterialSpecification
 	{
 		std::string DebugName;
 		std::filesystem::path ShaderFilePath;
@@ -33,7 +34,7 @@ namespace Gravix
 		Ref<Framebuffer> RenderTarget;
 	};
 
-	class Material 
+	class Material : public RefCounted
 	{
 	public:
 		virtual ~Material() = default;

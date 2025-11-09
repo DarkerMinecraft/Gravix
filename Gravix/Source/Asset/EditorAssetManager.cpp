@@ -40,6 +40,8 @@ namespace Gravix
 			}
 		}
 
+		bool registryChanged = false;
+
 		for(AsyncLoadRequest* request : completedRequests)
 		{
 			if (request->State == AssetState::Failed)
@@ -105,11 +107,16 @@ namespace Gravix
 				m_LoadedAssets[request->Handle] = asset;
 				m_LoadingAssets.erase(request->Handle);
 				GX_CORE_INFO("Asynchronously loaded asset: {0}", request->FilePath.string());
+				registryChanged = true;
 				delete request;
 			}
 		}
 
-		SerializeAssetRegistry();
+		// Only serialize the asset registry if it actually changed
+		if (registryChanged)
+		{
+			SerializeAssetRegistry();
+		}
 	}
 
 	void EditorAssetManager::ImportAsset(const std::filesystem::path& filePath)

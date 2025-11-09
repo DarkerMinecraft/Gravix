@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <utility>
+#include <type_traits>
 
 #ifdef ENGINE_DEBUG
 #define GX_ENABLE_ASSERTS
@@ -14,7 +15,7 @@
 #define GX_STATIC_ASSERT(...) { GX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
 #define GX_STATIC_CORE_ASSERT(...) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
 
-#else 
+#else
 #define GX_ASSERT(x, ...)
 #define GX_CORE_ASSERT(x, ...)
 
@@ -26,33 +27,25 @@
 #define BIND_EVENT_FN(x) [this](auto&&... args) -> decltype(auto) { return this->x(std::forward<decltype(args)>(args)...); }
 #define BIT(x) (1 << x)
 
-// Forward declarations
-template<typename T> using Ref = std::shared_ptr<T>;
-template<typename T> using Scope = std::unique_ptr<T>;
-template<typename T> using Weak = std::weak_ptr<T>;
+#include "RefCounted.h"
 
-// Factory for Ref (shared_ptr)
-template<typename T, typename... Args>
-inline Ref<T> CreateRef(Args&&... args)
+namespace Gravix
 {
-	return std::make_shared<T>(std::forward<Args>(args)...);
-}
+	// Factory for Ref - creates custom RefCounted smart pointers
+	template<typename T, typename... Args>
+	inline Ref<T> CreateRef(Args&&... args)
+	{
+		return Ref<T>::Create(std::forward<Args>(args)...);
+	}
 
-// Factory for Scope (unique_ptr)
-template<typename T, typename... Args>
-inline Scope<T> CreateScope(Args&&... args)
-{
-	return std::make_unique<T>(std::forward<Args>(args)...);
-}
+	// Weak reference alias
+	template<typename T>
+	using Weak = WeakRef<T>;
 
-template<typename T, typename... Args>
-inline Weak<T> CreateWeak(Args&&... args)
-{
-	return Weak<T>(std::forward<Args>(args)...);
-}
-
-template<typename T, typename U>
-inline Ref<T> Cast(const Ref<U>& other)
-{
-	return std::static_pointer_cast<T>(other);
+	// Cast for Ref types
+	template<typename T, typename U>
+	inline Ref<T> Cast(const Ref<U>& other)
+	{
+		return other.template As<T>();
+	}
 }

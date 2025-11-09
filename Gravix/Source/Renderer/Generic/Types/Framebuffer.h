@@ -1,12 +1,13 @@
 #pragma once
 
 #include "Core/Core.h"
+#include "Core/RefCounted.h"
 
 #include <glm/glm.hpp>
 
-namespace Gravix 
+namespace Gravix
 {
-	
+
 	enum class FramebufferTextureFormat
 	{
 		None = 0,
@@ -34,7 +35,7 @@ namespace Gravix
 		std::vector<FramebufferTextureFormat> Attachments;
 	};
 
-	class Framebuffer 
+	class Framebuffer : public RefCounted
 	{
 	public:
 		virtual ~Framebuffer() = default;

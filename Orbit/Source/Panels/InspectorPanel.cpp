@@ -81,8 +81,8 @@ namespace Gravix
 					ComponentUserSettings userSettings;
 					info.ImGuiRenderFunc(component, &userSettings);
 
-					// Check if any component value was modified
-					if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::IsItemEdited())
+					// Mark scene dirty if component was modified
+					if (userSettings.WasModified)
 					{
 						if (m_AppLayer)
 							m_AppLayer->MarkSceneDirty();

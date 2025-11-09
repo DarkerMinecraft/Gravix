@@ -42,7 +42,7 @@ namespace Gravix
         requires(std::is_base_of_v<Layer, TLayer>)
         void PushLayer()
         {
-            m_LayerStack.push_back(std::make_shared<TLayer>());
+            m_LayerStack.push_back(CreateRef<TLayer>());
         }
 
 		bool IsRuntime() { return m_IsRuntime; }

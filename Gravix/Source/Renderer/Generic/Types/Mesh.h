@@ -1,15 +1,17 @@
 #pragma once
 
+#include "Core/RefCounted.h"
+
 #include <span>
 #include <vector>
 
-#include "Reflections/DynamicStruct.h"	
-#include "Reflections/ReflectedStruct.h"	
+#include "Reflections/DynamicStruct.h"
+#include "Reflections/ReflectedStruct.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
-	class Mesh
+	class Mesh : public RefCounted
 	{
 	public:
 		virtual ~Mesh() = default;

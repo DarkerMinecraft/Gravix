@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/RefCounted.h"
 #include "Asset.h"
 #include "AsyncLoadRequest.h"
 
@@ -11,9 +12,10 @@ namespace Gravix
 
 	using AssetMap = std::unordered_map<AssetHandle, Ref<Asset>>;
 
-	class AssetManagerBase
+	class AssetManagerBase : public RefCounted
 	{
 	public:
+		virtual ~AssetManagerBase() = default;
 		virtual Ref<Asset> GetAsset(AssetHandle handle) = 0;
 
 		virtual bool IsAssetHandleValid(AssetHandle handle) const = 0;

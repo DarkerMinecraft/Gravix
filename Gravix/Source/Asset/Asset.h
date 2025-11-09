@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Core/UUID.h"
+#include "Core/RefCounted.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
 	using AssetHandle = UUID;
@@ -16,7 +17,7 @@ namespace Gravix
 		Script,
 	};
 
-	enum AssetState 
+	enum AssetState
 	{
 		NotLoaded,
 		Loading,
@@ -28,9 +29,10 @@ namespace Gravix
 	std::string_view AssetTypeToString(AssetType type);
 	AssetType StringToAssetType(const std::string& typeStr);
 
-	class Asset 
+	class Asset : public RefCounted
 	{
 	public:
+		virtual ~Asset() = default;
 		virtual AssetType GetAssetType() const = 0;
 	private:
 		AssetHandle m_Handle;
