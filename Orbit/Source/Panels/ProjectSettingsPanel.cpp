@@ -109,6 +109,7 @@ namespace Gravix
 
 			// X button to clear
 			ImGui::SameLine();
+			ImGui::AlignTextToFramePadding();
 			if (ImGui::Button("X", ImVec2(25, 0)))
 			{
 				config.StartScene = 0;
@@ -121,6 +122,7 @@ namespace Gravix
 			ImGui::Spacing();
 
 			// Save button
+			ImGui::AlignTextToFramePadding();
 			if (ImGui::Button("Save", ImVec2(120, 0)))
 			{
 				// Update config
@@ -133,6 +135,7 @@ namespace Gravix
 			}
 
 			ImGui::SameLine();
+			ImGui::AlignTextToFramePadding();
 
 			// Close button
 			if (ImGui::Button("Close", ImVec2(120, 0)))

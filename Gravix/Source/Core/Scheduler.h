@@ -13,11 +13,11 @@
 #include "Project/Project.h"
 #include "Core/Application.h"
 
+#include <TaskScheduler.h>
 #include <yaml-cpp/yaml.h>
 #include <filesystem>
 #include <vector>
 #include <unordered_set>
-#include "../../../ThirdParties/enkiTS/src/TaskScheduler.h"
 
 namespace Gravix
 {

@@ -333,6 +333,7 @@ namespace Gravix
 				if (validTexture)
 				{
 					ImGui::SameLine();
+					ImGui::AlignTextToFramePadding();
 					if (ImGui::Button("X", { 26.0f, 0.0f }))
 						c.Texture = 0;
 				}

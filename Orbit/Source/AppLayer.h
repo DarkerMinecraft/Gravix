@@ -45,13 +45,18 @@ namespace Gravix
 
 		void ShowStartupDialog();
 		void InitializeProject();
+
+		void OnScenePlay();
+		void OnSceneStop();
+
+		void UIToolbar();
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
 
-		Ref<Texture2D> m_CheckerboardTexture;
-		Ref<Texture2D> m_LogoTexture;
-
+		Ref<Texture2D> m_IconPlay;
+		Ref<Texture2D> m_IconStop;
+		
 		Ref<Scene> m_ActiveScene;
 
 		EditorCamera m_EditorCamera;
@@ -69,6 +74,14 @@ namespace Gravix
 		bool m_ProjectInitialized = false;
 		bool m_ShowStartupDialog = false;
 		bool m_SceneDirty = false;
+
+		enum class SceneState
+		{
+			Edit = 0,
+			Play = 1
+		};
+
+		SceneState m_SceneState = SceneState::Edit;
 	};
 
 }

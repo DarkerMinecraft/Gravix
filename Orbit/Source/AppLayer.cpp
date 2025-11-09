@@ -5,6 +5,8 @@
 #include "Events/KeyEvents.h"
 #include "Events/WindowEvents.h"
 
+#include "Asset/Importers/TextureImporter.h"
+
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -54,6 +56,9 @@ namespace Gravix
 		m_ContentBrowserPanel->SetAppLayer(this);
 
 		Renderer2D::Init(m_MSAAFramebuffer);
+
+		m_IconPlay = TextureImporter::LoadTexture2D("EditorAssets/Icons/PlayButton.png");
+		m_IconStop = TextureImporter::LoadTexture2D("EditorAssets/Icons/StopButton.png");
 	}
 
 	void AppLayer::InitializeProject()
@@ -119,7 +124,8 @@ namespace Gravix
 		// Only forward events to panels if project is initialized
 		if (m_ProjectInitialized)
 		{
-			m_EditorCamera.OnEvent(e);
+			if (m_SceneState == SceneState::Edit)
+				m_EditorCamera.OnEvent(e);
 			m_ViewportPanel.OnEvent(e);
 		}
 	}
@@ -152,23 +158,30 @@ namespace Gravix
 			m_ViewportPanel.UpdateViewport();
 		}
 
-		if (m_ViewportPanel.IsViewportHovered())
-			m_EditorCamera.OnUpdate(deltaTime);
+		if (m_SceneState == SceneState::Edit)
+			m_ActiveScene->OnEditorUpdate(deltaTime);
+		else
+			m_ActiveScene->OnRuntimeUpdate(deltaTime);
 
-		m_ActiveScene->OnEditorUpdate(deltaTime);
-
-		if (Input::IsMouseDown(Mouse::LeftButton))
+		if (m_SceneState == SceneState::Play)
 		{
-			if (m_ViewportPanel.IsViewportHovered())
-			{
-				Entity hoveredEntity = m_ViewportPanel.GetHoveredEntity();
 
-				if (hoveredEntity)
+			if (m_ViewportPanel.IsViewportHovered())
+				m_EditorCamera.OnUpdate(deltaTime);
+
+			if (Input::IsMouseDown(Mouse::LeftButton))
+			{
+				if (m_ViewportPanel.IsViewportHovered())
 				{
-					m_SceneHierarchyPanel.SetSelectedEntity(hoveredEntity);
+					Entity hoveredEntity = m_ViewportPanel.GetHoveredEntity();
+
+					if (hoveredEntity)
+					{
+						m_SceneHierarchyPanel.SetSelectedEntity(hoveredEntity);
+					}
 				}
 			}
-		}
+	}
 	}
 
 	void AppLayer::OnRender()
@@ -181,7 +194,10 @@ namespace Gravix
 			Command cmd(m_MSAAFramebuffer, 0, false);
 
 			cmd.BeginRendering();
-			m_ActiveScene->OnEditorRender(cmd, m_EditorCamera);
+			if (m_SceneState == SceneState::Edit)
+				m_ActiveScene->OnEditorRender(cmd, m_EditorCamera);
+			else
+				m_ActiveScene->OnRuntimeRender(cmd);
 			cmd.EndRendering();
 
 			cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
@@ -282,9 +298,56 @@ namespace Gravix
 			m_InspectorPanel.OnImGuiRender();
 			if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnImGuiRender();
 			m_ProjectSettingsPanel.OnImGuiRender();
+			UIToolbar();
 		}
 		ImGui::End();
 	}
+
+	void AppLayer::UIToolbar()
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 2));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+
+		auto& colors = ImGui::GetStyle().Colors;
+		auto& buttonHovered = colors[ImGuiCol_ButtonHovered];
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(buttonHovered.x, buttonHovered.y, buttonHovered.z, 0.5f));
+		auto& buttonActive = colors[ImGuiCol_ButtonActive];
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(buttonActive.x, buttonActive.y, buttonActive.x, 0.5f));
+
+		ImGui::Begin("##toolbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+		float windowHeight = ImGui::GetWindowHeight();
+		float buttonSize = windowHeight * 0.8f; // 80% of window height for some breathing room
+
+		Ref<Texture2D> icon = (m_SceneState == SceneState::Edit) ? m_IconPlay : m_IconStop;
+		ImGui::SetCursorPosX((ImGui::GetWindowContentRegionMax().x * 0.5f) - (buttonSize * 0.5f));
+		if (ImGui::ImageButton("SceneState", (ImTextureID)icon->GetImGuiAttachment(), ImVec2{ buttonSize, buttonSize }))
+		{
+			if (m_SceneState == SceneState::Edit)
+				OnScenePlay();
+			else if (m_SceneState == SceneState::Play)
+				OnSceneStop();
+		}
+
+		ImGui::PopStyleVar(4);
+		ImGui::PopStyleColor(3);
+		ImGui::End();
+	}
+
+
+	void AppLayer::OnScenePlay()
+	{
+		m_SceneState = SceneState::Play;
+	}
+
+	void AppLayer::OnSceneStop()
+	{
+		m_SceneState = SceneState::Edit;
+	}
+
 
 	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
 	{
@@ -472,6 +535,7 @@ namespace Gravix
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.529f, 0.808f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.353f, 0.627f, 0.902f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.208f, 0.471f, 0.749f, 1.0f));
+			ImGui::AlignTextToFramePadding();
 
 			if (ImGui::Button("New Project", ImVec2(buttonWidth, 40)))
 			{
@@ -482,6 +546,7 @@ namespace Gravix
 			ImGui::PopStyleColor(3);
 
 			ImGui::SameLine(0, spacing);
+			ImGui::AlignTextToFramePadding();
 
 			// Open Project button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));

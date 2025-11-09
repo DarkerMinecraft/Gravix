@@ -1,6 +1,8 @@
 #include "ContentBrowserPanel.h"
 #include "AppLayer.h"
 
+#include "Asset/Importers/TextureImporter.h"
+
 #include "Serialization/Scene/SceneSerializer.h"
 #include "Scene/Scene.h"
 
@@ -14,8 +16,8 @@ namespace Gravix
 	{
 		m_TreeNodes.push_back(TreeNode(".", 0));
 
-		m_DirectoryIcon = Texture2D::Create("EditorAssets/Icons/ContentBrowser/DirectoryIcon.png");
-		m_FileIcon = Texture2D::Create("EditorAssets/Icons/ContentBrowser/FileIcon.png");
+		m_DirectoryIcon = TextureImporter::LoadTexture2D("EditorAssets/Icons/ContentBrowser/DirectoryIcon.png");
+		m_FileIcon = TextureImporter::LoadTexture2D("EditorAssets/Icons/ContentBrowser/FileIcon.png");
 
 		m_AssetDirectory = Project::GetAssetDirectory();
 		m_CurrentDirectory = m_AssetDirectory;
@@ -39,6 +41,7 @@ namespace Gravix
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.353f, 0.627f, 0.902f, 1.0f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.208f, 0.471f, 0.749f, 1.0f));
 		ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
+		ImGui::AlignTextToFramePadding();
 		if (ImGui::Button("+ Create", ImVec2(80.0f, 0.0f)))
 		{
 			ImGui::OpenPopup("CreateAssetPopup");
@@ -109,6 +112,7 @@ namespace Gravix
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.443f, 0.443f, 0.443f, 1.0f));
+			ImGui::AlignTextToFramePadding();
 
 			if (ImGui::Button("< Back"))
 			{
@@ -265,6 +269,7 @@ namespace Gravix
 				float totalWidth = buttonWidth * 2 + spacing;
 				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
 
+				ImGui::AlignTextToFramePadding();
 				if (ImGui::Button("Rename", ImVec2(buttonWidth, 0)))
 				{
 					if (strlen(m_RenameBuffer) > 0)
@@ -276,6 +281,7 @@ namespace Gravix
 				}
 
 				ImGui::SameLine(0, spacing);
+				ImGui::AlignTextToFramePadding();
 
 				if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)))
 				{

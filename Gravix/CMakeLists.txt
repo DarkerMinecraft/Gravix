@@ -1,96 +1,258 @@
 cmake_minimum_required(VERSION 3.20)
 project(Gravix)
 
-add_library(Gravix STATIC)
+# ============================================================================
+# Configuration Modules
+# ============================================================================
 
-target_precompile_headers(Gravix PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/pch.h)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+include(VulkanConfig)
+include(NetHostConfig)
+
+# ============================================================================
+# Core Source Files
+# ============================================================================
+
+set(GRAVIX_CORE_SOURCES
+    # Core
+    Source/Core/Application.cpp
+    Source/Core/Application.h
+    Source/Core/Buffer.h
+    Source/Core/Core.h
+    Source/Core/Gravix.h
+    Source/Core/Input.h
+    Source/Core/Layer.h
+    Source/Core/Log.cpp
+    Source/Core/Log.h
+    Source/Core/RefCounted.h
+    Source/Core/Scheduler.cpp
+    Source/Core/Scheduler.h
+    Source/Core/UUID.cpp
+    Source/Core/UUID.h
+    Source/Core/Window.h
+
+    # Asset System
+    Source/Asset/Asset.cpp
+    Source/Asset/Asset.h
+    Source/Asset/AssetImporter.cpp
+    Source/Asset/AssetImporter.h
+    Source/Asset/AssetManager.h
+    Source/Asset/AssetManagerBase.h
+    Source/Asset/AssetMetadata.h
+    Source/Asset/AssetPack/PakBuilder.h
+    Source/Asset/AsyncLoadRequest.h
+    Source/Asset/EditorAssetManager.cpp
+    Source/Asset/EditorAssetManager.h
+    Source/Asset/RuntimeAssetManager.cpp
+    Source/Asset/RuntimeAssetManager.h
+    Source/Asset/Importers/SceneImporter.cpp
+    Source/Asset/Importers/SceneImporter.h
+    Source/Asset/Importers/TextureImporter.cpp
+    Source/Asset/Importers/TextureImporter.h
+
+    # Events
+    Source/Events/Event.h
+    Source/Events/KeyEvents.h
+    Source/Events/MouseEvents.h
+    Source/Events/WindowEvents.h
+
+    # Platform
+    Source/Platform/Windows/WindowsInput.cpp
+    Source/Platform/Windows/WindowsPlatformUtils.cpp
+    Source/Platform/Windows/WindowsWindow.cpp
+    Source/Platform/Windows/WindowsWindow.h
+
+    # Project
+    Source/Project/Project.cpp
+    Source/Project/Project.h
+
+    # Renderer (Generic)
+    Source/Renderer/CommandImpl.h
+    Source/Renderer/Specification.h
+    Source/Renderer/ImGuiBuild.cpp
+    Source/Renderer/ImGuiRender.cpp
+    Source/Renderer/ImGuiRender.h
+    Source/Renderer/Generic/Camera.h
+    Source/Renderer/Generic/Command.cpp
+    Source/Renderer/Generic/Command.h
+    Source/Renderer/Generic/Device.h
+    Source/Renderer/Generic/OrthographicCamera.cpp
+    Source/Renderer/Generic/OrthographicCamera.h
+    Source/Renderer/Generic/Renderer2D.cpp
+    Source/Renderer/Generic/Renderer2D.h
+    Source/Renderer/Generic/Types/Framebuffer.cpp
+    Source/Renderer/Generic/Types/Framebuffer.h
+    Source/Renderer/Generic/Types/Material.cpp
+    Source/Renderer/Generic/Types/Material.h
+    Source/Renderer/Generic/Types/Mesh.cpp
+    Source/Renderer/Generic/Types/Mesh.h
+    Source/Renderer/Generic/Types/Texture.cpp
+    Source/Renderer/Generic/Types/Texture.h
+
+    # Reflections
+    Source/Reflections/DynamicStruct.h
+    Source/Reflections/ReflectedStruct.h
+    Source/Reflections/ShaderReflection.h
+
+    # Scene
+    Source/Scene/ComponentRegistry.cpp
+    Source/Scene/ComponentRegistry.h
+    Source/Scene/Components.h
+    Source/Scene/EditorCamera.cpp
+    Source/Scene/EditorCamera.h
+    Source/Scene/Entity.h
+    Source/Scene/ImGuiHelpers.cpp
+    Source/Scene/ImGuiHelpers.h
+    Source/Scene/Scene.cpp
+    Source/Scene/Scene.h
+    Source/Scene/SceneCamera.cpp
+    Source/Scene/SceneCamera.h
+
+    # Scripting
+    Source/Scripting/ScriptEngine.cpp
+    Source/Scripting/ScriptEngine.h
+
+    # Serialization
+    Source/Serialization/BinaryDeserializer.h
+    Source/Serialization/BinarySerializer.h
+    Source/Serialization/Material/MaterialSerializer.cpp
+    Source/Serialization/Material/MaterialSerializer.h
+    Source/Serialization/Project/ProjectSerializer.cpp
+    Source/Serialization/Project/ProjectSerializer.h
+    Source/Serialization/Scene/SceneSerializer.cpp
+    Source/Serialization/Scene/SceneSerializer.h
+
+    # Math
+    Source/Maths/Maths.cpp
+    Source/Maths/Maths.h
+
+    # Utils
+    Source/Utils/PlatformUtils.h
+    Source/Utils/ShaderCompiler.cpp
+    Source/Utils/ShaderCompiler.h
+)
+
+# ============================================================================
+# Vulkan-Specific Source Files (Conditional)
+# ============================================================================
+
+if(GRAVIX_USE_VULKAN)
+    set(GRAVIX_VULKAN_SOURCES
+        # Vulkan Implementation
+        Source/Renderer/Vulkan/VulkanCommandImpl.cpp
+        Source/Renderer/Vulkan/VulkanCommandImpl.h
+        Source/Renderer/Vulkan/VulkanDevice.cpp
+        Source/Renderer/Vulkan/VulkanDevice.h
+        Source/Renderer/Vulkan/VulkanRenderCaps.cpp
+        Source/Renderer/Vulkan/VulkanRenderCaps.h
+
+        # Vulkan Types
+        Source/Renderer/Vulkan/Types/VulkanFramebuffer.cpp
+        Source/Renderer/Vulkan/Types/VulkanFramebuffer.h
+        Source/Renderer/Vulkan/Types/VulkanMaterial.cpp
+        Source/Renderer/Vulkan/Types/VulkanMaterial.h
+        Source/Renderer/Vulkan/Types/VulkanMesh.cpp
+        Source/Renderer/Vulkan/Types/VulkanMesh.h
+        Source/Renderer/Vulkan/Types/VulkanTexture.cpp
+        Source/Renderer/Vulkan/Types/VulkanTexture.h
+
+        # Vulkan Utils
+        Source/Renderer/Vulkan/Utils/DescriptorWriter.cpp
+        Source/Renderer/Vulkan/Utils/DescriptorWriter.h
+        Source/Renderer/Vulkan/Utils/VulkanInitializers.cpp
+        Source/Renderer/Vulkan/Utils/VulkanInitializers.h
+        Source/Renderer/Vulkan/Utils/VulkanTypes.h
+        Source/Renderer/Vulkan/Utils/VulkanUtils.cpp
+        Source/Renderer/Vulkan/Utils/VulkanUtils.h
+    )
+else()
+    set(GRAVIX_VULKAN_SOURCES "")
+endif()
+
+# ============================================================================
+# Library Target
+# ============================================================================
+
+add_library(Gravix STATIC
+    ${GRAVIX_CORE_SOURCES}
+    ${GRAVIX_VULKAN_SOURCES}
+)
+
+# Ensure Visual Studio tracks changes properly
+set_target_properties(Gravix PROPERTIES
+    FOLDER "Engine"
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+# Precompiled header
+target_precompile_headers(Gravix PRIVATE Source/pch.h)
+
+# UTF-8 support for MSVC
 if(MSVC)
     target_compile_options(Gravix PRIVATE /utf-8)
 endif()
 
-file(GLOB_RECURSE SRC_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
-)
-target_sources(Gravix PRIVATE ${SRC_FILES})
+# ============================================================================
+# Include Directories
+# ============================================================================
 
-find_package(Vulkan REQUIRED)
-
-if(ENGINE_USE_VULKAN)
-    add_compile_definitions(Gravix PRIVATE ENGINE_USE_VULKAN)
-endif()
-
-# --- Platform-specific .NET paths ---
-if(WIN32)
-    # Windows: Use installed .NET SDK
-    set(DOTNET_ROOT "C:/Program Files/dotnet")
-    set(NETHOST_PATH "${DOTNET_ROOT}/packs/Microsoft.NETCore.App.Host.win-x64/9.0.10/runtimes/win-x64/native")
-    
-    target_include_directories(Gravix PRIVATE ${NETHOST_PATH})
-    
-        find_library(NETHOST_LIB
-        NAMES nethost
-        PATHS ${NETHOST_PATH}
-        REQUIRED
-    )
-    target_link_libraries(Gravix PUBLIC ${NETHOST_LIB})
-    
-elseif(UNIX AND NOT APPLE)
-    # Linux: Use installed .NET SDK
-    set(DOTNET_ROOT "/usr/share/dotnet")
-    set(NETHOST_PATH "${DOTNET_ROOT}/packs/Microsoft.NETCore.App.Host.linux-x64/9.0.0/runtimes/linux-x64/native")
-    
-    target_include_directories(Gravix PRIVATE ${NETHOST_PATH})
-    
-    find_library(NETHOST_LIB
-        NAMES nethost
-        PATHS ${NETHOST_PATH}
-        REQUIRED
-    )
-    target_link_libraries(Gravix PUBLIC ${NETHOST_LIB} dl pthread)
-    
-elseif(APPLE)
-    # macOS: Use installed .NET SDK
-    set(DOTNET_ROOT "/usr/local/share/dotnet")
-    set(NETHOST_PATH "${DOTNET_ROOT}/packs/Microsoft.NETCore.App.Host.osx-x64/9.0.0/runtimes/osx-x64/native")
-    
-    target_include_directories(Gravix PRIVATE ${NETHOST_PATH})
-    
-    find_library(NETHOST_LIB
-        NAMES nethost
-        PATHS ${NETHOST_PATH}
-        REQUIRED
-    )
-    target_link_libraries(Gravix PUBLIC ${NETHOST_LIB})
-endif()
-
-target_include_directories(Gravix 
+target_include_directories(Gravix
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/Source/
-
+        Source/
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/glm
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGuizmo
         ${CMAKE_SOURCE_DIR}/ThirdParties/entt/single_include
     PRIVATE
-        ${Vulkan_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src
-        ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/enkiTS/src
-        ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include            
+        ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/stb/
         ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
+        ${NETHOST_INCLUDE_DIR}
 )
+
+# Vulkan-specific includes
+if(GRAVIX_USE_VULKAN)
+    target_include_directories(Gravix
+        PRIVATE
+            ${Vulkan_INCLUDE_DIRS}
+            ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src
+            ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
+    )
+endif()
+
+# ============================================================================
+# Link Libraries
+# ============================================================================
 
 target_link_libraries(Gravix
     PRIVATE
-        ${Vulkan_LIBRARIES}
-        vk-bootstrap
         enkiTS
         ImGui
         ImGuizmo
         slang
         yaml-cpp
+        ${NETHOST_LIB}
 )
+
+# Vulkan-specific libraries
+if(GRAVIX_USE_VULKAN)
+    target_link_libraries(Gravix
+        PRIVATE
+            ${Vulkan_LIBRARIES}
+            vk-bootstrap
+    )
+endif()
+
+# Platform-specific libraries
+if(UNIX AND NOT APPLE)
+    target_link_libraries(Gravix PRIVATE dl pthread)
+endif()
+
+# ============================================================================
+# Source Organization (IDE)
+# ============================================================================
+
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Source" FILES ${GRAVIX_CORE_SOURCES} ${GRAVIX_VULKAN_SOURCES})

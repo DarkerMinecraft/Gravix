@@ -10,12 +10,6 @@
 
 namespace Gravix
 {
-	VulkanTexture2D::VulkanTexture2D(Device* device, const std::filesystem::path& path, const TextureSpecification& specification)
-		: m_Device(static_cast<VulkanDevice*>(device))
-		, m_Specification(specification)
-	{
-		LoadFromFile(path);
-	}
 
 	VulkanTexture2D::VulkanTexture2D(Device* device, Buffer data, uint32_t width, uint32_t height, const TextureSpecification& specification)
 		: m_Device(static_cast<VulkanDevice*>(device))
@@ -46,44 +40,6 @@ namespace Gravix
 			ImGui_ImplVulkan_RemoveTexture(m_DescriptorSet);
 			m_DescriptorSet = VK_NULL_HANDLE;
 		}
-	}
-
-	void VulkanTexture2D::LoadFromFile(const std::filesystem::path& path)
-	{
-		if (!std::filesystem::exists(path)) 
-		{
-			GX_CORE_ERROR("Texture file does not exist: {0}", path.string());
-
-			CreateMagentaTexture(); // Create a magenta texture to indicate missing texture
-			return;
-		}
-
-		// Force RGBA format for consistency
-		stbi_set_flip_vertically_on_load(false); // Vulkan has inverted Y compared to OpenGL
-
-		int width, height, channels;
-		stbi_uc* data = stbi_load(path.string().c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-		if (!data)
-		{
-			GX_CORE_ERROR("Failed to load texture: {0} - {1}", path.string(), stbi_failure_reason());
-
-			CreateMagentaTexture(); // Create a magenta texture to indicate missing texture
-			return;
-		}
-
-		m_Width = static_cast<uint32_t>(width);
-		m_Height = static_cast<uint32_t>(height);
-		m_Channels = 4; // We forced RGBA above
-
-		Buffer buf; 
-		buf.Data = data;
-		buf.Size = m_Width * m_Height * m_Channels;
-
-		CreateFromData(buf, m_Width, m_Height, m_Channels);
-
-		// Free stbi memory
-		stbi_image_free(data);
 	}
 
 	void VulkanTexture2D::CreateFromData(Buffer data, uint32_t width, uint32_t height, uint32_t channels)

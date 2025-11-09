@@ -1,31 +1,53 @@
 cmake_minimum_required(VERSION 3.20)
 project(Orbit)
 
-file(GLOB_RECURSE SRC_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/**.cpp"
+# ============================================================================
+# Source Files
+# ============================================================================
+
+set(ORBIT_SOURCES
+    # Application
+    Source/App.cpp
+    Source/AppLayer.cpp
+    Source/AppLayer.h
+
+    # Panels
+    Source/Panels/ContentBrowserPanel.cpp
+    Source/Panels/ContentBrowserPanel.h
+    Source/Panels/InspectorPanel.cpp
+    Source/Panels/InspectorPanel.h
+    Source/Panels/ProjectSettingsPanel.cpp
+    Source/Panels/ProjectSettingsPanel.h
+    Source/Panels/SceneHierarchyPanel.cpp
+    Source/Panels/SceneHierarchyPanel.h
+    Source/Panels/ViewportPanel.cpp
+    Source/Panels/ViewportPanel.h
 )
 
-# Create the Orbit executable TARGET FIRST
-add_executable(Orbit ${SRC_FILES})
+# ============================================================================
+# Executable Target
+# ============================================================================
 
-# Link libraries to the target
-target_link_libraries(Orbit
-    PRIVATE
-        Gravix
-        ImGui
-        ImGuizmo
-        yaml-cpp
+add_executable(Orbit ${ORBIT_SOURCES})
+
+# Ensure Visual Studio tracks changes properly
+set_target_properties(Orbit PROPERTIES
+    FOLDER "Editor"
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
+# UTF-8 support for MSVC
 if(MSVC)
     target_compile_options(Orbit PRIVATE /utf-8)
 endif()
 
-# Include directories for the editor
+# ============================================================================
+# Include Directories
+# ============================================================================
+
 target_include_directories(Orbit
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/Source
+        Source
         ${CMAKE_SOURCE_DIR}/Gravix/Source/Core
         ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
@@ -35,19 +57,23 @@ target_include_directories(Orbit
 )
 
 # ============================================================================
-# IMPROVED ASSET COPYING WITH PROPER DEPENDENCY TRACKING
+# Link Libraries
 # ============================================================================
 
-# Gather all asset files for dependency tracking
-file(GLOB_RECURSE ROOT_ASSET_FILES 
-    "${CMAKE_SOURCE_DIR}/Assets/*"
+target_link_libraries(Orbit
+    PRIVATE
+        Gravix
+        ImGui
+        ImGuizmo
+        yaml-cpp
 )
 
-file(GLOB_RECURSE EDITOR_ASSET_FILES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*"
-)
+# ============================================================================
+# Asset Copying
+# ============================================================================
 
-# Custom command to copy root assets (triggered by file changes)
+# Root assets
+file(GLOB_RECURSE ROOT_ASSET_FILES "${CMAKE_SOURCE_DIR}/Assets/*")
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/root_assets.stamp"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -55,11 +81,12 @@ add_custom_command(
         "$<TARGET_FILE_DIR:Orbit>/Assets"
     COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/root_assets.stamp"
     DEPENDS ${ROOT_ASSET_FILES}
-    COMMENT "Copying root assets to Orbit output directory"
+    COMMENT "Copying root assets..."
     VERBATIM
 )
 
-# Custom command to copy editor-specific assets (triggered by file changes)
+# Editor assets
+file(GLOB_RECURSE EDITOR_ASSET_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*")
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/editor_assets.stamp"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -67,71 +94,54 @@ add_custom_command(
         "$<TARGET_FILE_DIR:Orbit>/EditorAssets"
     COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/editor_assets.stamp"
     DEPENDS ${EDITOR_ASSET_FILES}
-    COMMENT "Copying editor assets to Orbit output directory"
+    COMMENT "Copying editor assets..."
     VERBATIM
 )
 
-# Create custom targets that depend on the stamp files
-add_custom_target(CopyRootAssets
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/root_assets.stamp"
-)
-
-add_custom_target(CopyEditorAssets
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/editor_assets.stamp"
-)
-
-# Make Orbit depend on the copy targets
+add_custom_target(CopyRootAssets DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/root_assets.stamp")
+add_custom_target(CopyEditorAssets DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/editor_assets.stamp")
+set_target_properties(CopyRootAssets CopyEditorAssets PROPERTIES FOLDER "Editor/Assets")
 add_dependencies(Orbit CopyRootAssets CopyEditorAssets)
 
-# ============================================================================
-# SCRIPTING DLL COPYING
-# ============================================================================
-
-# Make CopyScripting wait for GravixScripting to build first
-#add_dependencies(CopyScripting GravixScripting)
-#add_dependencies(Orbit CopyScripting)
-
-# Copy Slang DLL
+# Slang DLL
 add_custom_command(TARGET Orbit POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:slang>"
         "$<TARGET_FILE_DIR:Orbit>"
-    COMMENT "Copying Slang DLL to Orbit output directory"
+    COMMENT "Copying Slang DLL..."
 )
 
 # ============================================================================
-# VISUAL STUDIO SETTINGS
+# Platform-Specific Settings
 # ============================================================================
 
-# Set as startup project in Visual Studio
-set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Orbit)
-
-# Platform-specific settings
 if(WIN32)
-    # Set console subsystem for debugging, windows subsystem for release
+    # Console subsystem for debug, windows subsystem for release
     set_target_properties(Orbit PROPERTIES
         WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>
     )
-    
-    # Add Windows-specific resources if available
+
+    # Windows resources
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Orbit.rc)
         target_sources(Orbit PRIVATE Resources/Orbit.rc)
     endif()
-    
+
 elseif(APPLE)
-    # macOS bundle settings
+    # macOS bundle
     set_target_properties(Orbit PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_NAME "Orbit Editor"
-        MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.orbit"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.gravix.orbit"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
 endif()
 
-# Debug information
-message(STATUS "Orbit Editor configured successfully")
-message(STATUS "  Output directory: ${CMAKE_BINARY_DIR}/bin")
-message(STATUS "  Engine dependency: Gravix::Engine")
-message(STATUS "  Root assets: ${CMAKE_SOURCE_DIR}/Assets")
-message(STATUS "  Editor assets: ${CMAKE_CURRENT_SOURCE_DIR}/Assets")
+# ============================================================================
+# Source Organization (IDE)
+# ============================================================================
+
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Source" FILES ${ORBIT_SOURCES})
+
+# Visual Studio startup project
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Orbit)

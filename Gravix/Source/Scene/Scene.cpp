@@ -79,15 +79,14 @@ namespace Gravix
 	void Scene::OnEditorRender(Command& cmd, EditorCamera& camera)
 	{
 		{
-			auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
-
 			Renderer2D::BeginScene(cmd, camera);
-			for (auto entity : group)
-			{
-				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
+
+			auto view = m_Registry.view<TransformComponent, SpriteRendererComponent>();
+			view.each([&](auto entity, auto& transform, auto& sprite) {
 				Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
 				Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite, texture, sprite);
-			}
+			});
+
 			Renderer2D::EndScene(cmd);
 		}
 	}
@@ -96,30 +95,28 @@ namespace Gravix
 	{
 		Camera mainCamera;
 		glm::mat4 cameraTransform;
+		bool foundCamera = false;
 		{
-			auto group = m_Registry.group<TransformComponent, CameraComponent>();
-			for (auto entity : group)
-			{
-				auto [transform, camera] = group.get<TransformComponent, CameraComponent>(entity);
-
+			auto view = m_Registry.view<TransformComponent, CameraComponent>();
+			view.each([&](auto entity, auto& transform, auto& camera) {
 				if (camera.Primary)
 				{
 					mainCamera = camera.Camera;
 					cameraTransform = transform.Transform;
+					foundCamera = true;
 				}
-			}
+			});
 		}
 
+		if (foundCamera)
 		{
-			auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
-
 			Renderer2D::BeginScene(cmd, mainCamera, cameraTransform);
-			for (auto entity : group)
-			{
-				auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
 
+			auto view = m_Registry.view<TransformComponent, SpriteRendererComponent>();
+			view.each([&](auto entity, auto& transform, auto& sprite) {
 				Renderer2D::DrawQuad(transform, -1, sprite);
-			}
+			});
+
 			Renderer2D::EndScene(cmd);
 		}
 	}
