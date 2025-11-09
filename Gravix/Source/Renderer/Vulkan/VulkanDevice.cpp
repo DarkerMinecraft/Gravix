@@ -40,7 +40,17 @@ namespace Gravix
 			vkDeviceWaitIdle(m_Device);
 		}
 
-		// Clean up frame resources
+		// Clean up per-swapchain-image present semaphores
+		for (auto& syncData : m_SwapchainSyncData)
+		{
+			if (syncData.RenderSemaphore != VK_NULL_HANDLE)
+			{
+				vkDestroySemaphore(m_Device, syncData.RenderSemaphore, nullptr);
+				syncData.RenderSemaphore = VK_NULL_HANDLE;
+			}
+		}
+
+		// Clean up per-frame resources
 		for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 		{
 			if (m_Frames[i].CommandPool != VK_NULL_HANDLE)
@@ -53,12 +63,6 @@ namespace Gravix
 			{
 				vkDestroySemaphore(m_Device, m_Frames[i].SwapchainSemaphore, nullptr);
 				m_Frames[i].SwapchainSemaphore = VK_NULL_HANDLE;
-			}
-
-			if (m_Frames[i].RenderSemaphore != VK_NULL_HANDLE)
-			{
-				vkDestroySemaphore(m_Device, m_Frames[i].RenderSemaphore, nullptr);
-				m_Frames[i].RenderSemaphore = VK_NULL_HANDLE;
 			}
 
 			if (m_Frames[i].RenderFence != VK_NULL_HANDLE)
@@ -152,13 +156,11 @@ namespace Gravix
 			GX_PROFILE_SCOPE("WaitForFences");
 			vkWaitForFences(m_Device, 1, &GetCurrentFrameData().RenderFence, true, UINT64_MAX);
 			vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
-
-			vkDeviceWaitIdle(m_Device);
 		}
 
 		{
 			GX_PROFILE_SCOPE("AcquireSwapchainImage");
-			// Wait on SwapchainSemaphore when acquiring
+			// Acquire next swapchain image - signal per-frame semaphore when ready
 			VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX,
 				GetCurrentFrameData().SwapchainSemaphore, nullptr, &m_SwapchainImageIndex);
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -208,13 +210,15 @@ namespace Gravix
 			GX_PROFILE_SCOPE("SubmitCommandBuffer");
 			VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(GetCurrentFrameData().CommandBuffer);
 
+			// Wait on per-frame acquire semaphore (signaled by vkAcquireNextImageKHR)
 			VkSemaphoreSubmitInfo waitInfo = VulkanInitializers::SemaphoreSubmitInfo(
 				VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				GetCurrentFrameData().SwapchainSemaphore);  // Wait on image acquisition
+				GetCurrentFrameData().SwapchainSemaphore);
 
+			// Signal per-swapchain-image present semaphore (waited on by vkQueuePresentKHR)
 			VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
 				VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-				GetCurrentFrameData().RenderSemaphore);
+				m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore);
 
 			VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
 
@@ -227,7 +231,7 @@ namespace Gravix
 			GX_PROFILE_SCOPE("PresentSwapchain");
 			//prepare present
 			// this will put the image we just rendered to into the visible window.
-			// we want to wait on the _renderSemaphore for that,
+			// we want to wait on the per-swapchain-image render semaphore for that,
 			// as its necessary that drawing commands have finished before the image is displayed to the user
 			VkPresentInfoKHR presentInfo = {};
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -235,7 +239,7 @@ namespace Gravix
 			presentInfo.pSwapchains = &m_Swapchain;
 			presentInfo.swapchainCount = 1;
 
-			presentInfo.pWaitSemaphores = &GetCurrentFrameData().RenderSemaphore;
+			presentInfo.pWaitSemaphores = &m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore;
 			presentInfo.waitSemaphoreCount = 1;
 
 			presentInfo.pImageIndices = &m_SwapchainImageIndex;
@@ -254,6 +258,11 @@ namespace Gravix
 
 		//increase the number of frames drawn
 		m_CurrentFrame++;
+	}
+
+	void VulkanDevice::WaitIdle()
+	{
+		vkDeviceWaitIdle(m_Device);
 	}
 
 	AllocatedImage VulkanDevice::CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool useSamples /*= false*/, bool mipmapped /*= false*/)
@@ -538,10 +547,17 @@ namespace Gravix
 
 	void VulkanDevice::RecreateSwapchain(uint32_t width, uint32_t height, bool vSync)
 	{
+		// Destroy old swapchain image views
 		for (int i = 0; i < m_SwapchainImageViews.size(); i++) {
-
 			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
 		}
+
+		// Destroy old per-swapchain-image semaphores
+		for (auto& syncData : m_SwapchainSyncData)
+		{
+			vkDestroySemaphore(m_Device, syncData.RenderSemaphore, nullptr);
+		}
+		m_SwapchainSyncData.clear();
 
 		vkb::SwapchainBuilder swapchainBuilder{ m_PhysicalDevice, m_Device, m_Surface };
 
@@ -563,6 +579,14 @@ namespace Gravix
 		m_Swapchain = vkbSwapchain.swapchain;
 		m_SwapchainImages = vkbSwapchain.get_images().value();
 		m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
+
+		// Recreate per-swapchain-image semaphores for new swapchain
+		VkSemaphoreCreateInfo semaphoreCreateInfo = VulkanInitializers::SemaphoreCreateInfo();
+		m_SwapchainSyncData.resize(m_SwapchainImages.size());
+		for (size_t i = 0; i < m_SwapchainImages.size(); i++)
+		{
+			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_SwapchainSyncData[i].RenderSemaphore);
+		}
 	}
 
 	void VulkanDevice::InitDescriptorPool()
@@ -767,12 +791,18 @@ namespace Gravix
 		VkFenceCreateInfo fenceCreateInfo = VulkanInitializers::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
 		VkSemaphoreCreateInfo semaphoreCreateInfo = VulkanInitializers::SemaphoreCreateInfo();
 
-		for (uint32_t i = 0; i < FRAME_OVERLAP; i++) 
+		// Create per-frame fences and acquire semaphores
+		for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 		{
 			vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_Frames[i].RenderFence);
-
 			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].SwapchainSemaphore);
-			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].RenderSemaphore);
+		}
+
+		// Create per-swapchain-image present semaphores
+		m_SwapchainSyncData.resize(m_SwapchainImages.size());
+		for (size_t i = 0; i < m_SwapchainImages.size(); i++)
+		{
+			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_SwapchainSyncData[i].RenderSemaphore);
 		}
 
 		vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_ImmediateFence);

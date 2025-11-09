@@ -30,7 +30,7 @@ namespace Gravix
 
 		const std::filesystem::path& GetAssetFilePath(AssetHandle handle) const;
 
-		void ClearLoadedAssets() { m_LoadedAssets.clear(); }
+		void ClearLoadedAssets();
 
 		void SerializeAssetRegistry();
 		void DeserializeAssetRegistry();

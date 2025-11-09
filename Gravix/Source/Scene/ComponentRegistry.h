@@ -101,7 +101,7 @@ namespace Gravix
 
 						// Use bold font for component headers
 						ImGuiIO& io = ImGui::GetIO();
-						ImGui::PushFont(io.Fonts->Fonts[3]); // 18px bold font for headers
+						ImGui::PushFont(io.Fonts->Fonts[2]); // 18px bold font for headers
 
 						bool open = ImGui::TreeNodeEx((void*)typeid(*reinterpret_cast<T*>(instance)).hash_code(),
 							ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_Framed,

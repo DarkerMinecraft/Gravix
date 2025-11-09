@@ -139,7 +139,8 @@ namespace Gravix
 
 	void VulkanTexture2D::Cleanup()
 	{
-		vkDeviceWaitIdle(m_Device->GetDevice());
+		// Wait for GPU to finish using this texture before destroying
+		m_Device->WaitIdle();
 
 		if (m_Sampler != VK_NULL_HANDLE)
 		{

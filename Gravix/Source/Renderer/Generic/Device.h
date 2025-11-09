@@ -27,15 +27,18 @@ namespace Gravix
 
 	constexpr uint32_t FRAME_OVERLAP = 2;
 
-	class Device 
+	class Device
 	{
 	public:
 		virtual ~Device() = default;
 
-		virtual DeviceType GetType() const = 0; 
+		virtual DeviceType GetType() const = 0;
 
 		virtual void StartFrame() = 0;
 		virtual void EndFrame() = 0;
+
+		// Wait for all GPU operations to complete (use sparingly, only for cleanup/destruction)
+		virtual void WaitIdle() = 0;
 
 		void RegisterFramebuffer(Ref<Framebuffer> framebuffer) { m_Framebuffers.push_back(framebuffer); }
 		std::vector<Ref<Framebuffer>>& GetFramebuffers() { return m_Framebuffers; }

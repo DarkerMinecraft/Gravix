@@ -52,11 +52,18 @@ namespace Gravix
 
 	void ImGuiRender::End()
 	{
-		Command cmd;
+		ImGui::Render();  // Finalize ImGui draw data
 
-		cmd.BeginRendering();
-		cmd.DrawImGui();
-		cmd.EndRendering();
+		// Only render if ImGui has vertices to draw (optimization)
+		ImDrawData* drawData = ImGui::GetDrawData();
+		if (drawData && drawData->TotalVtxCount > 0)
+		{
+			Command cmd;
+
+			cmd.BeginRendering();
+			cmd.DrawImGui();
+			cmd.EndRendering();
+		}
 
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -95,19 +102,22 @@ namespace Gravix
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
 
-		// Load fonts for a professional Unity-like appearance
+		// Load fonts for a professional Unity-like appearance with optimizations
+		// Reduce oversampling for better performance (default is 3,1 which is expensive)
+		ImFontConfig fontConfig;
+		fontConfig.OversampleH = 1;  // Reduced from 3 (66% less memory)
+		fontConfig.OversampleV = 1;  // Keep at 1
+		fontConfig.PixelSnapH = true; // Snap to pixel grid for sharper text
+
 		// Main UI font - slightly larger for better readability
-		ImFont* fontRegular = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 15.0f);
+		ImFont* fontRegular = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 15.0f, &fontConfig);
 		io.FontDefault = fontRegular;
 
 		// Bold font for headers and emphasis
-		ImFont* fontBold = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 15.0f);
+		ImFont* fontBold = io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 15.0f, &fontConfig);
 
-		// Additional font sizes for various UI elements
-		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 18.0f);  // For headers
-		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 18.0f);     // For bold headers
-		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Regular.ttf", 20.0f);  // For large headers
-		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 20.0f);     // For large bold headers
+		// Additional font sizes for various UI elements (optimized - only essential sizes)
+		io.Fonts->AddFontFromFileTTF("Assets/fonts/Roboto-Bold.ttf", 18.0f, &fontConfig);  // For bold headers
 
 		Application& app = Application::Get();
 		HWND window = static_cast<HWND>(app.GetWindow().GetWindowHandle());

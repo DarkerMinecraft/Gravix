@@ -15,13 +15,18 @@
 namespace Gravix 
 {
 
-	struct FrameData 
+	struct FrameData
 	{
 		VkCommandPool CommandPool;
 		VkCommandBuffer CommandBuffer;
 
-		VkSemaphore SwapchainSemaphore, RenderSemaphore;
 		VkFence RenderFence;
+		VkSemaphore SwapchainSemaphore;  // Per-frame: signaled by acquire, waited by submit
+	};
+
+	struct SwapchainSyncData
+	{
+		VkSemaphore RenderSemaphore;  // Per-swapchain-image: signaled by submit, waited by present
 	};
 
 
@@ -35,6 +40,7 @@ namespace Gravix
 
 		virtual void StartFrame() override;
 		virtual void EndFrame() override;
+		virtual void WaitIdle() override;
 
 		ShaderCompiler& GetShaderCompiler() { return *m_ShaderCompiler; }
 
@@ -114,10 +120,11 @@ namespace Gravix
 
 		VkSwapchainKHR m_Swapchain;
 		VkFormat m_SwapchainImageFormat;
-		VkImageLayout m_SwapchainImageLayout; 
+		VkImageLayout m_SwapchainImageLayout;
 
 		std::vector<VkImage> m_SwapchainImages;
 		std::vector<VkImageView> m_SwapchainImageViews;
+		std::vector<SwapchainSyncData> m_SwapchainSyncData;  // Per-swapchain-image semaphores
 		VkExtent2D m_SwapchainExtent;
 
 		FrameData m_Frames[FRAME_OVERLAP];

@@ -164,6 +164,15 @@ namespace Gravix
 		return GetAssetMetadata(handle).FilePath;
 	}
 
+	void EditorAssetManager::ClearLoadedAssets()
+	{
+		// Wait for GPU to finish using all assets before destroying them
+		// This prevents destroying textures/resources that are still in use by command buffers
+		Application::Get().GetWindow().GetDevice()->WaitIdle();
+
+		m_LoadedAssets.clear();
+	}
+
 	void EditorAssetManager::SerializeAssetRegistry()
 	{
 		std::filesystem::path registryPath = Project::GetLibraryDirectory() / "AssetRegistry.orbreg";

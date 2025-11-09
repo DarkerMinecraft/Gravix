@@ -6,6 +6,7 @@
 #include "Renderer/Generic/Types/Material.h"
 #include "Renderer/Generic/Types/Texture.h"
 #include "Renderer/Generic/Types/Mesh.h"
+#include "Debug/Instrumentor.h"
 #include <glm/ext/matrix_transform.hpp>
 
 namespace Gravix
@@ -97,7 +98,9 @@ namespace Gravix
 
 	void Renderer2D::BeginScene(Command& cmd, Camera& camera, const glm::mat4& transformMatrix)
 	{
-		s_Data->TextureSlotIndex = 1; 
+		GX_PROFILE_FUNCTION();
+
+		s_Data->TextureSlotIndex = 1;
 		s_Data->QuadIndexCount = 0;
 		s_Data->QuadVertexBuffer.clear();
 
@@ -109,6 +112,8 @@ namespace Gravix
 
 	void Renderer2D::BeginScene(Command& cmd, EditorCamera& camera)
 	{
+		GX_PROFILE_FUNCTION();
+
 		s_Data->TextureSlotIndex = 1;
 		s_Data->QuadIndexCount = 0;
 		s_Data->QuadVertexBuffer.clear();
@@ -121,11 +126,10 @@ namespace Gravix
 
 	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
 	{
-		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
-
 		float textureIndex = 0.0f;
 		if (texture != nullptr)
 		{
+			// Check if texture is already in a slot
 			for (uint32_t i = 1; i < s_Data->TextureSlotIndex; i++)
 			{
 				if (*s_Data->TextureSlots[i].get() == *texture.get())
@@ -135,13 +139,21 @@ namespace Gravix
 				}
 			}
 
-			if (textureIndex == 0.0)
+			// Add new texture if not found
+			if (textureIndex == 0.0f)
 			{
-				textureIndex = (float)s_Data->TextureSlotIndex;
-				s_Data->TextureSlots[s_Data->TextureSlotIndex] = texture;
-				s_Data->TextureSlotIndex++;
+				// Check if we have room for more textures
+				if (s_Data->TextureSlotIndex < s_Data->MaxTextureSlots)
+				{
+					textureIndex = (float)s_Data->TextureSlotIndex;
+					s_Data->TextureSlots[s_Data->TextureSlotIndex] = texture;
+					s_Data->TextureSlotIndex++;
+				}
+				// If no room, use white texture (fallback)
 			}
 		}
+
+		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -163,6 +175,12 @@ namespace Gravix
 
 	void Renderer2D::EndScene(Command& cmd)
 	{
+		GX_PROFILE_FUNCTION();
+
+		// Early exit if nothing to draw
+		if (s_Data->QuadIndexCount == 0)
+			return;
+
 		s_Data->QuadMesh->SetVertices(s_Data->QuadVertexBuffer);
 		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 

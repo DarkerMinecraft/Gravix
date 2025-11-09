@@ -6,6 +6,7 @@
 #include "Asset/AssetManager.h"
 
 #include "Renderer/Generic/Renderer2D.h"
+#include "Debug/Instrumentor.h"
 
 namespace Gravix
 {
@@ -78,27 +79,36 @@ namespace Gravix
 
 	void Scene::OnEditorRender(Command& cmd, EditorCamera& camera)
 	{
-		{
-			Renderer2D::BeginScene(cmd, camera);
+		GX_PROFILE_FUNCTION();
 
-			auto view = m_Registry.view<TransformComponent, SpriteRendererComponent>();
-			view.each([&](auto entity, auto& transform, auto& sprite) {
-				Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
-				Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite, texture, sprite);
-			});
+		auto view = m_Registry.view<TransformComponent, SpriteRendererComponent>();
 
-			Renderer2D::EndScene(cmd);
-		}
+		// Early exit if no sprites to render
+		if (view.size_hint() == 0)
+			return;
+
+		Renderer2D::BeginScene(cmd, camera);
+
+		view.each([&](auto entity, auto& transform, auto& sprite) {
+			Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
+			Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite, texture, sprite);
+		});
+
+		Renderer2D::EndScene(cmd);
 	}
 
 	void Scene::OnRuntimeRender(Command& cmd)
 	{
+		GX_PROFILE_FUNCTION();
+
 		Camera mainCamera;
 		glm::mat4 cameraTransform;
 		bool foundCamera = false;
-		{
-			auto view = m_Registry.view<TransformComponent, CameraComponent>();
-			view.each([&](auto entity, auto& transform, auto& camera) {
+
+		// Find primary camera
+		auto cameraView = m_Registry.view<TransformComponent, CameraComponent>();
+		cameraView.each([&](auto entity, auto& transform, auto& camera)
+			{
 				if (camera.Primary)
 				{
 					mainCamera = camera.Camera;
@@ -111,20 +121,24 @@ namespace Gravix
 					foundCamera = true;
 				}
 			});
-		}
 
-		if (foundCamera)
-		{
-			Renderer2D::BeginScene(cmd, mainCamera, cameraTransform);
+		if (!foundCamera)
+			return;  // Early exit if no camera
 
-			auto view = m_Registry.view<TransformComponent, SpriteRendererComponent>();
-			view.each([&](auto entity, auto& transform, auto& sprite) {
-				Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
-				Renderer2D::DrawQuad(transform, -1, sprite, texture, sprite);
-			});
+		auto spriteView = m_Registry.view<TransformComponent, SpriteRendererComponent>();
 
-			Renderer2D::EndScene(cmd);
-		}
+		// Early exit if no sprites to render
+		if (spriteView.size_hint() == 0)
+			return;
+
+		Renderer2D::BeginScene(cmd, mainCamera, cameraTransform);
+
+		spriteView.each([&](auto entity, auto& transform, auto& sprite) {
+			Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
+			Renderer2D::DrawQuad(transform, -1, sprite, texture, sprite);
+		});
+
+		Renderer2D::EndScene(cmd);
 	}
 
 	void Scene::OnViewportResize(uint32_t width, uint32_t height)

@@ -47,6 +47,9 @@ namespace Gravix
 
 	VulkanFramebuffer::~VulkanFramebuffer()
 	{
+		// Wait for GPU to finish using this framebuffer before destroying
+		m_Device->WaitIdle();
+
 		for (auto& attachment : m_Attachments)
 		{
 			vkDestroySampler(m_Device->GetDevice(), attachment.Sampler, nullptr);
@@ -425,6 +428,8 @@ namespace Gravix
 		}
 		m_Attachments[index] = { image, oldAttachment.Format, sampler, VK_IMAGE_LAYOUT_UNDEFINED };
 
+		// Wait for GPU to finish using old attachment before destroying
+		m_Device->WaitIdle();
 		m_Device->DestroyImage(oldAttachment.Image);
 		vkDestroySampler(m_Device->GetDevice(), oldAttachment.Sampler, nullptr);
 
