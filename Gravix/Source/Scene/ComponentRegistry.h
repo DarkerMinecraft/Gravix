@@ -112,6 +112,7 @@ namespace Gravix
 
 						// Unity-style settings button (three dots)
 						ImGui::SameLine(ImGui::GetContentRegionAvail().x - 10.0f);
+						ImGui::AlignTextToFramePadding();
 						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
 						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.443f, 0.443f, 0.443f, 1.0f));

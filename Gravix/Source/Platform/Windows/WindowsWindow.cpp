@@ -251,6 +251,18 @@ namespace Gravix
 			pData.EventCallback(event);
 			return 0;
 		}
+
+		case WM_SETCURSOR:
+		{
+			// Only handle cursor when in client area
+			if (LOWORD(lParam) == HTCLIENT)
+			{
+				// Return TRUE to prevent Windows from setting the cursor to the window class cursor
+				return TRUE;
+			}
+			// Let default handler manage cursor for non-client areas (title bar, resize borders, etc.)
+			break;
+		}
 		}
 
 		return DefWindowProc(hwnd, msg, wParam, lParam);

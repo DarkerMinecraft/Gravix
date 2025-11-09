@@ -6,8 +6,10 @@
 #include "Events/WindowEvents.h"
 
 #include "Asset/Importers/TextureImporter.h"
+#include "Debug/Instrumentor.h"
 
 #include <imgui.h>
+#include <ImGuizmo.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace Gravix
@@ -15,6 +17,26 @@ namespace Gravix
 
 	AppLayer::AppLayer()
 	{
+		GX_PROFILE_FUNCTION();
+		// Setup manager callbacks
+		m_ProjectManager.SetOnProjectLoadedCallback([this]() { InitializeProject(); });
+		m_ProjectManager.SetOnProjectCreatedCallback([this]() { InitializeProject(); });
+
+		m_SceneManager.SetOnSceneChangedCallback([this]() {
+			m_SceneHierarchyPanel.SetContext(m_SceneManager.GetActiveScene());
+			m_SceneHierarchyPanel.SetNoneSelected();
+			UpdateWindowTitle();
+		});
+
+		m_SceneManager.SetOnSceneDirtyCallback([this]() {
+			UpdateWindowTitle();
+		});
+
+		m_SceneManager.SetOnScenePlayCallback([this]() {
+			auto& viewportSize = m_ViewportPanel.GetViewportSize();
+			m_SceneManager.GetActiveScene()->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
+		});
+
 		// Check if a project has been loaded
 		if (Project::HasActiveProject())
 		{
@@ -23,9 +45,8 @@ namespace Gravix
 		else
 		{
 			// Show startup dialog to prompt user to open/create a project
-			m_ShowStartupDialog = true;
-
-			NewProject();
+			m_ProjectManager.SetShowStartupDialog(true);
+			m_ProjectManager.CreateNewProject();
 		}
 
 		FramebufferSpecification fbSpec{};
@@ -41,7 +62,7 @@ namespace Gravix
 		fbSpec.Multisampled = false;
 		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
 
-		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+		m_SceneHierarchyPanel.SetContext(m_SceneManager.GetActiveScene());
 		m_SceneHierarchyPanel.SetAppLayer(this);
 		m_InspectorPanel.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
 		m_InspectorPanel.SetAppLayer(this);
@@ -63,44 +84,17 @@ namespace Gravix
 
 	void AppLayer::InitializeProject()
 	{
-		// Always create a default empty scene to prevent nullptr issues
-		if (!m_ActiveScene)
-		{
-			m_ActiveScene = CreateRef<Scene>();
-		}
+		GX_PROFILE_FUNCTION();
 
-		// Try to open the start scene if it's valid
-		AssetHandle startScene = Project::GetActive()->GetConfig().StartScene;
-		if (startScene != 0 && AssetManager::GetAssetType(startScene) == AssetType::Scene)
-		{
-			// Load scene synchronously during initialization to ensure it's ready
-			const auto& assetManager = Project::GetActive()->GetEditorAssetManager();
-			const auto& metadata = assetManager->GetAssetMetadata(startScene);
-			const auto& filePath = Project::GetAssetDirectory() / metadata.FilePath;
+		// Load the start scene
+		Ref<Scene> scene = m_SceneManager.LoadStartScene(m_ViewportPanel.GetViewportSize());
 
-			if (std::filesystem::exists(filePath))
-			{
-				// Create and deserialize the scene
-				m_ActiveScene = CreateRef<Scene>();
-				SceneSerializer serializer(m_ActiveScene);
-				serializer.Deserialize(filePath);
-
-				m_ActiveSceneHandle = startScene;
-				m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-				m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-				m_SceneHierarchyPanel.SetNoneSelected();
-
-				GX_CORE_INFO("Loaded start scene: {0}", filePath.string());
-			}
-			else
-			{
-				GX_CORE_WARN("Start scene file not found: {0}", filePath.string());
-			}
-		}
+		// Update panels
+		m_SceneHierarchyPanel.SetContext(scene);
+		m_SceneHierarchyPanel.SetNoneSelected();
 
 		m_ProjectInitialized = true;
-		m_ShowStartupDialog = false;
-		m_SceneDirty = false;
+		m_ProjectManager.SetShowStartupDialog(false);
 
 		// Update window title with scene name
 		UpdateWindowTitle();
@@ -108,6 +102,8 @@ namespace Gravix
 
 	AppLayer::~AppLayer()
 	{
+		GX_PROFILE_FUNCTION();
+
 		if (Project::HasActiveProject())
 		{
 			Project::GetActive()->GetEditorAssetManager()->ClearLoadedAssets();
@@ -124,7 +120,7 @@ namespace Gravix
 		// Only forward events to panels if project is initialized
 		if (m_ProjectInitialized)
 		{
-			if (m_SceneState == SceneState::Edit)
+			if (m_SceneManager.GetSceneState() == SceneState::Edit)
 				m_EditorCamera.OnEvent(e);
 			m_ViewportPanel.OnEvent(e);
 		}
@@ -132,52 +128,62 @@ namespace Gravix
 
 	void AppLayer::OnUpdate(float deltaTime)
 	{
+		GX_PROFILE_FUNCTION();
+
 		// Only update if project is initialized
 		if (!m_ProjectInitialized)
 			return;
 
 		// Check if pending scene has finished loading
-		if (m_PendingSceneHandle != 0 && AssetManager::IsAssetLoaded(m_PendingSceneHandle))
 		{
-			GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(m_PendingSceneHandle));
-			AssetHandle sceneToLoad = m_PendingSceneHandle;
-			m_PendingSceneHandle = 0; // Clear pending before calling OpenScene
-			OpenScene(sceneToLoad, false); // AssetManager already deserialized the scene
-		}
-
-		if (m_ViewportPanel.IsViewportValid())
-		{
-			auto& viewportSize = m_ViewportPanel.GetViewportSize();
-
-			m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
-			m_ActiveScene->OnViewportResize(viewportSize.x, viewportSize.y);
-
-			m_ViewportPanel.ResizeFramebuffer();
-			m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
-
-			m_ViewportPanel.UpdateViewport();
-		}
-
-		if (m_SceneState == SceneState::Edit)
-		{
-			m_ActiveScene->OnEditorUpdate(deltaTime);
-
-			if (m_ViewportPanel.IsViewportHovered())
-				m_EditorCamera.OnUpdate(deltaTime);
-		}
-		else
-		{
-			m_ActiveScene->OnRuntimeUpdate(deltaTime);
-		}
-
-		if (m_SceneState == SceneState::Play)
-		{
-			if (m_ViewportPanel.IsViewportHovered())
-				m_EditorCamera.OnUpdate(deltaTime);
-
-			if (Input::IsMouseDown(Mouse::LeftButton))
+			GX_PROFILE_SCOPE("CheckPendingScene");
+			AssetHandle pendingScene = m_SceneManager.GetPendingSceneHandle();
+			if (pendingScene != 0 && AssetManager::IsAssetLoaded(pendingScene))
 			{
+				GX_CORE_INFO("Async scene load completed, switching to scene {0}", static_cast<uint64_t>(pendingScene));
+				m_SceneManager.ClearPendingScene();
+				m_SceneManager.OpenScene(pendingScene, false); // AssetManager already deserialized the scene
+			}
+		}
+
+		{
+			GX_PROFILE_SCOPE("ViewportResize");
+			if (m_ViewportPanel.IsViewportValid())
+			{
+				auto& viewportSize = m_ViewportPanel.GetViewportSize();
+
+				m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
+				m_SceneManager.GetActiveScene()->OnViewportResize(viewportSize.x, viewportSize.y);
+
+				m_ViewportPanel.ResizeFramebuffer();
+				m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
+
+				m_ViewportPanel.UpdateViewport();
+			}
+		}
+
+		{
+			GX_PROFILE_SCOPE("SceneUpdate");
+			if (m_SceneManager.GetSceneState() == SceneState::Edit)
+			{
+				m_SceneManager.GetActiveScene()->OnEditorUpdate(deltaTime);
+
 				if (m_ViewportPanel.IsViewportHovered())
+					m_EditorCamera.OnUpdate(deltaTime);
+			}
+			else
+			{
+				m_SceneManager.GetActiveScene()->OnRuntimeUpdate(deltaTime);
+			}
+		}
+
+		{
+			GX_PROFILE_SCOPE("EntitySelection");
+			// Entity selection on click (works in both Edit and Play modes)
+			if (m_ViewportPanel.IsViewportHovered() && Input::IsMouseDown(Mouse::LeftButton))
+			{
+				// Don't select entities when using ImGuizmo
+				if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver())
 				{
 					Entity hoveredEntity = m_ViewportPanel.GetHoveredEntity();
 
@@ -187,23 +193,26 @@ namespace Gravix
 					}
 				}
 			}
-	}
+		}
 	}
 
 	void AppLayer::OnRender()
 	{
+		GX_PROFILE_FUNCTION();
+
 		// Only render if project is initialized
 		if (!m_ProjectInitialized)
 			return;
 
 		{
+			GX_PROFILE_SCOPE("SceneRender");
 			Command cmd(m_MSAAFramebuffer, 0, false);
 
 			cmd.BeginRendering();
-			if (m_SceneState == SceneState::Edit)
-				m_ActiveScene->OnEditorRender(cmd, m_EditorCamera);
+			if (m_SceneManager.GetSceneState() == SceneState::Edit)
+				m_SceneManager.GetActiveScene()->OnEditorRender(cmd, m_EditorCamera);
 			else
-				m_ActiveScene->OnRuntimeRender(cmd);
+				m_SceneManager.GetActiveScene()->OnRuntimeRender(cmd);
 			cmd.EndRendering();
 
 			cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
@@ -212,6 +221,8 @@ namespace Gravix
 
 	void AppLayer::OnImGuiRender()
 	{
+		GX_PROFILE_FUNCTION();
+
 		static bool opt_fullscreen = true;
 		static bool opt_padding = false;
 		static bool* p_open = NULL;
@@ -260,17 +271,27 @@ namespace Gravix
 			{
 				if (ImGui::MenuItem("New", "Ctrl+N"))
 				{
-					NewProject();
+					if (m_ProjectManager.CreateNewProject())
+					{
+						// Refresh content browser panel
+						m_ContentBrowserPanel.emplace();
+						m_ContentBrowserPanel->SetAppLayer(this);
+					}
 				}
 
 				if (ImGui::MenuItem("Open... ", "Ctrl+O"))
 				{
-					OpenProject();
+					if (m_ProjectManager.OpenProject())
+					{
+						// Refresh content browser panel
+						m_ContentBrowserPanel.emplace();
+						m_ContentBrowserPanel->SetAppLayer(this);
+					}
 				}
 
 				if (m_ProjectInitialized && ImGui::MenuItem("Save", "Ctrl+S"))
 				{
-					SaveScene();
+					m_SceneManager.SaveActiveScene();
 				}
 
 				if (m_ProjectInitialized && ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
@@ -291,7 +312,7 @@ namespace Gravix
 		}
 
 		// Show startup dialog if no project is loaded
-		if (m_ShowStartupDialog)
+		if (m_ProjectManager.ShouldShowStartupDialog())
 		{
 			ShowStartupDialog();
 		}
@@ -328,14 +349,14 @@ namespace Gravix
 		float windowHeight = ImGui::GetWindowHeight();
 		float buttonSize = windowHeight * 0.8f; // 80% of window height for some breathing room
 
-		Ref<Texture2D> icon = (m_SceneState == SceneState::Edit) ? m_IconPlay : m_IconStop;
+		Ref<Texture2D> icon = (m_SceneManager.GetSceneState() == SceneState::Edit) ? m_IconPlay : m_IconStop;
 		ImGui::SetCursorPosX((ImGui::GetWindowContentRegionMax().x * 0.5f) - (buttonSize * 0.5f));
 		if (ImGui::ImageButton("SceneState", (ImTextureID)icon->GetImGuiAttachment(), ImVec2{ buttonSize, buttonSize }))
 		{
-			if (m_SceneState == SceneState::Edit)
-				OnScenePlay();
-			else if (m_SceneState == SceneState::Play)
-				OnSceneStop();
+			if (m_SceneManager.GetSceneState() == SceneState::Edit)
+				m_SceneManager.Play();
+			else if (m_SceneManager.GetSceneState() == SceneState::Play)
+				m_SceneManager.Stop();
 		}
 
 		ImGui::PopStyleVar(4);
@@ -344,19 +365,6 @@ namespace Gravix
 	}
 
 
-	void AppLayer::OnScenePlay()
-	{
-		m_SceneState = SceneState::Play;
-
-		// Ensure scene cameras have the current viewport size when entering play mode
-		auto& viewportSize = m_ViewportPanel.GetViewportSize();
-		m_ActiveScene->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
-	}
-
-	void AppLayer::OnSceneStop()
-	{
-		m_SceneState = SceneState::Edit;
-	}
 
 
 	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
@@ -374,7 +382,12 @@ namespace Gravix
 		case Key::N:
 			if (ctrlDown)
 			{
-				NewProject();
+				if (m_ProjectManager.CreateNewProject())
+				{
+					// Refresh content browser panel
+					m_ContentBrowserPanel.emplace();
+					m_ContentBrowserPanel->SetAppLayer(this);
+				}
 				return true;
 			}
 			break;
@@ -382,7 +395,12 @@ namespace Gravix
 		case Key::O:
 			if (ctrlDown)
 			{
-				OpenProject();
+				if (m_ProjectManager.OpenProject())
+				{
+					// Refresh content browser panel
+					m_ContentBrowserPanel.emplace();
+					m_ContentBrowserPanel->SetAppLayer(this);
+				}
 				return true;
 			}
 			break;
@@ -392,11 +410,11 @@ namespace Gravix
 			{
 				if (shiftDown)
 				{
-					// SaveSceneAs();
+					m_ProjectManager.SaveActiveProjectAs();
 				}
 				else
 				{
-					SaveScene();
+					m_SceneManager.SaveActiveScene();
 				}
 				return true;
 			}
@@ -412,89 +430,6 @@ namespace Gravix
 		return true;
 	}
 
-	void AppLayer::SaveProject()
-	{
-		if(m_ActiveProjectPath.empty())
-		{
-			std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Project (*.orbproj)\0*.orbproj\0");
-			if (filePath.empty())
-				return;
-
-			m_ActiveProjectPath = filePath;
-		}
-		Project::SaveActive(m_ActiveProjectPath);
-	}
-
-	void AppLayer::SaveProjectAs()
-	{
-		std::filesystem::path filePath = FileDialogs::SaveFile("Orbit Project (*.orbproj)\0*.orbproj\0");
-		if (filePath.empty())
-			return;
-
-		m_ActiveProjectPath = filePath;
-		Project::SaveActive(m_ActiveProjectPath);
-	}
-
-	void AppLayer::OpenProject()
-	{
-		m_ActiveProjectPath = FileDialogs::OpenFile("Orbit Project (*.orbproj)\0*.orbproj\0");
-		if (m_ActiveProjectPath.empty())
-			return;
-
-		if (Project::Load(m_ActiveProjectPath))
-		{
-			// Always initialize the project to load StartScene
-			InitializeProject();
-
-			// Refresh content browser panel
-			m_ContentBrowserPanel.emplace();
-			m_ContentBrowserPanel->SetAppLayer(this);
-		}
-	}
-
-	void AppLayer::NewProject()
-	{
-		// Prompt user to select a folder for the new project
-		std::filesystem::path projectFolder = FileDialogs::OpenFolder("Select Project Location");
-		if (projectFolder.empty())
-			return;
-
-		// Check if a project file already exists in this folder
-		std::filesystem::path projectPath = projectFolder / ".orbproj";
-		if (std::filesystem::exists(projectPath))
-		{
-			// Project already exists, open it instead of creating a new one
-			GX_CORE_INFO("Project file already exists at: {0}, opening existing project", projectPath.string());
-			m_ActiveProjectPath = projectPath;
-
-			if (Project::Load(m_ActiveProjectPath))
-			{
-				// Always initialize the project to load StartScene
-				InitializeProject();
-
-				// Refresh content browser panel
-				m_ContentBrowserPanel.emplace();
-				m_ContentBrowserPanel->SetAppLayer(this);
-			}
-			return;
-		}
-
-		// Create the project with default directories
-		Project::New(projectFolder);
-
-		// Set the project path and save it
-		m_ActiveProjectPath = projectPath;
-		Project::SaveActive(m_ActiveProjectPath);
-
-		GX_CORE_INFO("New project created at: {0}", projectFolder.string());
-
-		// Always initialize the project to load StartScene
-		InitializeProject();
-
-		// Refresh content browser panel
-		m_ContentBrowserPanel.emplace();
-		m_ContentBrowserPanel->SetAppLayer(this);
-	}
 
 	void AppLayer::ShowStartupDialog()
 	{
@@ -549,7 +484,12 @@ namespace Gravix
 
 			if (ImGui::Button("New Project", ImVec2(buttonWidth, 40)))
 			{
-				NewProject();
+				if (m_ProjectManager.CreateNewProject())
+				{
+					// Refresh content browser panel
+					m_ContentBrowserPanel.emplace();
+					m_ContentBrowserPanel->SetAppLayer(this);
+				}
 				ImGui::CloseCurrentPopup();
 			}
 
@@ -565,7 +505,12 @@ namespace Gravix
 
 			if (ImGui::Button("Open Project", ImVec2(buttonWidth, 40)))
 			{
-				OpenProject();
+				if (m_ProjectManager.OpenProject())
+				{
+					// Refresh content browser panel
+					m_ContentBrowserPanel.emplace();
+					m_ContentBrowserPanel->SetAppLayer(this);
+				}
 				ImGui::CloseCurrentPopup();
 			}
 
@@ -575,94 +520,6 @@ namespace Gravix
 		}
 	}
 
-	void AppLayer::SaveScene()
-	{
-		// Check if we have a valid active scene
-		if (!m_ActiveScene)
-		{
-			GX_CORE_ERROR("No active scene to save!");
-			return;
-		}
-
-		// Check if the scene has a valid asset handle and file path
-		if (m_ActiveSceneHandle == 0 || AssetManager::GetAssetType(m_ActiveSceneHandle) != AssetType::Scene)
-		{
-			GX_CORE_WARN("Scene doesn't have a valid file path. Cannot save without a file location.");
-			// TODO: Implement SaveSceneAs dialog here
-			return;
-		}
-
-		// Get the scene file path
-		const auto& filePath = Project::GetAssetDirectory() / Project::GetActive()->GetEditorAssetManager()->GetAssetFilePath(m_ActiveSceneHandle);
-
-		// Save the scene
-		SceneSerializer serializer(m_ActiveScene);
-		serializer.Serialize(filePath);
-		GX_CORE_INFO("Saved scene to: {0}", filePath.string());
-
-		m_SceneDirty = false;
-		UpdateWindowTitle();
-	}
-
-	void AppLayer::OpenScene(AssetHandle handle, bool deserialize)
-	{
-		if(AssetManager::GetAssetType(handle) != AssetType::Scene)
-		{
-			GX_CORE_ERROR("Asset with handle {0} is not a scene!", static_cast<uint64_t>(handle));
-			return;
-		}
-
-		// Get scene file path
-		const auto& assetManager = Project::GetActive()->GetEditorAssetManager();
-		const auto& metadata = assetManager->GetAssetMetadata(handle);
-		const auto& filePath = Project::GetAssetDirectory() / metadata.FilePath;
-
-		Ref<Scene> scene = nullptr;
-
-		// If we need to deserialize or if the asset isn't loaded yet, load synchronously
-		if (deserialize || !AssetManager::IsAssetLoaded(handle))
-		{
-			if (std::filesystem::exists(filePath))
-			{
-				// Create a new scene and deserialize it from file
-				scene = CreateRef<Scene>();
-				SceneSerializer serializer(scene);
-				serializer.Deserialize(filePath);
-				GX_CORE_INFO("Loaded scene from: {0}", filePath.string());
-			}
-			else
-			{
-				GX_CORE_ERROR("Scene file not found: {0}", filePath.string());
-				return;
-			}
-		}
-		else
-		{
-			// Try to get the already-loaded scene asset
-			scene = AssetManager::GetAsset<Scene>(handle);
-
-			if (!scene)
-			{
-				// Scene is loading asynchronously, track it so we can auto-load when ready
-				m_PendingSceneHandle = handle;
-				GX_CORE_INFO("Scene {0} is loading asynchronously, will auto-switch when ready", static_cast<uint64_t>(handle));
-				return;
-			}
-		}
-
-		// Update the active scene
-		if (scene)
-		{
-			m_ActiveSceneHandle = handle;
-			m_ActiveScene = scene;
-			m_ActiveScene->OnViewportResize((uint32_t)m_ViewportPanel.GetViewportSize().x, (uint32_t)m_ViewportPanel.GetViewportSize().y);
-			m_SceneHierarchyPanel.SetContext(m_ActiveScene);
-			m_SceneHierarchyPanel.SetNoneSelected();
-
-			m_SceneDirty = false;
-			UpdateWindowTitle();
-		}
-	}
 
 	void AppLayer::UpdateWindowTitle()
 	{
@@ -674,14 +531,15 @@ namespace Gravix
 
 		std::string sceneName = "Untitled";
 
-		if (m_ActiveSceneHandle != 0 && AssetManager::IsValidAssetHandle(m_ActiveSceneHandle))
+		AssetHandle activeSceneHandle = m_SceneManager.GetActiveSceneHandle();
+		if (activeSceneHandle != 0 && AssetManager::IsValidAssetHandle(activeSceneHandle))
 		{
-			const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(m_ActiveSceneHandle);
+			const auto& metadata = Project::GetActive()->GetEditorAssetManager()->GetAssetMetadata(activeSceneHandle);
 			sceneName = metadata.FilePath.stem().string();
 		}
 
 		std::string title = "Orbit - " + sceneName;
-		if (m_SceneDirty)
+		if (m_SceneManager.IsSceneDirty())
 			title += "*";
 
 		Application::Get().GetWindow().SetTitle(title);
@@ -689,10 +547,16 @@ namespace Gravix
 
 	void AppLayer::MarkSceneDirty()
 	{
-		if (!m_SceneDirty)
+		m_SceneManager.MarkSceneDirty();
+	}
+
+	void AppLayer::OpenScene(AssetHandle handle, bool deserialize)
+	{
+		if (m_SceneManager.OpenScene(handle, deserialize))
 		{
-			m_SceneDirty = true;
-			UpdateWindowTitle();
+			// Update viewport size for the new scene
+			auto& viewportSize = m_ViewportPanel.GetViewportSize();
+			m_SceneManager.GetActiveScene()->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
 		}
 	}
 

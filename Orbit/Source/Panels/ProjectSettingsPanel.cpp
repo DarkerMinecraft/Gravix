@@ -1,6 +1,9 @@
 #include "ProjectSettingsPanel.h"
 #include "Utils/PlatformUtils.h"
 
+#include "Project/Project.h"
+#include "Asset/AssetManager.h"
+
 #include <imgui.h>
 #include <cstring>
 

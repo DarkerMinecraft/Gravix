@@ -5,6 +5,7 @@
 #include "Project/Project.h"
 #include "Core/Scheduler.h"
 #include "Core/Application.h"
+#include "Debug/Instrumentor.h"
 
 #include <yaml-cpp/yaml.h>
 #include <fstream>
@@ -30,8 +31,11 @@ namespace Gravix
 
 	void EditorAssetManager::ProcessAsyncLoads()
 	{
+		GX_PROFILE_FUNCTION();
+
 		std::vector<AsyncLoadRequest*> completedRequests;
 		{
+			GX_PROFILE_SCOPE("GatherCompletedRequests");
 			std::lock_guard<std::mutex> lock(m_CompletionQueueMutex);
 			while (!m_CompletionQueue.empty())
 			{
@@ -42,8 +46,10 @@ namespace Gravix
 
 		bool registryChanged = false;
 
-		for(AsyncLoadRequest* request : completedRequests)
 		{
+			GX_PROFILE_SCOPE("ProcessCompletedRequests");
+			for(AsyncLoadRequest* request : completedRequests)
+			{
 			if (request->State == AssetState::Failed)
 			{
 				GX_CORE_ERROR("Failed to load asset asynchronously: {0}", request->FilePath.string());
@@ -110,17 +116,23 @@ namespace Gravix
 				registryChanged = true;
 				delete request;
 			}
+			}
 		}
 
 		// Only serialize the asset registry if it actually changed
-		if (registryChanged)
 		{
-			SerializeAssetRegistry();
+			GX_PROFILE_SCOPE("SerializeAssetRegistry");
+			if (registryChanged)
+			{
+				SerializeAssetRegistry();
+			}
 		}
 	}
 
 	void EditorAssetManager::ImportAsset(const std::filesystem::path& filePath)
 	{
+		GX_PROFILE_FUNCTION();
+
 		AssetMetadata metadata;
 		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
 

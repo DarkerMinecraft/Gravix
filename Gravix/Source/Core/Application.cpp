@@ -7,6 +7,7 @@
 
 #include "Scripting/ScriptEngine.h"
 #include "Asset/EditorAssetManager.h"
+#include "Debug/Instrumentor.h"
 
 namespace Gravix
 {
@@ -14,6 +15,8 @@ namespace Gravix
 
 	Application::Application(const ApplicationSpecification& spec)
 	{
+		GX_PROFILE_FUNCTION();
+
 		s_Instance = this;
 
 		WindowSpecification windowSpec;
@@ -39,16 +42,22 @@ namespace Gravix
 
 	Application::~Application()
 	{
+		GX_PROFILE_FUNCTION();
+
 		//ScriptEngine::Shutdown();
 	}
 
 	void Application::Run()
 	{
+		GX_PROFILE_FUNCTION();
+
 		const float MAX_TIMESTEP = 0.05f; // 50ms max
 		std::chrono::time_point<std::chrono::high_resolution_clock> currentTime;
 
 		while (m_IsRunning)
 		{
+			GX_PROFILE_SCOPE("MainLoop");
+
 			m_Window->GetDevice()->StartFrame();
 
 			currentTime = std::chrono::high_resolution_clock::now();
@@ -60,21 +69,31 @@ namespace Gravix
 			if (!m_IsMinimize)
 			{
 				// Process async asset loads every frame if we have an active project
-				if (auto activeProject = Project::GetActive())
 				{
-					if (auto editorAssetManager = activeProject->GetEditorAssetManager())
+					GX_PROFILE_SCOPE("ProcessAsyncLoads");
+					if (auto activeProject = Project::GetActive())
 					{
-						editorAssetManager->ProcessAsyncLoads();
+						if (auto editorAssetManager = activeProject->GetEditorAssetManager())
+						{
+							editorAssetManager->ProcessAsyncLoads();
+						}
 					}
 				}
 
 				{
+					GX_PROFILE_SCOPE("LayerUpdate");
 					for (Ref<Layer> layer : m_LayerStack)
 						layer->OnUpdate(deltaTime);
+				}
 
+				{
+					GX_PROFILE_SCOPE("LayerRender");
 					for(Ref<Layer> layer : m_LayerStack)
 						layer->OnRender();
+				}
 
+				{
+					GX_PROFILE_SCOPE("ImGuiRender");
 					m_ImGuiRender->Begin();
 					for (Ref<Layer> layer : m_LayerStack)
 						layer->OnImGuiRender();
@@ -84,17 +103,23 @@ namespace Gravix
 			}
 
 			{
+				GX_PROFILE_SCOPE("WindowUpdate");
 				m_Window->OnUpdate();
 			}
 
 			m_Window->GetDevice()->EndFrame();
 		}
 
-		delete m_ImGuiRender;
+		{
+			GX_PROFILE_SCOPE("ImGuiCleanup");
+			delete m_ImGuiRender;
+		}
 	}
 
 	void Application::Shutdown()
-	{		
+	{
+		GX_PROFILE_FUNCTION();
+
 		m_IsRunning = false;
 	}
 

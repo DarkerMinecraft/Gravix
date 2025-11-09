@@ -3,12 +3,14 @@
 
 #include "Core/Application.h"
 #include "Renderer/Vulkan/VulkanCommandImpl.h"
+#include "Debug/Instrumentor.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
 	Command::Command(Ref<Framebuffer> framebuffer, uint32_t presentIndex, bool shouldCopy)
 	{
+		GX_PROFILE_FUNCTION();
 		Initialize(framebuffer, presentIndex, shouldCopy);
 	}
 
@@ -49,6 +51,7 @@ namespace Gravix
 
 	void Command::BeginRendering()
 	{
+		GX_PROFILE_FUNCTION();
 		if(m_Impl)
 			m_Impl->BeginRendering();
 	}
@@ -61,24 +64,28 @@ namespace Gravix
 
 	void Command::Draw(uint32_t vertexCount, uint32_t instanceCount /*= 1*/, uint32_t firstVertex /*= 0*/, uint32_t firstInstance /*= 0*/)
 	{
+		GX_PROFILE_FUNCTION();
 		if(m_Impl)
 			m_Impl->Draw(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 
 	void Command::DrawIndexed(uint32_t indexCount, uint32_t instanceCount /*= 1*/, uint32_t firstIndex /*= 0*/, int32_t vertexOffset /*= 0*/, uint32_t firstInstance /*= 0*/)
 	{
+		GX_PROFILE_FUNCTION();
 		if(m_Impl)
 			m_Impl->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
 	void Command::DrawImGui()
 	{
+		GX_PROFILE_FUNCTION();
 		if(m_Impl)
 			m_Impl->DrawImGui();
 	}
 
 	void Command::EndRendering()
 	{
+		GX_PROFILE_FUNCTION();
 		if(m_Impl)
 			m_Impl->EndRendering();
 	}

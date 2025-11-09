@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gravix.h"
+#include "Core/Gravix.h"
 
 #include "Panels/SceneHierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
@@ -8,10 +8,13 @@
 #include "Panels/ContentBrowserPanel.h"
 #include "Panels/ProjectSettingsPanel.h"
 
+#include "ProjectManager.h"
+#include "SceneManager.h"
+
 #include <glm/glm.hpp>
 #include <optional>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	class AppLayer : public Layer
@@ -27,27 +30,18 @@ namespace Gravix
 
 		virtual void OnImGuiRender() override;
 
-		void OpenScene(AssetHandle handle, bool deserialize = false);
 		void MarkSceneDirty();
 		void UpdateWindowTitle();
+		void OpenScene(AssetHandle handle, bool deserialize = false);
 
-		AssetHandle GetActiveSceneHandle() const { return m_ActiveSceneHandle; }
+		Ref<Scene> GetActiveScene() const { return m_SceneManager.GetActiveScene(); }
+		AssetHandle GetActiveSceneHandle() const { return m_SceneManager.GetActiveSceneHandle(); }
 	private:
 		bool OnKeyPressed(KeyPressedEvent& e);
 		bool OnFileDrop(WindowFileDropEvent& e);
 
-		void SaveProject();
-		void SaveProjectAs();
-		void OpenProject();
-		void NewProject();
-
-		void SaveScene();
-
 		void ShowStartupDialog();
 		void InitializeProject();
-
-		void OnScenePlay();
-		void OnSceneStop();
 
 		void UIToolbar();
 	private:
@@ -56,8 +50,6 @@ namespace Gravix
 
 		Ref<Texture2D> m_IconPlay;
 		Ref<Texture2D> m_IconStop;
-		
-		Ref<Scene> m_ActiveScene;
 
 		EditorCamera m_EditorCamera;
 
@@ -67,21 +59,11 @@ namespace Gravix
 		std::optional<ContentBrowserPanel> m_ContentBrowserPanel;
 		ProjectSettingsPanel m_ProjectSettingsPanel;
 
-		AssetHandle m_ActiveSceneHandle;
-		AssetHandle m_PendingSceneHandle = 0; // Track scene waiting to load asynchronously
-		std::filesystem::path m_ActiveProjectPath;
+		// Managers
+		ProjectManager m_ProjectManager;
+		SceneManager m_SceneManager;
 
 		bool m_ProjectInitialized = false;
-		bool m_ShowStartupDialog = false;
-		bool m_SceneDirty = false;
-
-		enum class SceneState
-		{
-			Edit = 0,
-			Play = 1
-		};
-
-		SceneState m_SceneState = SceneState::Edit;
 	};
 
 }

@@ -32,3 +32,6 @@
 [submodule "Slang"]
 	path = ThirdParties/Slang
 	url = https://github.com/DarkerMinecraft/slang.git
+[submodule "ThirdParties/Box2D"]
+	path = ThirdParties/Box2D
+	url = https://github.com/erincatto/box2d.git

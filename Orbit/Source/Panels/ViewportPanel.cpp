@@ -4,7 +4,7 @@
 #include "Core/Application.h"
 #include "AppLayer.h"
 
-#include "Input.h"
+#include "Core/Input.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -159,6 +159,16 @@ namespace Gravix
 				m_CurrentCursorMode = desiredMode;
 				Application::Get().GetWindow().SetCursorMode(desiredMode);
 			}
+		}
+		else
+		{
+			// Reset to normal cursor when outside viewport
+			if (m_CurrentCursorMode != CursorMode::Normal)
+			{
+				m_CurrentCursorMode = CursorMode::Normal;
+				Application::Get().GetWindow().SetCursorMode(CursorMode::Normal);
+			}
+			m_HoveredEntity = Entity{ entt::null, m_SceneHierarchyPanel->GetContext().get() };
 		}
 	}
 

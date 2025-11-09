@@ -131,7 +131,23 @@ set(GRAVIX_CORE_SOURCES
     Source/Utils/PlatformUtils.h
     Source/Utils/ShaderCompiler.cpp
     Source/Utils/ShaderCompiler.h
+
+    # Physics
+    Source/Physics/PhysicsWorld.h
+    Source/Physics/PhysicsWorld.cpp
 )
+
+# ============================================================================
+# Debug Source Files (Conditional)
+# ============================================================================
+
+if(ENGINE_DEBUG) 
+    set(GRAVIX_DEBUG_SOURCES
+        Source/Debug/Instrumentor.h
+    )
+else()
+    set(GRAVIX_DEBUG_SOURCES "")
+endif()
 
 # ============================================================================
 # Vulkan-Specific Source Files (Conditional)
@@ -177,6 +193,7 @@ endif()
 add_library(Gravix STATIC
     ${GRAVIX_CORE_SOURCES}
     ${GRAVIX_VULKAN_SOURCES}
+    ${GRAVIX_DEBUG_SOURCES}
 )
 
 # Precompiled header
@@ -204,6 +221,7 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/Slang/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/stb/
         ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
+        ${CMAKE_SOURCE_DIR}/ThirdParties/Box2D/include
         ${NETHOST_INCLUDE_DIR}
 )
 
@@ -228,6 +246,7 @@ target_link_libraries(Gravix
         ImGuizmo
         slang
         yaml-cpp
+        box2d
         ${NETHOST_LIB}
 )
 

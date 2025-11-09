@@ -11,6 +11,12 @@ set(ORBIT_SOURCES
     Source/AppLayer.cpp
     Source/AppLayer.h
 
+    # Managers
+    Source/ProjectManager.cpp
+    Source/ProjectManager.h
+    Source/SceneManager.cpp
+    Source/SceneManager.h
+
     # Panels
     Source/Panels/ContentBrowserPanel.cpp
     Source/Panels/ContentBrowserPanel.h
@@ -42,12 +48,6 @@ endif()
 target_include_directories(Orbit
     PRIVATE
         Source
-        ${CMAKE_SOURCE_DIR}/Gravix/Source/Core
-        ${CMAKE_SOURCE_DIR}/ThirdParties/spdlog/include
-        ${CMAKE_SOURCE_DIR}/ThirdParties/ImGui/
-        ${CMAKE_SOURCE_DIR}/ThirdParties/glm
-        ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
-        ${CMAKE_SOURCE_DIR}/ThirdParties/ImGuizmo
 )
 
 # ============================================================================

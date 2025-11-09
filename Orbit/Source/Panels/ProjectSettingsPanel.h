@@ -1,8 +1,5 @@
 #pragma once
 
-#include "Gravix.h"
-#include <string>
-
 namespace Gravix
 {
 

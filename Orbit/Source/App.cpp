@@ -1,12 +1,13 @@
-#include "Application.h"
+#include "Core/Application.h"
 #include "AppLayer.h"
 
 
 #ifdef ENGINE_PLATFORM_WINDOWS
 #ifdef ENGINE_DEBUG
 
-#include "Log.h"
+#include "Core/Log.h"
 #include "Project/Project.h"
+#include "Debug/Instrumentor.h"
 #include <crtdbg.h>
 
 	int main()
@@ -15,6 +16,9 @@
 		//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF);
 
 		Gravix::Log::Init();
+
+		// === STARTUP PROFILING ===
+		GX_PROFILE_BEGIN_SESSION("Startup", "Gravix-Profile-Startup.json");
 
 		Gravix::ApplicationSpecification appSpec{};
 		appSpec.Width = 1280;
@@ -26,7 +30,20 @@
 
 		Gravix::Application app(appSpec);
 		app.PushLayer<Gravix::AppLayer>();
+
+		GX_PROFILE_END_SESSION();
+
+		// === RUNNING PROFILING ===
+		GX_PROFILE_BEGIN_SESSION("Runtime", "Gravix-Profile-Runtime.json");
 		app.Run();
+		GX_PROFILE_END_SESSION();
+
+		// === SHUTDOWN PROFILING ===
+		GX_PROFILE_BEGIN_SESSION("Shutdown", "Gravix-Profile-Shutdown.json");
+
+		// Destructor will be called here
+
+		GX_PROFILE_END_SESSION();
 
 		return 0;
 	}

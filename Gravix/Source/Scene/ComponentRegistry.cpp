@@ -103,6 +103,7 @@ namespace Gravix
 
 				// Bold "Tag" label with input on the same line
 				ImGui::PushFont(io.Fonts->Fonts[1]);
+				ImGui::AlignTextToFramePadding();
 				ImGui::Text("Tag");
 				ImGui::PopFont();
 				ImGui::SameLine();

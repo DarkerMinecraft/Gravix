@@ -85,6 +85,10 @@ set_target_properties(yaml-cpp PROPERTIES FOLDER "Dependencies")
 add_subdirectory(ThirdParties/ImGuizmo)
 set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
 
+# Box2D 
+add_subdirectory(ThirdParties/Box2D)
+set_target_properties(box2d PROPERTIES FOLDER "Dependencies")
+
 # ============================================================================
 # Engine Modules
 # ============================================================================

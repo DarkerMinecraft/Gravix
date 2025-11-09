@@ -6,6 +6,7 @@
 
 #ifdef ENGINE_DEBUG
 #define GX_ENABLE_ASSERTS
+#define GX_PROFILE
 #endif
 
 #ifdef GX_ENABLE_ASSERTS

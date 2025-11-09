@@ -6,6 +6,7 @@
 #include "Core/Application.h"
 
 #include "Utils/VulkanUtils.h"
+#include "Debug/Instrumentor.h"
 
 #include <VkBootstrap.h>
 
@@ -145,88 +146,110 @@ namespace Gravix
 
 	void VulkanDevice::StartFrame()
 	{
-		vkWaitForFences(m_Device, 1, &GetCurrentFrameData().RenderFence, true, UINT64_MAX);
-		vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
+		GX_PROFILE_FUNCTION();
 
-		vkDeviceWaitIdle(m_Device);
+		{
+			GX_PROFILE_SCOPE("WaitForFences");
+			vkWaitForFences(m_Device, 1, &GetCurrentFrameData().RenderFence, true, UINT64_MAX);
+			vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
 
-		// Wait on SwapchainSemaphore when acquiring
-		VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX,
-			GetCurrentFrameData().SwapchainSemaphore, nullptr, &m_SwapchainImageIndex);
-		if (result == VK_ERROR_OUT_OF_DATE_KHR)
-		{
-			RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
-			return;
-		}
-		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-		{
-			GX_CORE_CRITICAL("Failed to acquire swapchain image!");
-			return;
+			vkDeviceWaitIdle(m_Device);
 		}
 
-		//begin the command buffer recording
-		vkResetCommandBuffer(GetCurrentFrameData().CommandBuffer, 0);
+		{
+			GX_PROFILE_SCOPE("AcquireSwapchainImage");
+			// Wait on SwapchainSemaphore when acquiring
+			VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX,
+				GetCurrentFrameData().SwapchainSemaphore, nullptr, &m_SwapchainImageIndex);
+			if (result == VK_ERROR_OUT_OF_DATE_KHR)
+			{
+				RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+				return;
+			}
+			else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+			{
+				GX_CORE_CRITICAL("Failed to acquire swapchain image!");
+				return;
+			}
+		}
 
-		VkCommandBufferBeginInfo beginInfo = VulkanInitializers::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		vkBeginCommandBuffer(GetCurrentFrameData().CommandBuffer, &beginInfo);
+		{
+			GX_PROFILE_SCOPE("BeginCommandBuffer");
+			//begin the command buffer recording
+			vkResetCommandBuffer(GetCurrentFrameData().CommandBuffer, 0);
 
-		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		//transition the swapchain image to a color attachment
-		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex],
-			m_SwapchainImageFormat, m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			VkCommandBufferBeginInfo beginInfo = VulkanInitializers::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+			vkBeginCommandBuffer(GetCurrentFrameData().CommandBuffer, &beginInfo);
 
-		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			//transition the swapchain image to a color attachment
+			VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex],
+				m_SwapchainImageFormat, m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
 	}
 
 	void VulkanDevice::EndFrame()
 	{
-		VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageFormat,
-			m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		GX_PROFILE_FUNCTION();
 
-		//end the command buffer recording
-		vkEndCommandBuffer(GetCurrentFrameData().CommandBuffer);
-
-		VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(GetCurrentFrameData().CommandBuffer);
-
-		VkSemaphoreSubmitInfo waitInfo = VulkanInitializers::SemaphoreSubmitInfo(
-			VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-			GetCurrentFrameData().SwapchainSemaphore);  // Wait on image acquisition
-
-		VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
-			VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-			GetCurrentFrameData().RenderSemaphore);
-
-		VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
-
-		//submit command buffer to the queue and execute it.
-		// _renderFence will now block until the graphic commands finish execution
-		vkQueueSubmit2(m_GraphicsQueue, 1, &submit, GetCurrentFrameData().RenderFence);
-
-		//prepare present
-		// this will put the image we just rendered to into the visible window.
-		// we want to wait on the _renderSemaphore for that, 
-		// as its necessary that drawing commands have finished before the image is displayed to the user
-		VkPresentInfoKHR presentInfo = {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.pNext = nullptr;
-		presentInfo.pSwapchains = &m_Swapchain;
-		presentInfo.swapchainCount = 1;
-
-		presentInfo.pWaitSemaphores = &GetCurrentFrameData().RenderSemaphore;
-		presentInfo.waitSemaphoreCount = 1;
-
-		presentInfo.pImageIndices = &m_SwapchainImageIndex;
-
-		VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
-		if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		{
-			RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+			GX_PROFILE_SCOPE("TransitionImageForPresent");
+			VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageFormat,
+				m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+			//end the command buffer recording
+			vkEndCommandBuffer(GetCurrentFrameData().CommandBuffer);
 		}
-		else if (result != VK_SUCCESS)
+
 		{
-			GX_CORE_CRITICAL("Failed to present swapchain image!");
-			return;
+			GX_PROFILE_SCOPE("SubmitCommandBuffer");
+			VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(GetCurrentFrameData().CommandBuffer);
+
+			VkSemaphoreSubmitInfo waitInfo = VulkanInitializers::SemaphoreSubmitInfo(
+				VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+				GetCurrentFrameData().SwapchainSemaphore);  // Wait on image acquisition
+
+			VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
+				VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+				GetCurrentFrameData().RenderSemaphore);
+
+			VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
+
+			//submit command buffer to the queue and execute it.
+			// _renderFence will now block until the graphic commands finish execution
+			vkQueueSubmit2(m_GraphicsQueue, 1, &submit, GetCurrentFrameData().RenderFence);
+		}
+
+		{
+			GX_PROFILE_SCOPE("PresentSwapchain");
+			//prepare present
+			// this will put the image we just rendered to into the visible window.
+			// we want to wait on the _renderSemaphore for that,
+			// as its necessary that drawing commands have finished before the image is displayed to the user
+			VkPresentInfoKHR presentInfo = {};
+			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+			presentInfo.pNext = nullptr;
+			presentInfo.pSwapchains = &m_Swapchain;
+			presentInfo.swapchainCount = 1;
+
+			presentInfo.pWaitSemaphores = &GetCurrentFrameData().RenderSemaphore;
+			presentInfo.waitSemaphoreCount = 1;
+
+			presentInfo.pImageIndices = &m_SwapchainImageIndex;
+
+			VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
+			if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+			{
+				RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+			}
+			else if (result != VK_SUCCESS)
+			{
+				GX_CORE_CRITICAL("Failed to present swapchain image!");
+				return;
+			}
 		}
 
 		//increase the number of frames drawn
