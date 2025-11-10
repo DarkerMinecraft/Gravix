@@ -1,5 +1,5 @@
-#pragma once
-
+#include "Utils/PlatformUtils.h"
+#include "Core/Application.h"
 #include "Utils/PlatformUtils.h"
 #include "Core/Application.h"
 

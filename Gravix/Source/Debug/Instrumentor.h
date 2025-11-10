@@ -34,6 +34,12 @@ namespace Gravix
 		{
 		}
 
+		~Instrumentor()
+		{
+			if (m_CurrentSession)
+				EndSession();
+		}
+
 		void BeginSession(const std::string& name, const std::string& filepath = "results.json")
 		{
 			m_OutputStream.open(filepath);
@@ -89,7 +95,6 @@ namespace Gravix
 			return instance;
 		}
 	};
-
 	class InstrumentationTimer
 	{
 	public:
@@ -128,8 +133,11 @@ namespace Gravix
 	#define GX_PROFILE_BEGIN_SESSION(name, filepath) ::Gravix::Instrumentor::Get().BeginSession(name, filepath);
 	#define GX_PROFILE_END_SESSION() ::Gravix::Instrumentor::Get().EndSession();
 	#define GX_PROFILE_SCOPE(name) ::Gravix::InstrumentationTimer timer##__LINE__(name);
-	#define GX_PROFILE_FUNCTION() GX_PROFILE_SCOPE(__FUNCSIG__)
-#else
+	#if defined(_MSC_VER)
+		#define GX_PROFILE_FUNCTION() GX_PROFILE_SCOPE(__FUNCSIG__)
+	#else
+		#define GX_PROFILE_FUNCTION() GX_PROFILE_SCOPE(__PRETTY_FUNCTION__)
+	#endif#else
 	#define GX_PROFILE_BEGIN_SESSION(name, filepath)
 	#define GX_PROFILE_END_SESSION()
 	#define GX_PROFILE_SCOPE(name)

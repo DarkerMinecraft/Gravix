@@ -104,8 +104,7 @@ namespace Gravix
 	// --- Public API ---
 	void ScriptEngine::Init(const std::filesystem::path& assemblyPath)
 	{
-		GX_CORE_ERROR("[ScriptEngine] Initializing Script Engine with assembly: {}", assemblyPath.string());
-		InitDotNet(assemblyPath);
+		GX_CORE_INFO("[ScriptEngine] Initializing Script Engine with assembly: {}", assemblyPath.string());		InitDotNet(assemblyPath);
 	}
 
 	void ScriptEngine::Shutdown()
@@ -321,8 +320,7 @@ namespace Gravix
 			s_Data.m_SetErrorWriter(HostfxrErrorWriter);
 		}
 
-		GX_CORE_ERROR("[ScriptEngine] Successfully loaded hostfxr");
-		return true;
+		GX_CORE_INFO("[ScriptEngine] Successfully loaded hostfxr");		return true;
 	}
 
 	bool ScriptEngine::InitializeHostFxrContext(const std::filesystem::path& assemblyPath)

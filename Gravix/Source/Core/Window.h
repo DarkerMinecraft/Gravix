@@ -28,9 +28,10 @@ namespace Gravix
 
 	class Window
 	{
-	public:
+	class Window
+	{
 		public:
-			virtual ~Window() = default;
+			virtual ~Window() = default;			virtual ~Window() = default;
 
 			static Scope<Window> Create(const WindowSpecification& spec);
 

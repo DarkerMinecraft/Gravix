@@ -9,11 +9,22 @@ REM Try python3 first, then python
 where python3 >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
     python3 setup.py %*
+    exit /b %ERRORLEVEL%
 ) else (
     where python >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
         python setup.py %*
+        exit /b %ERRORLEVEL%
     ) else (
+        echo ERROR: Python not found!
+        echo.
+        echo Please install Python 3.8 or newer from:
+        echo https://www.python.org/downloads/
+        echo.
+        pause
+        exit /b 1
+    )
+)    ) else (
         echo ERROR: Python not found!
         echo.
         echo Please install Python 3.8 or newer from:
