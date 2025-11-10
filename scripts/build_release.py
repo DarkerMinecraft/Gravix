@@ -61,7 +61,7 @@ class GravixBuilder:
     """Main builder class for Gravix Engine"""
 
     def __init__(self):
-        self.root_dir = Path(__file__).parent.absolute()
+        self.root_dir = Path(__file__).parent.parent.absolute()
         self.build_type = "Release"
         self.system = platform.system()
 
@@ -75,6 +75,10 @@ class GravixBuilder:
 
         # Visual Studio environment variables (set during VS setup)
         self.vs_env = None
+
+        # .NET SDK check
+        self.dotnet_available = False
+        self.dotnet_version = None
 
     def setup_visual_studio_env(self):
         """Set up Visual Studio development environment on Windows"""
@@ -158,6 +162,38 @@ class GravixBuilder:
             # Clean up temp file
             if temp_batch.exists():
                 temp_batch.unlink()
+
+    def check_dotnet_sdk(self):
+        """Check if .NET SDK is installed and available"""
+        print_step("Checking for .NET SDK...")
+
+        try:
+            result = subprocess.run(
+                ["dotnet", "--version"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            self.dotnet_version = result.stdout.strip()
+            self.dotnet_available = True
+            print_success(f"Found .NET SDK version {self.dotnet_version}")
+
+            # Check if version is 9.0 or higher
+            try:
+                major_version = int(self.dotnet_version.split('.')[0])
+                if major_version < 9:
+                    print_warning(f".NET SDK {self.dotnet_version} found, but version 9.0+ recommended for scripting support")
+            except (ValueError, IndexError):
+                pass
+
+            return True
+
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            self.dotnet_available = False
+            print_warning(".NET SDK not found")
+            print_warning("Scripting support will not be available")
+            print_warning("Download .NET 9.0 SDK from: https://dotnet.microsoft.com/download/dotnet/9.0")
+            return False
 
     def clean_build(self):
         """Clean previous build artifacts"""
@@ -376,26 +412,29 @@ For issues and support, visit: https://github.com/DarkerMinecraft/Gravix
             print_error("Build process failed at Visual Studio setup")
             return False
 
-        # Step 2: Clean (optional)
+        # Step 2: Check for .NET SDK
+        self.check_dotnet_sdk()
+
+        # Step 3: Clean (optional)
         if clean:
             self.clean_build()
 
-        # Step 3: Configure CMake
+        # Step 4: Configure CMake
         if not self.configure_cmake():
             print_error("Build process failed at CMake configuration")
             return False
 
-        # Step 4: Build project
+        # Step 5: Build project
         if not self.build_project():
             print_error("Build process failed at compilation")
             return False
 
-        # Step 5: Collect files
+        # Step 6: Collect files
         if not self.collect_files():
             print_error("Build process failed at file collection")
             return False
 
-        # Step 6: Create ZIP
+        # Step 7: Create ZIP
         zip_path = self.create_zip()
 
         # Success!

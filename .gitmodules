@@ -35,3 +35,6 @@
 [submodule "ThirdParties/Box2D"]
 	path = ThirdParties/Box2D
 	url = https://github.com/erincatto/box2d.git
+[submodule "ThirdParties/Nvidia/Streamline"]
+	path = ThirdParties/Nvidia/Streamline
+	url = https://github.com/NVIDIA-RTX/Streamline.git

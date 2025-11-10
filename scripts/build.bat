@@ -12,6 +12,43 @@ echo ========================================
 echo.
 
 :: ============================================================================
+:: Prerequisites Check
+:: ============================================================================
+
+echo Checking prerequisites...
+echo.
+
+:: Check for .NET SDK
+set DOTNET_FOUND=0
+where dotnet >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    set DOTNET_FOUND=1
+    for /f "tokens=*" %%i in ('dotnet --version 2^>nul') do set DOTNET_VERSION=%%i
+    echo   .NET SDK: Found ^(version !DOTNET_VERSION!^)
+) else (
+    echo   .NET SDK: Not found
+)
+
+:: Check for CMake
+where cmake >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    for /f "tokens=*" %%i in ('cmake --version 2^>nul ^| findstr /R "[0-9]"') do (
+        echo   CMake: Found ^(%%i^)
+        goto cmake_done
+    )
+)
+:cmake_done
+
+:: Check for Vulkan SDK
+if defined VULKAN_SDK (
+    echo   Vulkan SDK: Found ^(%VULKAN_SDK%^)
+) else (
+    echo   Vulkan SDK: Not found in VULKAN_SDK environment variable
+)
+
+echo.
+
+:: ============================================================================
 :: Build Configuration
 :: ============================================================================
 
@@ -75,6 +112,20 @@ if /i "%BUILD_SCRIPTING%"=="n" (
 ) else (
     set SCRIPTING_FLAG=-DGRAVIX_BUILD_SCRIPTING=ON
     echo   Scripting: Enabled
+
+    :: Warn if .NET SDK is not found
+    if !DOTNET_FOUND! EQU 0 (
+        echo.
+        echo   WARNING: .NET SDK not found! Scripting support requires .NET 9.0 SDK.
+        echo   Download from: https://dotnet.microsoft.com/download/dotnet/9.0
+        echo.
+        set /p CONTINUE_WITHOUT_DOTNET="Continue anyway? (y/N): "
+        if /i "!CONTINUE_WITHOUT_DOTNET!" NEQ "y" (
+            echo Build cancelled.
+            pause
+            exit /b 1
+        )
+    )
 )
 echo.
 

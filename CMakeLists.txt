@@ -85,9 +85,26 @@ set_target_properties(yaml-cpp PROPERTIES FOLDER "Dependencies")
 add_subdirectory(ThirdParties/ImGuizmo)
 set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
 
-# Box2D 
+# Box2D
 add_subdirectory(ThirdParties/Box2D)
 set_target_properties(box2d PROPERTIES FOLDER "Dependencies")
+
+# Nvidia Streamline (RTX Support)
+option(GRAVIX_ENABLE_STREAMLINE "Enable Nvidia Streamline for RTX features" ON)
+
+if(GRAVIX_ENABLE_STREAMLINE)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParties/Nvidia/Streamline/CMakeLists.txt")
+        message(STATUS "Nvidia Streamline found - enabling RTX support")
+        add_subdirectory(ThirdParties/Nvidia/Streamline)
+        set(GRAVIX_HAS_STREAMLINE ON)
+        add_compile_definitions(GRAVIX_HAS_STREAMLINE)
+    else()
+        message(WARNING "Nvidia Streamline directory not found at ThirdParties/Nvidia/Streamline")
+        set(GRAVIX_HAS_STREAMLINE OFF)
+    endif()
+else()
+    set(GRAVIX_HAS_STREAMLINE OFF)
+endif()
 
 # ============================================================================
 # Engine Modules
@@ -120,4 +137,5 @@ message(STATUS "Features:")
 message(STATUS "  Vulkan:         ${GRAVIX_USE_VULKAN}")
 message(STATUS "  Editor:         ${GRAVIX_BUILD_EDITOR}")
 message(STATUS "  Scripting:      ${GRAVIX_BUILD_SCRIPTING}")
+message(STATUS "  Streamline:     ${GRAVIX_HAS_STREAMLINE}")
 message(STATUS "========================================")
