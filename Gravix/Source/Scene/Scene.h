@@ -15,12 +15,15 @@ namespace Gravix
 {
 
 	class Entity;
+	class PhysicsWorld;
 
 	class Scene : public Asset
 	{
 	public:
-		Scene();
-		~Scene();
+		Scene() = default;
+		~Scene() = default;
+
+		static Ref<Scene> Copy(Ref<Scene> other);
 
 		virtual AssetType GetAssetType() const override { return AssetType::Scene; }
 
@@ -29,11 +32,16 @@ namespace Gravix
 
 		void ExtractSceneDependencies(std::vector<AssetHandle>* outDependencies) const;
 
+		void OnRuntimeStart();
+		void OnRuntimeStop();
+
 		void OnEditorUpdate(float ts);
 		void OnRuntimeUpdate(float ts);
 
 		void OnEditorRender(Command& cmd, EditorCamera& camera);
 		void OnRuntimeRender(Command& cmd);
+
+		void DuplicateEntity(Entity entity);
 
 		void OnViewportResize(uint32_t width, uint32_t height);
 
@@ -44,6 +52,8 @@ namespace Gravix
 
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 		uint32_t m_NextCreationIndex = 0;
+
+		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		friend class Entity;
 		friend class SceneSerializer;

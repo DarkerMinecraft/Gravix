@@ -132,6 +132,7 @@ namespace Gravix
 
 		uint32_t m_SwapchainImageIndex = 0;
 		bool m_Vsync;
+		bool m_FrameStarted = false;
 
 #ifdef ENGINE_DEBUG
 		bool m_UseValidationLayer = true;

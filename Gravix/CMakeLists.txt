@@ -77,8 +77,6 @@ set(GRAVIX_CORE_SOURCES
     Source/Renderer/Generic/Command.cpp
     Source/Renderer/Generic/Command.h
     Source/Renderer/Generic/Device.h
-    Source/Renderer/Generic/OrthographicCamera.cpp
-    Source/Renderer/Generic/OrthographicCamera.h
     Source/Renderer/Generic/Renderer2D.cpp
     Source/Renderer/Generic/Renderer2D.h
     Source/Renderer/Generic/Types/Framebuffer.cpp
@@ -122,6 +120,7 @@ set(GRAVIX_CORE_SOURCES
     Source/Serialization/Project/ProjectSerializer.h
     Source/Serialization/Scene/SceneSerializer.cpp
     Source/Serialization/Scene/SceneSerializer.h
+    Source/Serialization/YAMLConverters.h
 
     # Math
     Source/Maths/Maths.cpp

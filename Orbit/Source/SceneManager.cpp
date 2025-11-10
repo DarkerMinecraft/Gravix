@@ -4,6 +4,7 @@
 #include "Asset/AssetManager.h"
 #include "Serialization/Scene/SceneSerializer.h"
 #include "Core/Log.h"
+#include "Core/Application.h"
 
 namespace Gravix
 {
@@ -91,8 +92,15 @@ namespace Gravix
 		// Update the active scene
 		if (scene)
 		{
+			// Wait for GPU to finish before destroying the old scene's resources
+			if (m_ActiveScene)
+			{
+				Application::Get().GetWindow().GetDevice()->WaitIdle();
+			}
+
 			m_ActiveSceneHandle = handle;
-			m_ActiveScene = scene;
+			m_EditorScene = scene;
+			m_ActiveScene = m_EditorScene;
 			m_SceneDirty = false;
 
 			if (m_OnSceneChanged)
@@ -124,12 +132,12 @@ namespace Gravix
 			if (std::filesystem::exists(filePath))
 			{
 				// Create and deserialize the scene
-				m_ActiveScene = CreateRef<Scene>();
-				SceneSerializer serializer(m_ActiveScene);
+				m_EditorScene = CreateRef<Scene>();
+				SceneSerializer serializer(m_EditorScene);
 				serializer.Deserialize(filePath);
 
 				m_ActiveSceneHandle = startScene;
-				m_ActiveScene->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
+				m_EditorScene->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
 
 				GX_CORE_INFO("Loaded start scene: {0}", filePath.string());
 			}
@@ -144,12 +152,17 @@ namespace Gravix
 		if (m_OnSceneChanged)
 			m_OnSceneChanged();
 
+		m_ActiveScene = m_EditorScene;
+
 		return m_ActiveScene;
 	}
 
 	void SceneManager::Play()
 	{
 		m_SceneState = SceneState::Play;
+
+		m_ActiveScene = Scene::Copy(m_EditorScene);
+		m_ActiveScene->OnRuntimeStart();
 
 		if (m_OnScenePlay)
 			m_OnScenePlay();
@@ -158,6 +171,8 @@ namespace Gravix
 	void SceneManager::Stop()
 	{
 		m_SceneState = SceneState::Edit;
+		m_ActiveScene->OnRuntimeStop();
+		m_ActiveScene = m_EditorScene;
 
 		if (m_OnSceneStop)
 			m_OnSceneStop();
@@ -165,6 +180,12 @@ namespace Gravix
 
 	void SceneManager::SetActiveScene(Ref<Scene> scene, AssetHandle handle)
 	{
+		// Wait for GPU to finish before destroying the old scene's resources
+		if (m_ActiveScene)
+		{
+			Application::Get().GetWindow().GetDevice()->WaitIdle();
+		}
+
 		m_ActiveScene = scene;
 		m_ActiveSceneHandle = handle;
 

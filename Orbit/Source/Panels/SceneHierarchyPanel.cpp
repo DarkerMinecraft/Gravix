@@ -83,6 +83,20 @@ namespace Gravix
 			ImGui::EndPopup();
 		}
 
+		// Keyboard shortcuts when window is focused
+		if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+		{
+			// Ctrl+D to duplicate selected entity
+			if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_D, false))
+			{
+				if (m_SelectedEntity)
+				{
+					m_Context->DuplicateEntity(m_SelectedEntity);
+					if (m_AppLayer) m_AppLayer->MarkSceneDirty();
+				}
+			}
+		}
+
 		ImGui::End();
 	}
 
@@ -114,12 +128,11 @@ namespace Gravix
 		{
 			if (ImGui::MenuItem("Duplicate"))
 			{
-				// TODO: Implement entity duplication
-			}
-
-			if (ImGui::MenuItem("Rename"))
-			{
-				// TODO: Implement entity renaming
+				if (m_SelectedEntity)
+				{
+					m_Context->DuplicateEntity(m_SelectedEntity);
+					if (m_AppLayer) m_AppLayer->MarkSceneDirty();
+				}
 			}
 
 			ImGui::Separator();

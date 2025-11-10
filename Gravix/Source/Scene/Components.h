@@ -84,6 +84,18 @@ namespace Gravix
 		operator const float& () const { return TilingFactor; }
 	};
 
+	struct CircleRendererComponent 
+	{
+		glm::vec4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
+		float Thickness = 1.0f;
+		float Fade = 0.005f;
+
+		CircleRendererComponent() = default;
+		CircleRendererComponent(const CircleRendererComponent&) = default;
+		CircleRendererComponent(const glm::vec4& color, float thickness, float fade)
+			: Color(color), Thickness(thickness), Fade(fade) {}
+	};
+
 	struct CameraComponent
 	{
 		SceneCamera Camera;
@@ -92,6 +104,39 @@ namespace Gravix
 
 		CameraComponent() = default;
 		CameraComponent(const CameraComponent&) = default;
+	};
+
+	struct Rigidbody2DComponent
+	{
+		enum class BodyType { Static = 0, Dynamic, Kinematic };
+		BodyType Type = BodyType::Static;
+		bool FixedRotation = false;
+
+		// Runtime physics body stored as uint64_t (physics system converts to/from Box2D IDs)
+		uint64_t RuntimeBody = 0;
+
+		Rigidbody2DComponent() = default;
+		Rigidbody2DComponent(const Rigidbody2DComponent&) = default;
+		Rigidbody2DComponent(BodyType type, bool fixedRotation)
+			: Type(type), FixedRotation(fixedRotation) {}
+	};
+
+	struct BoxCollider2DComponent
+	{
+		glm::vec2 Offset = { 0.0f, 0.0f };
+		glm::vec2 Size = { 0.5f, 0.5f };
+
+		float Density = 1.0f;
+		float Friction = 0.5f;
+		float Restitution = 0.0f;
+
+		// Runtime physics shape stored as uint64_t (physics system converts to/from Box2D IDs)
+		uint64_t RuntimeShape = 0;
+
+		BoxCollider2DComponent() = default;
+		BoxCollider2DComponent(const BoxCollider2DComponent&) = default;
+		BoxCollider2DComponent(const glm::vec2& offset, const glm::vec2& size, float density, float friction, float restitution)
+			: Offset(offset), Size(size), Density(density), Friction(friction), Restitution(restitution) {}
 	};
 
 	// Hidden component that tracks the order components were added to an entity

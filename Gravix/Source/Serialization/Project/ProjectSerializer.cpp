@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ProjectSerializer.h"
+#include "Serialization/YAMLConverters.h"
 
 #include <yaml-cpp/yaml.h>
 #include <fstream>
@@ -29,6 +30,13 @@ namespace Gravix
 		out << YAML::Key << "AssetDirectory" << YAML::Value << relativeAssetDir.string();
 		out << YAML::Key << "LibraryDirectory" << YAML::Value << relativeLibraryDir.string();
 		out << YAML::Key << "ScriptPath" << YAML::Value << relativeScriptPath.string();
+
+		// Serialize Physics Settings
+		out << YAML::Key << "Physics" << YAML::BeginMap;
+		out << YAML::Key << "Gravity" << YAML::Value << config.Physics.Gravity;
+		out << YAML::Key << "RestitutionThreshold" << YAML::Value << config.Physics.RestitutionThreshold;
+		out << YAML::EndMap;
+
 		out << YAML::EndMap;
 
 		out << YAML::EndMap;
@@ -62,6 +70,16 @@ namespace Gravix
 		config.AssetDirectory = projectNode["AssetDirectory"].as<std::string>();
 		config.LibraryDirectory = projectNode["LibraryDirectory"].as<std::string>();
 		config.ScriptPath = projectNode["ScriptPath"].as<std::string>();
+
+		// Deserialize Physics Settings (with defaults if not present)
+		auto physicsNode = projectNode["Physics"];
+		if (physicsNode)
+		{
+			if (physicsNode["Gravity"])
+				config.Physics.Gravity = physicsNode["Gravity"].as<glm::vec2>();
+			if (physicsNode["RestitutionThreshold"])
+				config.Physics.RestitutionThreshold = physicsNode["RestitutionThreshold"].as<float>();
+		}
 
 		return true;
 	}

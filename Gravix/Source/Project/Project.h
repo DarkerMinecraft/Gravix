@@ -12,9 +12,16 @@
 #include "Asset/Asset.h"
 
 #include <filesystem>
+#include <glm/glm.hpp>
 
 namespace Gravix
 {
+
+	struct PhysicsSettings
+	{
+		glm::vec2 Gravity = { 0.0f, -9.8f };
+		float RestitutionThreshold = 2.4f;  // Box2D default: 1.0 m/s (we use 2.4 for pixels)
+	};
 
 	struct ProjectConfig
 	{
@@ -25,6 +32,8 @@ namespace Gravix
 		std::filesystem::path AssetDirectory;
 		std::filesystem::path LibraryDirectory;
 		std::filesystem::path ScriptPath;
+
+		PhysicsSettings Physics;
 	};
 
 	class Project : public RefCounted

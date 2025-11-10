@@ -26,16 +26,16 @@ namespace Gravix
 			m_SceneHierarchyPanel.SetContext(m_SceneManager.GetActiveScene());
 			m_SceneHierarchyPanel.SetNoneSelected();
 			UpdateWindowTitle();
-		});
+			});
 
 		m_SceneManager.SetOnSceneDirtyCallback([this]() {
 			UpdateWindowTitle();
-		});
+			});
 
 		m_SceneManager.SetOnScenePlayCallback([this]() {
 			auto& viewportSize = m_ViewportPanel.GetViewportSize();
 			m_SceneManager.GetActiveScene()->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
-		});
+			});
 
 		// Check if a project has been loaded
 		if (Project::HasActiveProject())
@@ -364,9 +364,6 @@ namespace Gravix
 		ImGui::End();
 	}
 
-
-
-
 	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
 	{
 		// Don't process shortcuts if ImGui wants keyboard input
@@ -415,6 +412,21 @@ namespace Gravix
 				else
 				{
 					m_SceneManager.SaveActiveScene();
+				}
+				return true;
+			}
+			break;
+		case Key::D:
+			if (ctrlDown)
+			{
+				if (m_SceneManager.GetSceneState() != SceneState::Edit)
+					break;
+
+				Entity entity = m_SceneHierarchyPanel.GetSelectedEntity();
+				if (entity)
+				{
+					m_SceneManager.GetActiveScene()->DuplicateEntity(entity);
+					MarkSceneDirty();
 				}
 				return true;
 			}
@@ -552,6 +564,9 @@ namespace Gravix
 
 	void AppLayer::OpenScene(AssetHandle handle, bool deserialize)
 	{
+		if (m_SceneManager.GetSceneState() != SceneState::Edit)
+			m_SceneManager.Stop();
+
 		if (m_SceneManager.OpenScene(handle, deserialize))
 		{
 			// Update viewport size for the new scene

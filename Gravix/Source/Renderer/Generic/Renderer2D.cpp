@@ -15,16 +15,26 @@ namespace Gravix
 	struct Renderer2DData
 	{
 		const uint32_t MaxQuads = 10000;
-		const uint32_t MaxVertices = MaxQuads * 4;
-		const uint32_t MaxIndices = MaxQuads * 6;
+		const uint32_t MaxQuadVertices = MaxQuads * 4;
+		const uint32_t MaxQuadIndices = MaxQuads * 6;
 		static const uint32_t MaxTextureSlots = 32; // TODO: RenderCaps
 
-		Ref<Material> TexturedMaterial;
+		const uint32_t MaxCircles = 10000;
+		const uint32_t MaxCircleVertices = MaxCircles * 4;
+		const uint32_t MaxCircleIndices = MaxCircles * 6;
+
+		Ref<Material> QuadMaterial;
 		Ref<Texture2D> WhiteTexture;
 		Ref<Mesh> QuadMesh;
 
-		DynamicStruct PushConstants;
+		Ref<Material> CircleMaterial;
+		Ref<Mesh> CircleMesh;
+
+		DynamicStruct QuadPushConstants;
 		std::vector<DynamicStruct> QuadVertexBuffer;
+
+		DynamicStruct CirclePushConstants;
+		std::vector<DynamicStruct> CircleVertexBuffer;
 
 		static constexpr std::array<glm::vec2, 4> QuadTextureCoords = 
 		{
@@ -46,6 +56,8 @@ namespace Gravix
 		uint32_t QuadIndexCount = 0;
 		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
 		uint32_t TextureSlotIndex = 1; // 0 = white texture
+
+		uint32_t CircleIndexCount = 0;
 	};
 
 	static Renderer2DData* s_Data;
@@ -63,35 +75,61 @@ namespace Gravix
 
 		// Create a default textured material
 		MaterialSpecification matSpec{};
-		matSpec.DebugName = "DefaultTexturedMaterial";
-		matSpec.ShaderFilePath = "Assets/shaders/texture.slang";
+		matSpec.DebugName = "DefaultQuadTexture";
+		matSpec.ShaderFilePath = "Assets/shaders/quad.slang";
 		matSpec.BlendingMode = Blending::Alphablend;
 		matSpec.RenderTarget = renderTarget;
 		matSpec.EnableDepthTest = true;
 
-		s_Data->TexturedMaterial = Material::Create(matSpec);
+		s_Data->QuadMaterial = Material::Create(matSpec);
 
-		s_Data->PushConstants = s_Data->TexturedMaterial->GetPushConstantStruct();
-		s_Data->QuadMesh = Mesh::Create(s_Data->TexturedMaterial->GetVertexSize());
+		s_Data->QuadPushConstants = s_Data->QuadMaterial->GetPushConstantStruct();
+		s_Data->QuadMesh = Mesh::Create(s_Data->QuadMaterial->GetVertexSize());
 
-		std::vector<uint32_t> indices(s_Data->MaxIndices);
+		matSpec.DebugName = "DefaultCircle";
+		matSpec.ShaderFilePath = "Assets/shaders/circle.slang";
+
+		s_Data->CircleMaterial = Material::Create(matSpec);
+		s_Data->CirclePushConstants = s_Data->CircleMaterial->GetPushConstantStruct();
+		s_Data->CircleMesh = Mesh::Create(s_Data->CircleMaterial->GetVertexSize());
+
+		std::vector<uint32_t> quadIndices(s_Data->MaxQuadIndices);
 		uint32_t offset = 0;
-		for (uint32_t i = 0; i < s_Data->MaxIndices; i += 6)
+		for (uint32_t i = 0; i < s_Data->MaxQuadIndices; i += 6)
 		{
 			// First triangle
-			indices[i + 0] = offset + 0;
-			indices[i + 1] = offset + 1;
-			indices[i + 2] = offset + 2;
+			quadIndices[i + 0] = offset + 0;
+			quadIndices[i + 1] = offset + 1;
+			quadIndices[i + 2] = offset + 2;
 
 			// Second triangle
-			indices[i + 3] = offset + 2;
-			indices[i + 4] = offset + 3;
-			indices[i + 5] = offset + 0;
+			quadIndices[i + 3] = offset + 2;
+			quadIndices[i + 4] = offset + 3;
+			quadIndices[i + 5] = offset + 0;
 
 			offset += 4;  // Each quad uses 4 vertices
 		}
 
-		s_Data->QuadMesh->SetIndices(indices);
+		s_Data->QuadMesh->SetIndices(quadIndices);
+
+		std::vector<uint32_t> circleIndices(s_Data->MaxQuadIndices);
+		offset = 0;
+		for (uint32_t i = 0; i < s_Data->MaxQuadIndices; i += 6)
+		{
+			// First triangle
+			circleIndices[i + 0] = offset + 0;
+			circleIndices[i + 1] = offset + 1;
+			circleIndices[i + 2] = offset + 2;
+
+			// Second triangle
+			circleIndices[i + 3] = offset + 2;
+			circleIndices[i + 4] = offset + 3;
+			circleIndices[i + 5] = offset + 0;
+
+			offset += 4;  // Each quad uses 4 vertices
+		}
+
+		s_Data->CircleMesh->SetIndices(circleIndices);
 
 		memset(s_Data->TextureSlots.data(), 0, s_Data->TextureSlots.size() * sizeof(uint32_t));
 	}
@@ -104,10 +142,12 @@ namespace Gravix
 		s_Data->QuadIndexCount = 0;
 		s_Data->QuadVertexBuffer.clear();
 
-		cmd.SetActiveMaterial(s_Data->TexturedMaterial);
-		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
+		s_Data->CircleIndexCount = 0;
+		s_Data->CircleVertexBuffer.clear();
 
-		s_Data->PushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
+		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
+		s_Data->QuadPushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
+		s_Data->CirclePushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
 	}
 
 	void Renderer2D::BeginScene(Command& cmd, EditorCamera& camera)
@@ -118,10 +158,12 @@ namespace Gravix
 		s_Data->QuadIndexCount = 0;
 		s_Data->QuadVertexBuffer.clear();
 
-		cmd.SetActiveMaterial(s_Data->TexturedMaterial);
-		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
+		s_Data->CircleIndexCount = 0;
+		s_Data->CircleVertexBuffer.clear();
 
-		s_Data->PushConstants.Set("viewProjMatrix", camera.GetViewProjection());
+		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
+		s_Data->QuadPushConstants.Set("viewProjMatrix", camera.GetViewProjection());
+		s_Data->CirclePushConstants.Set("viewProjMatrix", camera.GetViewProjection());
 	}
 
 	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
@@ -153,7 +195,7 @@ namespace Gravix
 			}
 		}
 
-		DynamicStruct vertex = s_Data->TexturedMaterial->GetVertexStruct();
+		DynamicStruct vertex = s_Data->QuadMaterial->GetVertexStruct();
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -173,28 +215,53 @@ namespace Gravix
 		s_Data->QuadIndexCount += 6;
 	}
 
+	void Renderer2D::DrawCircle(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, float thickness /*= 0.1f*/, float fade /*= 0.005f*/)
+	{
+		DynamicStruct vertex = s_Data->CircleMaterial->GetVertexStruct();
+
+		for (int i = 0; i < 4; i++)
+		{
+			// Calculate vertex position relative to center
+			glm::vec4 finalPos = transformMatrix * s_Data->QuadVertexOffsets[i];
+
+			vertex.Set("worldPosition", finalPos);
+			vertex.Set("localPosition", s_Data->QuadVertexOffsets[i] * 2.0f);
+			vertex.Set("color", color);
+			vertex.Set("thickness", thickness);
+			vertex.Set("fade", fade);
+			vertex.Set("entityID", entityID);
+
+			s_Data->CircleVertexBuffer.push_back(vertex);
+		}
+
+		s_Data->CircleIndexCount += 6;
+	}
+
 	void Renderer2D::EndScene(Command& cmd)
 	{
 		GX_PROFILE_FUNCTION();
 
-		// Early exit if nothing to draw
-		if (s_Data->QuadIndexCount == 0)
-			return;
-
 		s_Data->QuadMesh->SetVertices(s_Data->QuadVertexBuffer);
-		s_Data->PushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
+		s_Data->QuadPushConstants.Set("vertex", s_Data->QuadMesh->GetVertexBufferAddress());
 
-		for(uint32_t i = 0; i < s_Data->TextureSlotIndex; i++)
-			cmd.BindResource(0, i, s_Data->TextureSlots[i]);
+		s_Data->CircleMesh->SetVertices(s_Data->CircleVertexBuffer);
+		s_Data->CirclePushConstants.Set("vertex", s_Data->CircleMesh->GetVertexBufferAddress());
 
 		Flush(cmd);
 	}
 
 	void Renderer2D::Flush(Command& cmd)
 	{
-		cmd.BindMaterial(s_Data->PushConstants.Data());
+		cmd.SetActiveMaterial(s_Data->QuadMaterial);
+		for (uint32_t i = 0; i < s_Data->TextureSlotIndex; i++)
+			cmd.BindResource(0, i, s_Data->TextureSlots[i]);
+		cmd.BindMaterial(s_Data->QuadPushConstants.Data());
 		cmd.BindMesh(s_Data->QuadMesh);
 		cmd.DrawIndexed(s_Data->QuadIndexCount);
+		cmd.SetActiveMaterial(s_Data->CircleMaterial);
+		cmd.BindMaterial(s_Data->CirclePushConstants.Data());
+		cmd.BindMesh(s_Data->CircleMesh);
+		cmd.DrawIndexed(s_Data->CircleIndexCount);
 	}
 
 	void Renderer2D::Destroy()

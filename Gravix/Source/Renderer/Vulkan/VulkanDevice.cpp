@@ -152,11 +152,29 @@ namespace Gravix
 	{
 		GX_PROFILE_FUNCTION();
 
+		m_FrameStarted = false;
+
+		// Always wait for the fence from FRAME_OVERLAP frames ago
 		{
 			GX_PROFILE_SCOPE("WaitForFences");
 			vkWaitForFences(m_Device, 1, &GetCurrentFrameData().RenderFence, true, UINT64_MAX);
-			vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
 		}
+
+		// Skip rendering if window is minimized (zero dimensions)
+		uint32_t width = Application::Get().GetWindow().GetWidth();
+		uint32_t height = Application::Get().GetWindow().GetHeight();
+		if (width == 0 || height == 0)
+		{
+			// Re-signal the fence immediately so it can be reused next frame
+			vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
+			// Submit an empty command buffer to signal the fence
+			VkSubmitInfo2 emptySubmit = VulkanInitializers::SubmitInfo(nullptr, nullptr, nullptr);
+			vkQueueSubmit2(m_GraphicsQueue, 1, &emptySubmit, GetCurrentFrameData().RenderFence);
+			return;
+		}
+
+		// Reset fence for this frame
+		vkResetFences(m_Device, 1, &GetCurrentFrameData().RenderFence);
 
 		{
 			GX_PROFILE_SCOPE("AcquireSwapchainImage");
@@ -165,7 +183,7 @@ namespace Gravix
 				GetCurrentFrameData().SwapchainSemaphore, nullptr, &m_SwapchainImageIndex);
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
-				RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+				RecreateSwapchain(width, height, m_Vsync);
 				return;
 			}
 			else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -190,73 +208,81 @@ namespace Gravix
 
 			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		}
+
+		m_FrameStarted = true;
 	}
 
 	void VulkanDevice::EndFrame()
 	{
 		GX_PROFILE_FUNCTION();
 
+		// Only submit and present if we successfully started the frame
+		if (m_FrameStarted)
 		{
-			GX_PROFILE_SCOPE("TransitionImageForPresent");
-			VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageFormat,
-				m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			uint32_t width = Application::Get().GetWindow().GetWidth();
+			uint32_t height = Application::Get().GetWindow().GetHeight();
 
-			//end the command buffer recording
-			vkEndCommandBuffer(GetCurrentFrameData().CommandBuffer);
-		}
-
-		{
-			GX_PROFILE_SCOPE("SubmitCommandBuffer");
-			VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(GetCurrentFrameData().CommandBuffer);
-
-			// Wait on per-frame acquire semaphore (signaled by vkAcquireNextImageKHR)
-			VkSemaphoreSubmitInfo waitInfo = VulkanInitializers::SemaphoreSubmitInfo(
-				VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-				GetCurrentFrameData().SwapchainSemaphore);
-
-			// Signal per-swapchain-image present semaphore (waited on by vkQueuePresentKHR)
-			VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
-				VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-				m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore);
-
-			VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
-
-			//submit command buffer to the queue and execute it.
-			// _renderFence will now block until the graphic commands finish execution
-			vkQueueSubmit2(m_GraphicsQueue, 1, &submit, GetCurrentFrameData().RenderFence);
-		}
-
-		{
-			GX_PROFILE_SCOPE("PresentSwapchain");
-			//prepare present
-			// this will put the image we just rendered to into the visible window.
-			// we want to wait on the per-swapchain-image render semaphore for that,
-			// as its necessary that drawing commands have finished before the image is displayed to the user
-			VkPresentInfoKHR presentInfo = {};
-			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			presentInfo.pNext = nullptr;
-			presentInfo.pSwapchains = &m_Swapchain;
-			presentInfo.swapchainCount = 1;
-
-			presentInfo.pWaitSemaphores = &m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore;
-			presentInfo.waitSemaphoreCount = 1;
-
-			presentInfo.pImageIndices = &m_SwapchainImageIndex;
-
-			VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
-			if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 			{
-				RecreateSwapchain(Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight(), m_Vsync);
+				GX_PROFILE_SCOPE("TransitionImageForPresent");
+				VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageFormat,
+					m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+				m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+				//end the command buffer recording
+				vkEndCommandBuffer(GetCurrentFrameData().CommandBuffer);
 			}
-			else if (result != VK_SUCCESS)
+
 			{
-				GX_CORE_CRITICAL("Failed to present swapchain image!");
-				return;
+				GX_PROFILE_SCOPE("SubmitCommandBuffer");
+				VkCommandBufferSubmitInfo cmdinfo = VulkanInitializers::CommandBufferSubmitInfo(GetCurrentFrameData().CommandBuffer);
+
+				// Wait on per-frame acquire semaphore (signaled by vkAcquireNextImageKHR)
+				VkSemaphoreSubmitInfo waitInfo = VulkanInitializers::SemaphoreSubmitInfo(
+					VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+					GetCurrentFrameData().SwapchainSemaphore);
+
+				// Signal per-swapchain-image present semaphore (waited on by vkQueuePresentKHR)
+				VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
+					VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+					m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore);
+
+				VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
+
+				//submit command buffer to the queue and execute it.
+				// _renderFence will now block until the graphic commands finish execution
+				vkQueueSubmit2(m_GraphicsQueue, 1, &submit, GetCurrentFrameData().RenderFence);
+			}
+
+			{
+				GX_PROFILE_SCOPE("PresentSwapchain");
+				//prepare present
+				// this will put the image we just rendered to into the visible window.
+				// we want to wait on the per-swapchain-image render semaphore for that,
+				// as its necessary that drawing commands have finished before the image is displayed to the user
+				VkPresentInfoKHR presentInfo = {};
+				presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+				presentInfo.pNext = nullptr;
+				presentInfo.pSwapchains = &m_Swapchain;
+				presentInfo.swapchainCount = 1;
+
+				presentInfo.pWaitSemaphores = &m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore;
+				presentInfo.waitSemaphoreCount = 1;
+
+				presentInfo.pImageIndices = &m_SwapchainImageIndex;
+
+				VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
+				if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+				{
+					RecreateSwapchain(width, height, m_Vsync);
+				}
+				else if (result != VK_SUCCESS)
+				{
+					GX_CORE_CRITICAL("Failed to present swapchain image!");
+				}
 			}
 		}
 
-		//increase the number of frames drawn
+		//always increase the number of frames drawn, even if we skipped rendering
 		m_CurrentFrame++;
 	}
 
@@ -515,6 +541,13 @@ namespace Gravix
 
 	void VulkanDevice::CreateSwapchain(uint32_t width, uint32_t height, bool vSync)
 	{
+		// Don't create swapchain with zero dimensions (window minimized)
+		if (width == 0 || height == 0)
+		{
+			GX_CORE_WARN("Cannot create swapchain with zero dimensions (width={}, height={}). Window may be minimized.", width, height);
+			return;
+		}
+
 		vkb::SwapchainBuilder swapchainBuilder{ m_PhysicalDevice, m_Device, m_Surface };
 
 		m_SwapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -547,6 +580,16 @@ namespace Gravix
 
 	void VulkanDevice::RecreateSwapchain(uint32_t width, uint32_t height, bool vSync)
 	{
+		// Don't recreate swapchain with zero dimensions (window minimized)
+		if (width == 0 || height == 0)
+		{
+			GX_CORE_WARN("Cannot recreate swapchain with zero dimensions (width={}, height={}). Window may be minimized.", width, height);
+			return;
+		}
+
+		// Wait for GPU to finish before destroying swapchain resources
+		vkDeviceWaitIdle(m_Device);
+
 		// Destroy old swapchain image views
 		for (int i = 0; i < m_SwapchainImageViews.size(); i++) {
 			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
@@ -580,7 +623,7 @@ namespace Gravix
 		m_SwapchainImages = vkbSwapchain.get_images().value();
 		m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
 
-		// Recreate per-swapchain-image semaphores for new swapchain
+		// Recreate per-swapchain-image present semaphores
 		VkSemaphoreCreateInfo semaphoreCreateInfo = VulkanInitializers::SemaphoreCreateInfo();
 		m_SwapchainSyncData.resize(m_SwapchainImages.size());
 		for (size_t i = 0; i < m_SwapchainImages.size(); i++)

@@ -55,6 +55,7 @@ namespace Gravix
 
 	private:
 		Ref<Scene> m_ActiveScene;
+		Ref<Scene> m_EditorScene;
 		AssetHandle m_ActiveSceneHandle = 0;
 		AssetHandle m_PendingSceneHandle = 0;
 

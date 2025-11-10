@@ -47,6 +47,31 @@ namespace Gravix
 			return component;
 		}
 
+		template<typename T, typename... Args>
+		T& AddOrReplaceComponent(Args&&... args)
+		{
+			T& component = m_Scene->m_Registry.emplace_or_replace<T>(m_EntityHandle, std::forward<Args>(args)...);
+			if (auto* info = ComponentRegistry::Get().GetComponentInfo(typeid(T)))
+			{
+				if (info->OnCreateFunc)
+					info->OnCreateFunc(&component, m_Scene);
+			}
+			// Track component order (skip for ComponentOrderComponent itself to avoid recursion)
+			if constexpr (!std::is_same_v<T, ComponentOrderComponent>)
+			{
+				if (HasComponent<ComponentOrderComponent>())
+				{
+					auto& order = GetComponent<ComponentOrderComponent>();
+					// If the component is not already in the order list, add it
+					if (std::find(order.ComponentOrder.begin(), order.ComponentOrder.end(), typeid(T)) == order.ComponentOrder.end())
+					{
+						order.ComponentOrder.push_back(typeid(T));
+					}
+				}
+			}
+			return component;
+		}
+
 		template<typename T>
 		T& GetComponent()
 		{

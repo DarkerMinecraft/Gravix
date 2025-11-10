@@ -6,6 +6,7 @@
 
 #include "Asset/AssetManager.h"
 #include "Project/Project.h"
+#include "Serialization/YAMLConverters.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -13,73 +14,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-namespace YAML 
-{
-	template<>
-	struct convert<glm::vec3>
-	{
-		static Node encode(const glm::vec3& vec)
-		{
-			Node node;
-			node.push_back(vec.x);
-			node.push_back(vec.y);
-			node.push_back(vec.z);
-			return node;
-		}
-		static bool decode(const Node& node, glm::vec3& vec)
-		{
-			if (!node.IsSequence() || node.size() != 3)
-				return false;
-
-			vec.x = node[0].as<float>();
-			vec.y = node[1].as<float>();
-			vec.z = node[2].as<float>();
-			return true;
-		}
-	};
-
-	template<>
-	struct convert<glm::vec4>
-	{
-		static Node encode(const glm::vec4& vec)
-		{
-			Node node;
-			node.push_back(vec.x);
-			node.push_back(vec.y);
-			node.push_back(vec.z);
-			node.push_back(vec.w);
-			return node;
-		}
-		static bool decode(const Node& node, glm::vec4& vec)
-		{
-			if (!node.IsSequence() || node.size() != 4)
-				return false;
-
-			vec.x = node[0].as<float>();
-			vec.y = node[1].as<float>();
-			vec.z = node[2].as<float>();
-			vec.w = node[3].as<float>();
-			return true;
-		}
-	};
-}
-
 namespace Gravix
 {
-
-	YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec3& vec)
-	{
-		out << YAML::Flow;
-		out << YAML::BeginSeq << vec.x << vec.y << vec.z << YAML::EndSeq;
-		return out;
-	}
-
-	YAML::Emitter& operator<<(YAML::Emitter& out, const glm::vec4& vec)
-	{
-		out << YAML::Flow;
-		out << YAML::BeginSeq << vec.x << vec.y << vec.z << vec.w << YAML::EndSeq;
-		return out;
-	}
 
 	void ComponentRegistry::RegisterAllComponents()
 	{
@@ -345,6 +281,145 @@ namespace Gravix
 				ImGuiHelpers::BeginPropertyRow("Tiling Factor");
 				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 				ImGui::DragFloat("##TilingFactor", &c.TilingFactor);
+				ImGuiHelpers::EndPropertyRow();
+			}
+		);
+
+		RegisterComponent<Rigidbody2DComponent>(
+			"Rigidbody2D",
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
+			nullptr,
+			[](YAML::Emitter& out, Rigidbody2DComponent& c)
+			{
+				out << YAML::Key << "BodyType" << YAML::Value << (int)c.Type;
+				out << YAML::Key << "FixedRotation" << YAML::Value << c.FixedRotation;
+			},
+			[](Rigidbody2DComponent& c, const YAML::Node& node)
+			{
+				c.Type = (Rigidbody2DComponent::BodyType)node["BodyType"].as<int>();
+				c.FixedRotation = node["FixedRotation"].as<bool>();
+			},
+			[](Rigidbody2DComponent& c)
+			{
+				const char* bodyTypeStrings[] = { "Static", "Dynamic", "Kinematic" };
+				const char* currentBodyTypeString = bodyTypeStrings[(int)c.Type];
+
+				// Body Type combo
+				ImGuiHelpers::BeginPropertyRow("Body Type");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				if (ImGui::BeginCombo("##BodyType", currentBodyTypeString))
+				{
+					for (int i = 0; i < 3; i++)
+					{
+						bool isSelected = (int)c.Type == i;
+						if (ImGui::Selectable(bodyTypeStrings[i], isSelected))
+						{
+							c.Type = (Rigidbody2DComponent::BodyType)i;
+						}
+
+						if (isSelected)
+							ImGui::SetItemDefaultFocus();
+					}
+
+					ImGui::EndCombo();
+				}
+				ImGuiHelpers::EndPropertyRow();
+
+				// Fixed Rotation checkbox
+				ImGuiHelpers::BeginPropertyRow("Fixed Rotation");
+				ImGui::Checkbox("##FixedRotation", &c.FixedRotation);
+				ImGuiHelpers::EndPropertyRow();
+			}
+		);
+
+		RegisterComponent<BoxCollider2DComponent>(
+			"BoxCollider2D",
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
+			nullptr,
+			[](YAML::Emitter& out, BoxCollider2DComponent& c)
+			{
+				out << YAML::Key << "Offset" << YAML::Value << c.Offset;
+				out << YAML::Key << "Size" << YAML::Value << c.Size;
+				out << YAML::Key << "Density" << YAML::Value << c.Density;
+				out << YAML::Key << "Friction" << YAML::Value << c.Friction;
+				out << YAML::Key << "Restitution" << YAML::Value << c.Restitution;
+			},
+			[](BoxCollider2DComponent& c, const YAML::Node& node)
+			{
+				c.Offset = node["Offset"].as<glm::vec2>();
+				c.Size = node["Size"].as<glm::vec2>();
+				c.Density = node["Density"].as<float>();
+				c.Friction = node["Friction"].as<float>();
+				c.Restitution = node["Restitution"].as<float>();
+			},
+			[](BoxCollider2DComponent& c)
+			{
+				// Offset property
+				ImGuiHelpers::BeginPropertyRow("Offset");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat2("##Offset", glm::value_ptr(c.Offset), 0.01f);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Size property
+				ImGuiHelpers::BeginPropertyRow("Size");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat2("##Size", glm::value_ptr(c.Size), 0.01f);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Density property
+				ImGuiHelpers::BeginPropertyRow("Density");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat("##Density", &c.Density, 0.01f, 0.0f, 100.0f);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Friction property
+				ImGuiHelpers::BeginPropertyRow("Friction");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat("##Friction", &c.Friction, 0.01f, 0.0f, 1.0f);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Restitution property
+				ImGuiHelpers::BeginPropertyRow("Restitution");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat("##Restitution", &c.Restitution, 0.01f, 0.0f, 1.0f);
+				ImGuiHelpers::EndPropertyRow();
+			}
+		);
+
+		RegisterComponent<CircleRendererComponent>(
+			"Circle Renderer",
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
+			nullptr,
+			[](YAML::Emitter& out, CircleRendererComponent& c)
+			{
+				out << YAML::Key << "Color" << YAML::Value << c.Color;
+				out << YAML::Key << "Thickness" << YAML::Value << c.Thickness;
+				out << YAML::Key << "Fade" << YAML::Value << c.Fade;
+			},
+			[](CircleRendererComponent& c, const YAML::Node& node)
+			{
+				c.Color = node["Color"].as<glm::vec4>();
+				c.Thickness = node["Thickness"].as<float>();
+				c.Fade = node["Fade"].as<float>();
+			},
+			[](CircleRendererComponent& c)
+			{
+				// Color property
+				ImGuiHelpers::BeginPropertyRow("Color");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::ColorEdit4("##Color", glm::value_ptr(c.Color));
+				ImGuiHelpers::EndPropertyRow();
+
+				// Thickness property
+				ImGuiHelpers::BeginPropertyRow("Thickness");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat("##Thickness", &c.Thickness, 0.01f, 0.0f, 1.0f);
+				ImGuiHelpers::EndPropertyRow();
+
+				// Fade property
+				ImGuiHelpers::BeginPropertyRow("Fade");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				ImGui::DragFloat("##Fade", &c.Fade, 0.001f, 0.0f, 1.0f);
 				ImGuiHelpers::EndPropertyRow();
 			}
 		);

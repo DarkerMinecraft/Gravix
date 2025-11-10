@@ -40,6 +40,7 @@ namespace Gravix
 		std::function<bool(entt::registry&, entt::entity)> HasComponentFunc;
 
 		std::function<void(entt::registry&, entt::entity)> AddComponentFunc;
+		std::function<void(entt::registry&, entt::entity)> AddOrReplaceComponentFunc;
 		std::function<void(entt::registry&, entt::entity)> RemoveComponentFunc;
 	};
 

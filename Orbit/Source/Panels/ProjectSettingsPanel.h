@@ -3,6 +3,12 @@
 namespace Gravix
 {
 
+	enum class ProjectSettingsTab
+	{
+		General = 0,
+		Physics
+	};
+
 	class ProjectSettingsPanel
 	{
 	public:
@@ -15,7 +21,11 @@ namespace Gravix
 
 		void OnImGuiRender();
 	private:
+		void RenderGeneralTab();
+		void RenderPhysicsTab();
+
 		bool m_IsOpen = false;
+		ProjectSettingsTab m_CurrentTab = ProjectSettingsTab::General;
 
 		// Temporary buffers for editing
 		char m_ProjectNameBuffer[256] = "";

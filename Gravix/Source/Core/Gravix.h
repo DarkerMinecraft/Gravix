@@ -8,7 +8,6 @@
 
 // Rendering Helpers
 #include "Renderer/Generic/Command.h"
-#include "Renderer/Generic/OrthographicCamera.h"
 #include "Renderer/Generic/Renderer2D.h"
 
 // Core 
