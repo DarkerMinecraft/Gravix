@@ -23,6 +23,10 @@ namespace Gravix
 		const uint32_t MaxCircleVertices = MaxCircles * 4;
 		const uint32_t MaxCircleIndices = MaxCircles * 6;
 
+		const uint32_t MaxLines = 10000;
+		const uint32_t MaxLineVertices = MaxLines * 2;
+		const float LineWidth = 2.0f;
+
 		Ref<Material> QuadMaterial;
 		Ref<Texture2D> WhiteTexture;
 		Ref<Mesh> QuadMesh;
@@ -30,11 +34,17 @@ namespace Gravix
 		Ref<Material> CircleMaterial;
 		Ref<Mesh> CircleMesh;
 
+		Ref<Material> LineMaterial;
+		Ref<Mesh> LineMesh;
+
 		DynamicStruct QuadPushConstants;
 		std::vector<DynamicStruct> QuadVertexBuffer;
 
 		DynamicStruct CirclePushConstants;
 		std::vector<DynamicStruct> CircleVertexBuffer;
+
+		DynamicStruct LinePushConstants;
+		std::vector<DynamicStruct> LineVertexBuffer;
 
 		static constexpr std::array<glm::vec2, 4> QuadTextureCoords = 
 		{
@@ -58,6 +68,7 @@ namespace Gravix
 		uint32_t TextureSlotIndex = 1; // 0 = white texture
 
 		uint32_t CircleIndexCount = 0;
+		uint32_t LineVertexCount = 0;
 	};
 
 	static Renderer2DData* s_Data;
@@ -82,7 +93,6 @@ namespace Gravix
 		matSpec.EnableDepthTest = true;
 
 		s_Data->QuadMaterial = Material::Create(matSpec);
-
 		s_Data->QuadPushConstants = s_Data->QuadMaterial->GetPushConstantStruct();
 		s_Data->QuadMesh = Mesh::Create(s_Data->QuadMaterial->GetVertexSize());
 
@@ -92,6 +102,15 @@ namespace Gravix
 		s_Data->CircleMaterial = Material::Create(matSpec);
 		s_Data->CirclePushConstants = s_Data->CircleMaterial->GetPushConstantStruct();
 		s_Data->CircleMesh = Mesh::Create(s_Data->CircleMaterial->GetVertexSize());
+
+		matSpec.DebugName = "DefaultLine";
+		matSpec.ShaderFilePath = "Assets/shaders/line.slang";
+		matSpec.GraphicsTopology = Topology::LineList;
+		matSpec.LineWidth = s_Data->LineWidth;
+
+		s_Data->LineMaterial = Material::Create(matSpec);
+		s_Data->LineMesh = Mesh::Create(s_Data->LineMaterial->GetVertexSize());
+		s_Data->LinePushConstants = s_Data->LineMaterial->GetPushConstantStruct();
 
 		std::vector<uint32_t> quadIndices(s_Data->MaxQuadIndices);
 		uint32_t offset = 0;
@@ -145,9 +164,13 @@ namespace Gravix
 		s_Data->CircleIndexCount = 0;
 		s_Data->CircleVertexBuffer.clear();
 
+		s_Data->LineVertexCount = 0;
+		s_Data->LineVertexBuffer.clear();
+
 		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
 		s_Data->QuadPushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
 		s_Data->CirclePushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
+		s_Data->LinePushConstants.Set("viewProjMatrix", camera.GetProjection() * glm::inverse(transformMatrix));
 	}
 
 	void Renderer2D::BeginScene(Command& cmd, EditorCamera& camera)
@@ -161,9 +184,13 @@ namespace Gravix
 		s_Data->CircleIndexCount = 0;
 		s_Data->CircleVertexBuffer.clear();
 
+		s_Data->LineVertexCount = 0;
+		s_Data->LineVertexBuffer.clear();
+
 		s_Data->TextureSlots[0] = s_Data->WhiteTexture;
 		s_Data->QuadPushConstants.Set("viewProjMatrix", camera.GetViewProjection());
 		s_Data->CirclePushConstants.Set("viewProjMatrix", camera.GetViewProjection());
+		s_Data->LinePushConstants.Set("viewProjMatrix", camera.GetViewProjection());
 	}
 
 	void Renderer2D::DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/, Ref<Texture2D> texture /*= nullptr*/, float tilingFactor /*= 1.0f*/)
@@ -237,6 +264,45 @@ namespace Gravix
 		s_Data->CircleIndexCount += 6;
 	}
 
+	void Renderer2D::DrawLine(const glm::vec3& p0, const glm::vec3& p1, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	{
+		DynamicStruct vertex = s_Data->LineMaterial->GetVertexStruct();
+		vertex.Set("color", color);
+
+		vertex.Set("position", p0);
+		s_Data->LineVertexBuffer.push_back(vertex);
+		vertex.Set("position", p1);
+		s_Data->LineVertexBuffer.push_back(vertex);
+
+		s_Data->LineVertexCount += 2;
+	}
+
+	void Renderer2D::DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	{
+		glm::vec3 p0 = glm::vec3(position.x - size.x * 0.5f, position.y - size.y * 0.5f, position.z);
+		glm::vec3 p1 = glm::vec3(position.x + size.x * 0.5f, position.y - size.y * 0.5f, position.z);
+		glm::vec3 p2 = glm::vec3(position.x + size.x * 0.5f, position.y + size.y * 0.5f, position.z);
+		glm::vec3 p3 = glm::vec3(position.x - size.x * 0.5f, position.y + size.y * 0.5f, position.z);
+
+
+		DrawLine(p0, p1, color);
+		DrawLine(p1, p2, color);
+		DrawLine(p2, p3, color);
+		DrawLine(p3, p0, color);
+	}
+
+	void Renderer2D::DrawRect(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	{
+		glm::vec3 lineVertices[4]; 
+		for(int i = 0; i < 4; i++)
+			lineVertices[i] = transformMatrix * s_Data->QuadVertexOffsets[i];
+			
+		DrawLine(lineVertices[0], lineVertices[1], color);
+		DrawLine(lineVertices[1], lineVertices[2], color);
+		DrawLine(lineVertices[2], lineVertices[3], color);
+		DrawLine(lineVertices[3], lineVertices[0], color);
+	}
+
 	void Renderer2D::EndScene(Command& cmd)
 	{
 		GX_PROFILE_FUNCTION();
@@ -246,6 +312,9 @@ namespace Gravix
 
 		s_Data->CircleMesh->SetVertices(s_Data->CircleVertexBuffer);
 		s_Data->CirclePushConstants.Set("vertex", s_Data->CircleMesh->GetVertexBufferAddress());
+
+		s_Data->LineMesh->SetVertices(s_Data->LineVertexBuffer);
+		s_Data->LinePushConstants.Set("vertex", s_Data->LineMesh->GetVertexBufferAddress());
 
 		Flush(cmd);
 	}
@@ -258,10 +327,16 @@ namespace Gravix
 		cmd.BindMaterial(s_Data->QuadPushConstants.Data());
 		cmd.BindMesh(s_Data->QuadMesh);
 		cmd.DrawIndexed(s_Data->QuadIndexCount);
+
 		cmd.SetActiveMaterial(s_Data->CircleMaterial);
 		cmd.BindMaterial(s_Data->CirclePushConstants.Data());
 		cmd.BindMesh(s_Data->CircleMesh);
 		cmd.DrawIndexed(s_Data->CircleIndexCount);
+
+		cmd.SetActiveMaterial(s_Data->LineMaterial);
+		cmd.SetLineWidth(s_Data->LineWidth);
+		cmd.BindMaterial(s_Data->LinePushConstants.Data());
+		cmd.Draw(s_Data->LineVertexCount);
 	}
 
 	void Renderer2D::Destroy()

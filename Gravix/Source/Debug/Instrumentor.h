@@ -137,7 +137,8 @@ namespace Gravix
 		#define GX_PROFILE_FUNCTION() GX_PROFILE_SCOPE(__FUNCSIG__)
 	#else
 		#define GX_PROFILE_FUNCTION() GX_PROFILE_SCOPE(__PRETTY_FUNCTION__)
-	#endif#else
+	#endif
+#else
 	#define GX_PROFILE_BEGIN_SESSION(name, filepath)
 	#define GX_PROFILE_END_SESSION()
 	#define GX_PROFILE_SCOPE(name)

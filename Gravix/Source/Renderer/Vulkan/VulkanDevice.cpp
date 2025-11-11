@@ -390,12 +390,28 @@ namespace Gravix
 
 	void VulkanDevice::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function)
 	{
-		vkWaitForFences(m_Device, 1, &m_ImmediateFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(m_Device, 1, &m_ImmediateFence);
+		// Lock mutex to ensure only one thread uses the immediate command buffer at a time
+		std::lock_guard<std::mutex> lock(m_ImmediateSubmitMutex);
+
+		// Wait for any previous operations to complete
+		VkResult result = vkWaitForFences(m_Device, 1, &m_ImmediateFence, VK_TRUE, UINT64_MAX);
+		if (result != VK_SUCCESS)
+		{
+			GX_CORE_ERROR("Failed to wait for immediate fence before submit: {}", static_cast<int>(result));
+			return;
+		}
+
+		// Reset the fence for this submission
+		result = vkResetFences(m_Device, 1, &m_ImmediateFence);
+		if (result != VK_SUCCESS)
+		{
+			GX_CORE_ERROR("Failed to reset immediate fence: {}", static_cast<int>(result));
+			return;
+		}
 
 		VkCommandBuffer cmd = m_ImmediateCommandBuffer;
 
-		VkResult result = vkResetCommandBuffer(cmd, 0);
+		result = vkResetCommandBuffer(cmd, 0);
 		if (result != VK_SUCCESS) {
 			GX_CORE_ERROR("Failed to reset immediate command buffer: {}", static_cast<int>(result));
 			return;
@@ -403,16 +419,17 @@ namespace Gravix
 
 		VkCommandBufferBeginInfo cmdBeginInfo = VulkanInitializers::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		result = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
-		if (result != VK_SUCCESS) 
+		if (result != VK_SUCCESS)
 		{
 			GX_CORE_ERROR("Failed to begin immediate command buffer: {}", static_cast<int>(result));
 			return;
 		}
 
+		// Execute the provided function
 		function(cmd);
 
 		result = vkEndCommandBuffer(cmd);
-		if (result != VK_SUCCESS) 
+		if (result != VK_SUCCESS)
 		{
 			GX_CORE_ERROR("Failed to end immediate command buffer: {}", static_cast<int>(result));
 			return;
@@ -422,16 +439,19 @@ namespace Gravix
 		VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, nullptr, nullptr);
 
 		result = vkQueueSubmit2(m_GraphicsQueue, 1, &submit, m_ImmediateFence);
-		if (result != VK_SUCCESS) 
+		if (result != VK_SUCCESS)
 		{
 			GX_CORE_ERROR("Failed to submit immediate command buffer: {}", static_cast<int>(result));
+			// Fence was reset but submission failed - wait would hang, so just return
+			// The mutex will be released and next call will properly wait
 			return;
 		}
 
+		// Wait for the submission to complete
 		result = vkWaitForFences(m_Device, 1, &m_ImmediateFence, VK_TRUE, UINT64_MAX);
 		if (result != VK_SUCCESS)
 		{
-			GX_CORE_ERROR("Failed to wait for immediate fence: {}", static_cast<int>(result));
+			GX_CORE_ERROR("Failed to wait for immediate fence after submit: {}", static_cast<int>(result));
 		}
 	}
 
@@ -497,6 +517,7 @@ namespace Gravix
 		features.shaderStorageImageMultisample = true;
 		features.sampleRateShading = true;
 		features.independentBlend = true;
+		features.wideLines = true;
 
 		//We want a gpu that can write to the win32 surface and supports vulkan 1.4 with the correct features
 		vkb::PhysicalDeviceSelector selector{ instRet.value() };

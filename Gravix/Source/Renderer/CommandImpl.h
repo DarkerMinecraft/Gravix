@@ -24,6 +24,7 @@ namespace Gravix
 
 		virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
 		virtual void SetScissor(uint32_t offsetX, uint32_t offsetY, uint32_t width, uint32_t height) = 0;
+		virtual void SetLineWidth(float width) = 0;
 
 		virtual void BeginRendering() = 0;
 		virtual void BindMesh(Mesh* mesh) = 0;

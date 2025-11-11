@@ -16,6 +16,8 @@
 #include "Log.h"
 #include "Input.h"
 
+#include "Debug/Instrumentor.h"
+
 #include "Project/Project.h"
 
 // Events

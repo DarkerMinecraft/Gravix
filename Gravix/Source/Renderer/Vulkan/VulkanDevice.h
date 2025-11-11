@@ -92,7 +92,7 @@ namespace Gravix
 		VkPhysicalDevice m_PhysicalDevice;
 		VkDevice m_Device;
 		VkSurfaceKHR m_Surface;
-		
+
 		VmaAllocator m_Allocator;
 
 		ShaderCompiler* m_ShaderCompiler;
@@ -106,6 +106,7 @@ namespace Gravix
 		VkFence m_ImmediateFence;
 		VkCommandBuffer m_ImmediateCommandBuffer;
 		VkCommandPool m_ImmediateCommandPool;
+		std::mutex m_ImmediateSubmitMutex;
 
 		VkDescriptorPool m_DescriptorPool;
 		VkDescriptorSetLayout m_BindlessStorageBufferLayout;

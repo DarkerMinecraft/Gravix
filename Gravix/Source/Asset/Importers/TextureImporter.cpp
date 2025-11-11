@@ -5,7 +5,7 @@
 
 #include <stb_image.h>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	Ref<Texture2D> TextureImporter::ImportTexture2D(AssetHandle handle, const AssetMetadata& metadata)
@@ -55,20 +55,8 @@ namespace Gravix
 			data.Size = sizeof(uint32_t) * (16 * 16);
 		}
 		else { data.Size = *width * *height * *channels; }
-		
-		return data;
-			auto pixels = std::make_unique<uint32_t[]>(16 * 16);
-			for (int x = 0; x < 16; x++) {
-				for (int y = 0; y < 16; y++) {
-					pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
-				}
-			}
 
-			data.Data = reinterpret_cast<uint8_t*>(pixels.release());
-			data.Size = sizeof(uint32_t) * (16 * 16);
-		}
-		else { data.Size = *width * *height * *channels; }
-		
-		return data;	}
+		return data;
+	}
 
 }

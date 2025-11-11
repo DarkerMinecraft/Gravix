@@ -134,19 +134,10 @@ set(GRAVIX_CORE_SOURCES
     # Physics
     Source/Physics/PhysicsWorld.h
     Source/Physics/PhysicsWorld.cpp
+
+    # Debug
+    Source/Debug/Instrumentor.h
 )
-
-# ============================================================================
-# Debug Source Files (Conditional)
-# ============================================================================
-
-if(ENGINE_DEBUG) 
-    set(GRAVIX_DEBUG_SOURCES
-        Source/Debug/Instrumentor.h
-    )
-else()
-    set(GRAVIX_DEBUG_SOURCES "")
-endif()
 
 # ============================================================================
 # Vulkan-Specific Source Files (Conditional)
@@ -192,7 +183,6 @@ endif()
 add_library(Gravix STATIC
     ${GRAVIX_CORE_SOURCES}
     ${GRAVIX_VULKAN_SOURCES}
-    ${GRAVIX_DEBUG_SOURCES}
 )
 
 # Precompiled header
@@ -231,6 +221,14 @@ if(GRAVIX_USE_VULKAN)
             ${Vulkan_INCLUDE_DIRS}
             ${CMAKE_SOURCE_DIR}/ThirdParties/VkBootstrap/src
             ${CMAKE_SOURCE_DIR}/ThirdParties/VulkanMemoryAllocator/include
+    )
+endif()
+
+# Streamline includes
+if(GRAVIX_HAS_STREAMLINE)
+    target_include_directories(Gravix
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/ThirdParties/Nvidia/Streamline/include
     )
 endif()
 

@@ -56,8 +56,16 @@ namespace Gravix
 			m_Impl->BeginRendering();
 	}
 
+	void Command::SetLineWidth(float width)
+	{
+		GX_PROFILE_FUNCTION();
+		if(m_Impl)
+			m_Impl->SetLineWidth(width);
+	}
+
 	void Command::BindMesh(Mesh* mesh)
 	{
+		GX_PROFILE_FUNCTION();
 		if(m_Impl)
 			m_Impl->BindMesh(mesh);
 	}

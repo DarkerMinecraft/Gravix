@@ -151,6 +151,13 @@ namespace Gravix
 		 */
 		void BeginRendering();
 
+		/*
+		* @brief Set line width for line primitives
+		*
+		* @param width Line width in pixels
+		*/
+		void SetLineWidth(float width);
+
 		/**
 		 * @brief Bind vertex and index buffers from a mesh
 		 * @param mesh Mesh containing geometry data

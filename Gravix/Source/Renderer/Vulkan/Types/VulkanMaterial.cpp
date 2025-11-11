@@ -416,6 +416,8 @@ namespace Gravix
 		else
 			builder.DisableDepthTest();
 
+		builder.SetLineWidth(spec.LineWidth);
+
 		VkPipelineCacheCreateInfo pipelineCacheCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 		if (!m_ShouldRegeneratePipelineCache)
 		{

@@ -38,4 +38,5 @@
 #include <condition_variable>
 
 #include "Core/Log.h"
+
 #include "Debug/Instrumentor.h"

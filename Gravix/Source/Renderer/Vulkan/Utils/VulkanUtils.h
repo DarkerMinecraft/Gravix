@@ -39,6 +39,7 @@ namespace Gravix
 		void SetInputTopology(VkPrimitiveTopology topology);
 		void SetPolygonMode(VkPolygonMode polygonMode);
 		void SetCullMode(VkCullModeFlags cullMode, VkFrontFace frontFace);
+		void SetLineWidth(float lineWidth);
 		void SetMultiSampling(bool useSampling);
 		void DisableBlending();
 		void EnableBlendingAdditive();

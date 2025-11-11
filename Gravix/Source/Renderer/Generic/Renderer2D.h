@@ -22,6 +22,11 @@ namespace Gravix
 		static void DrawQuad(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, Ref<Texture2D> texture = nullptr, float tilingFactor = 1.0f);
 		static void DrawCircle(const glm::mat4& transformMatrix, uint32_t entityID, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, float thickness = 0.1f, float fade = 0.005f);
 
+		static void DrawLine(const glm::vec3& p0, const glm::vec3& p1, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f });
+
+		static void DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f });
+		static void DrawRect(const glm::mat4& transformMatrix, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f });
+
 		static void EndScene(Command& cmd);
 		static void Flush(Command& cmd);
 

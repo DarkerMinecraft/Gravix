@@ -80,6 +80,11 @@ namespace Gravix
 		vkCmdSetScissor(m_CommandBuffer, 0, 1, &scissor);
 	}
 
+	void VulkanCommandImpl::SetLineWidth(float width)
+	{
+		vkCmdSetLineWidth(m_CommandBuffer, width);
+	}
+
 	void VulkanCommandImpl::BeginRendering()
 	{
 		if (m_TargetFramebuffer == nullptr)
