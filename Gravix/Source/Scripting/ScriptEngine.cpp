@@ -1,4 +1,5 @@
 #include "ScriptEngine.h"
+#include "Interop/ScriptInstance.h"
 
 #ifdef ENGINE_PLATFORM_WINDOWS
 #include <windows.h>
@@ -461,5 +462,32 @@ namespace Gravix
 		}
 
 		return true;
+	}
+
+	ScriptInstance ScriptEngine::CreateInstance(const std::string& typeName)
+	{
+		typedef void* (*CreateScriptFn)(const char*);
+		static auto createScript = (CreateScriptFn)GetFunction(
+			"GravixEngine.Interop.ScriptInstanceManager, GravixScripting",
+			"CreateScript"
+		);
+
+		if (!createScript)
+		{
+			GX_CORE_ERROR("[ScriptEngine] Failed to get CreateScript function");
+			return ScriptInstance();
+		}
+
+		std::string fullTypeName = typeName + ", GravixScripting";
+		void* handle = createScript(fullTypeName.c_str());
+
+		if (!handle)
+		{
+			GX_CORE_ERROR("[ScriptEngine] Failed to create instance of type: {}", typeName);
+			return ScriptInstance();
+		}
+
+		GX_CORE_INFO("[ScriptEngine] Successfully created instance of type: {}", typeName);
+		return ScriptInstance(handle, typeName);
 	}
 }

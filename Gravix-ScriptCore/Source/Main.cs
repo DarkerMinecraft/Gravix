@@ -1,24 +1,9 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace GravixEngine
 {
-    // Module initializer - runs automatically when the assembly is loaded
-    internal static class ModuleInitializer
-    {
-        [ModuleInitializer]
-        internal static void Initialize()
-        {
-            Console.WriteLine("[C#] Module Initializer executed!");
-
-            // Create an instance of Main to trigger the constructor
-            var mainInstance = new Main();
-        }
-    }
-
     public class Main
     {
-
         public float FloatVar { get; set; }
 
         public Main()
@@ -26,16 +11,25 @@ namespace GravixEngine
             Console.WriteLine("Main constructor!");
         }
 
+        // Instance methods - called via reflection
         public void PrintMessage()
         {
             Console.WriteLine("Hello World From C#!");
+        }
+
+        public void PrintInt(int number)
+        {
+            Console.WriteLine($"C# says: {number}");
+        }
+
+        public void PrintInts(int a, int b)
+        {
+            Console.WriteLine($"C# says: {a} and {b}");
         }
 
         public void PrintCustomMessage(string message)
         {
             Console.WriteLine($"C# says: {message}");
         }
-
     }
-
 }
