@@ -17,13 +17,17 @@ set(CSPROJ_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj")
 
 # Create a custom target for the C# project
 add_custom_target(Gravix-ScriptCore ALL
-    COMMAND ${DOTNET_EXECUTABLE} build 
+    COMMAND ${DOTNET_EXECUTABLE} build
         "${CSPROJ_FILE}"
         --configuration $<CONFIG>
         --output "${SCRIPTCORE_OUTPUT_DIR}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Building Gravix-ScriptCore C# project"
     SOURCES ${CSPROJ_FILE} ${CS_FILES}
+    BYPRODUCTS
+        "${SCRIPTCORE_OUTPUT_DIR}/GravixScripting.dll"
+        "${SCRIPTCORE_OUTPUT_DIR}/GravixScripting.deps.json"
+        "${SCRIPTCORE_OUTPUT_DIR}/GravixScripting.runtimeconfig.json"
 )
 
 # Organize files in Visual Studio to match filesystem structure

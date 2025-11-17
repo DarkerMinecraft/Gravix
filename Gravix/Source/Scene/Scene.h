@@ -10,6 +10,7 @@
 
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
+#include "SceneCamera.h"
 
 namespace Gravix
 {
@@ -169,7 +170,6 @@ namespace Gravix
 		 * @param camera Editor camera for view/projection
 		 *
 		 * Renders visible entities from editor camera perspective.
-		 * May include editor-specific visualization (gizmos, grids).
 		 */
 		void OnEditorRender(Command& cmd, EditorCamera& camera);
 
@@ -212,6 +212,29 @@ namespace Gravix
 		 * @return Height in pixels
 		 */
 		uint32_t GetViewportHeight() const { return m_ViewportHeight; }
+
+		/**
+		 * @brief Get the primary camera entity in the scene
+		 * @return Entity with CameraComponent marked as primary
+		 *
+		 * Searches for the entity with a CameraComponent that is
+		 * designated as the primary camera for rendering.
+		 */
+		SceneCamera GetPrimaryCameraEntity(glm::mat4* transform);
+
+		/**
+		 * @brief Get all entities with specified components
+		 * @tparam Component Component types to filter by
+		 * @return EnTT view of matching entities
+		 *
+		 * Returns a view that can be iterated over to access all entities
+		 * that have the specified component types.
+		 */
+		template<typename... Component>
+		auto GetAllEntitiesWith()
+		{
+			return m_Registry.view<Component...>();
+		}
 	private:
 		entt::registry m_Registry;
 

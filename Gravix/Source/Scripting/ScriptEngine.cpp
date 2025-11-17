@@ -21,12 +21,16 @@
 #define DIR_SEPARATOR '/'
 #endif
 
+// Define UNMANAGEDCALLERSONLY_METHOD if not already defined
+#ifndef UNMANAGEDCALLERSONLY_METHOD
+#define UNMANAGEDCALLERSONLY_METHOD ((const char_t*)-1)
+#endif
+
 namespace Gravix
 {
 	// --- Function Pointer Types ---
-	using HostfxrInitializeForDotnetCommandLineFn = int32_t(*)(
-		int argc,
-		const char_t** argv,
+	using HostfxrInitializeForRuntimeConfigFn = int32_t(*)(
+		const char_t* runtime_config_path,
 		const struct hostfxr_initialize_parameters* parameters,
 		hostfxr_handle* host_context_handle
 		);
@@ -37,6 +41,11 @@ namespace Gravix
 		);
 	using HostfxrCloseFn = int32_t(*)(const hostfxr_handle host_context_handle);
 	using HostfxrSetErrorWriterFn = hostfxr_error_writer_fn(*)(hostfxr_error_writer_fn error_writer);
+	using HostfxrSetRuntimePropertyValueFn = int32_t(*)(
+		const hostfxr_handle host_context_handle,
+		const char_t* name,
+		const char_t* value
+		);
 
 	// --- ScriptEngine Data ---
 	struct ScriptEngineData
@@ -44,10 +53,11 @@ namespace Gravix
 		void* m_HostfxrLib = nullptr;
 		hostfxr_handle m_HostContext = nullptr;
 
-		HostfxrInitializeForDotnetCommandLineFn m_InitFxrForCommandLine = nullptr;
+		HostfxrInitializeForRuntimeConfigFn m_InitFxrForRuntimeConfig = nullptr;
 		HostfxrGetRuntimeDelegateFn m_GetRuntimeDelegate = nullptr;
 		HostfxrCloseFn m_Close = nullptr;
 		HostfxrSetErrorWriterFn m_SetErrorWriter = nullptr;
+		HostfxrSetRuntimePropertyValueFn m_SetRuntimePropertyValue = nullptr;
 
 		load_assembly_and_get_function_pointer_fn m_LoadAssemblyAndGetFunctionPointer = nullptr;
 
@@ -175,16 +185,22 @@ namespace Gravix
 			return nullptr;
 		}
 
+		// Ensure we have an absolute path
+		std::filesystem::path absoluteAssemblyPath = std::filesystem::absolute(s_Data.m_AssemblyPath);
+
 		// Convert strings to wide strings on Windows
 #ifdef ENGINE_PLATFORM_WINDOWS
-		std::wstring wAssemblyPath(s_Data.m_AssemblyPath.wstring());
+		std::wstring wAssemblyPath(absoluteAssemblyPath.wstring());
 		std::wstring wTypeName(typeName.begin(), typeName.end());
 		std::wstring wMethodName(methodName.begin(), methodName.end());
 #else
-		std::string wAssemblyPath(s_Data.m_AssemblyPath.string());
+		std::string wAssemblyPath(absoluteAssemblyPath.string());
 		std::string wTypeName(typeName);
 		std::string wMethodName(methodName);
 #endif
+
+		GX_CORE_INFO("[ScriptEngine] Attempting to get function: {}::{} from {}",
+			typeName, methodName, absoluteAssemblyPath.string());
 
 		// Get the function pointer
 		void* functionPtr = nullptr;
@@ -192,7 +208,7 @@ namespace Gravix
 			wAssemblyPath.c_str(),
 			wTypeName.c_str(),
 			wMethodName.c_str(),
-			nullptr, // Delegate type name (nullptr for UnmanagedCallersOnlyAttribute)
+			UNMANAGEDCALLERSONLY_METHOD, // Special value for UnmanagedCallersOnlyAttribute methods
 			nullptr, // Reserved
 			&functionPtr
 		);
@@ -260,22 +276,47 @@ namespace Gravix
 
 		bool isGlobalHostfxr = false;
 
-		// If not found locally, try to get system hostfxr
+		// If not found locally, try specific .NET 9.0 version first, then fall back
 		if (!std::filesystem::exists(hostfxrPath))
 		{
-			char_t buffer[MAX_PATH];
-			size_t bufferSize = sizeof(buffer) / sizeof(char_t);
+#ifdef ENGINE_PLATFORM_WINDOWS
+			// Try .NET 9.0 specific path first
+			std::vector<std::wstring> dotnet9Paths = {
+				L"C:\\Program Files\\dotnet\\host\\fxr\\9.0.11\\hostfxr.dll",
+				L"C:\\Program Files\\dotnet\\host\\fxr\\9.0.10\\hostfxr.dll",
+				L"C:\\Program Files\\dotnet\\host\\fxr\\9.0.0\\hostfxr.dll"
+			};
 
-			int32_t result = get_hostfxr_path(buffer, &bufferSize, nullptr);
-			if (result != 0)
+			bool found = false;
+			for (const auto& path : dotnet9Paths)
 			{
-				GX_CORE_ERROR("[ScriptEngine] get_hostfxr_path failed (error code: {0})", result);
-				return false;
+				if (std::filesystem::exists(path))
+				{
+					hostfxrPath = path;
+					found = true;
+					GX_CORE_INFO("[ScriptEngine] Using .NET 9.0 hostfxr: {}", hostfxrPath.string());
+					break;
+				}
 			}
 
-			hostfxrPath = buffer;
+			// If no .NET 9 found, fall back to system default
+			if (!found)
+#endif
+			{
+				char_t buffer[MAX_PATH];
+				size_t bufferSize = sizeof(buffer) / sizeof(char_t);
+
+				int32_t result = get_hostfxr_path(buffer, &bufferSize, nullptr);
+				if (result != 0)
+				{
+					GX_CORE_ERROR("[ScriptEngine] get_hostfxr_path failed (error code: {0})", result);
+					return false;
+				}
+
+				hostfxrPath = buffer;
+				GX_CORE_INFO("[ScriptEngine] Using default hostfxr: {}", hostfxrPath.string());
+			}
 			isGlobalHostfxr = true;
-			GX_CORE_INFO("[ScriptEngine] Using global hostfxr: {}", hostfxrPath.string());
 		}
 		else
 		{
@@ -295,9 +336,9 @@ namespace Gravix
 			return false;
 		}
 
-		// Get function pointers - USE COMMAND LINE VERSION for self-contained
-		s_Data.m_InitFxrForCommandLine = (HostfxrInitializeForDotnetCommandLineFn)
-			GetExport(s_Data.m_HostfxrLib, "hostfxr_initialize_for_dotnet_command_line");
+		// Get function pointers - USE RUNTIME CONFIG VERSION for framework-dependent
+		s_Data.m_InitFxrForRuntimeConfig = (HostfxrInitializeForRuntimeConfigFn)
+			GetExport(s_Data.m_HostfxrLib, "hostfxr_initialize_for_runtime_config");
 
 		s_Data.m_GetRuntimeDelegate = (HostfxrGetRuntimeDelegateFn)
 			GetExport(s_Data.m_HostfxrLib, "hostfxr_get_runtime_delegate");
@@ -308,7 +349,10 @@ namespace Gravix
 		s_Data.m_SetErrorWriter = (HostfxrSetErrorWriterFn)
 			GetExport(s_Data.m_HostfxrLib, "hostfxr_set_error_writer");
 
-		if (!s_Data.m_InitFxrForCommandLine || !s_Data.m_GetRuntimeDelegate || !s_Data.m_Close)
+		s_Data.m_SetRuntimePropertyValue = (HostfxrSetRuntimePropertyValueFn)
+			GetExport(s_Data.m_HostfxrLib, "hostfxr_set_runtime_property_value");
+
+		if (!s_Data.m_InitFxrForRuntimeConfig || !s_Data.m_GetRuntimeDelegate || !s_Data.m_Close)
 		{
 			GX_CORE_ERROR("[ScriptEngine] Failed to load required hostfxr functions");
 			return false;
@@ -325,40 +369,34 @@ namespace Gravix
 
 	bool ScriptEngine::InitializeHostFxrContext(const std::filesystem::path& assemblyPath)
 	{
-		// For self-contained deployment, use command line initialization
-		std::filesystem::path appDir = assemblyPath.parent_path();
+		// For framework-dependent deployment, use runtime config initialization
+		// Find the .runtimeconfig.json file (same name as DLL but with .runtimeconfig.json extension)
+		std::filesystem::path runtimeConfigPath = assemblyPath;
+		runtimeConfigPath.replace_extension(".runtimeconfig.json");
+
+		if (!std::filesystem::exists(runtimeConfigPath))
+		{
+			GX_CORE_ERROR("[ScriptEngine] Runtime config not found: {}", runtimeConfigPath.string());
+			return false;
+		}
+
+		GX_CORE_INFO("[ScriptEngine] Using runtime config: {}", runtimeConfigPath.string());
 
 #ifdef ENGINE_PLATFORM_WINDOWS
-		std::wstring wAssemblyPath = assemblyPath.wstring();
-		std::wstring wAppDir = appDir.wstring();
-		const char_t* argv[] = { wAssemblyPath.c_str() };
+		std::wstring wRuntimeConfigPath = runtimeConfigPath.wstring();
 #else
-		std::string sAssemblyPath = assemblyPath.string();
-		std::string sAppDir = appDir.string();
-		const char_t* argv[] = { sAssemblyPath.c_str() };
+		std::string wRuntimeConfigPath = runtimeConfigPath.string();
 #endif
 
-		// Setup initialization parameters for self-contained
-		hostfxr_initialize_parameters params;
-		params.size = sizeof(hostfxr_initialize_parameters);
-		params.host_path = argv[0];
-#ifdef ENGINE_PLATFORM_WINDOWS
-		params.dotnet_root = wAppDir.c_str();
-#else
-		params.dotnet_root = sAppDir.c_str();
-#endif
-
-		int32_t result = s_Data.m_InitFxrForCommandLine(
-			1,
-			argv,
-			&params,
+		int32_t result = s_Data.m_InitFxrForRuntimeConfig(
+			wRuntimeConfigPath.c_str(),
+			nullptr, // No additional parameters needed
 			&s_Data.m_HostContext
 		);
 
 		if (result != 0 || s_Data.m_HostContext == nullptr)
 		{
-			GX_CORE_ERROR("[ScriptEngine] hostfxr_initialize_for_dotnet_command_line failed (error code: {0})", result);
-			GX_CORE_ERROR("[ScriptEngine] Make sure to publish your .NET assembly as self-contained");
+			GX_CORE_ERROR("[ScriptEngine] hostfxr_initialize_for_runtime_config failed (error code: {0})", result);
 			return false;
 		}
 
@@ -383,6 +421,44 @@ namespace Gravix
 
 		s_Data.m_LoadAssemblyAndGetFunctionPointer =
 			(load_assembly_and_get_function_pointer_fn)loadAssemblyDelegate;
+
+		// Trigger module initialization by loading the assembly
+		// This will cause the ModuleInitializer to run
+		std::filesystem::path absoluteAssemblyPath = std::filesystem::absolute(s_Data.m_AssemblyPath);
+
+#ifdef ENGINE_PLATFORM_WINDOWS
+		std::wstring wAssemblyPath(absoluteAssemblyPath.wstring());
+		std::wstring wTypeName(L"GravixEngine.ModuleInitializer, GravixScripting");
+		std::wstring wMethodName(L"Initialize");
+#else
+		std::string wAssemblyPath(absoluteAssemblyPath.string());
+		std::string wTypeName("GravixEngine.ModuleInitializer, GravixScripting");
+		std::string wMethodName("Initialize");
+#endif
+
+		GX_CORE_INFO("[ScriptEngine] Triggering module initialization");
+
+		// Try to get the Initialize function to trigger assembly load and module initializer
+		void* initFunctionPtr = nullptr;
+		int32_t initResult = s_Data.m_LoadAssemblyAndGetFunctionPointer(
+			wAssemblyPath.c_str(),
+			wTypeName.c_str(),
+			wMethodName.c_str(),
+			UNMANAGEDCALLERSONLY_METHOD,
+			nullptr,
+			&initFunctionPtr
+		);
+
+		// Note: This might fail if Initialize is not marked with UnmanagedCallersOnly,
+		// but the ModuleInitializer should still run during assembly load
+		if (initResult == 0 && initFunctionPtr != nullptr)
+		{
+			GX_CORE_INFO("[ScriptEngine] Module initializer function found");
+		}
+		else
+		{
+			GX_CORE_INFO("[ScriptEngine] Module initializer will run automatically on first function call");
+		}
 
 		return true;
 	}

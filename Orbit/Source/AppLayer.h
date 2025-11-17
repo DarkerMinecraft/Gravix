@@ -40,10 +40,12 @@ namespace Gravix
 		bool OnKeyPressed(KeyPressedEvent& e);
 		bool OnFileDrop(WindowFileDropEvent& e);
 
-		void ShowStartupDialog();
 		void InitializeProject();
 
 		void UIToolbar();
+		void UISettings();
+
+		void OnOverlayRender(Command& cmd);
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
@@ -58,6 +60,8 @@ namespace Gravix
 		ViewportPanel m_ViewportPanel;
 		std::optional<ContentBrowserPanel> m_ContentBrowserPanel;
 		ProjectSettingsPanel m_ProjectSettingsPanel;
+
+		bool m_ShowPhysicsColliders = false;
 
 		// Managers
 		ProjectManager m_ProjectManager;

@@ -27,13 +27,14 @@ namespace Gravix
 		TagComponent() = default;
 		TagComponent(const TagComponent&) = default;
 		TagComponent(const std::string& name, UUID uuid, uint32_t creationIndex = 0)
-			: Name(name), ID(uuid), CreationIndex(creationIndex) {}
+			: Name(name), ID(uuid), CreationIndex(creationIndex) {
+		}
 
-		operator std::string&() { return Name; }
-		operator const std::string&() const { return Name; }
+		operator std::string& () { return Name; }
+		operator const std::string& () const { return Name; }
 
-		operator UUID&() { return ID; }
-		operator const UUID&() const { return ID; }
+		operator UUID& () { return ID; }
+		operator const UUID& () const { return ID; }
 	};
 
 	struct TransformComponent
@@ -44,14 +45,16 @@ namespace Gravix
 
 		glm::mat4 Transform;
 
-		TransformComponent()  { CalculateTransform(); }
+		TransformComponent() { CalculateTransform(); }
 		TransformComponent(const TransformComponent&) = default;
 		TransformComponent(const glm::vec3& position, const glm::vec3 rotation, const glm::vec3 scale)
-			: Position(position), Rotation(rotation), Scale(scale) { CalculateTransform(); }
+			: Position(position), Rotation(rotation), Scale(scale) {
+			CalculateTransform();
+		}
 
-		void CalculateTransform() 
+		void CalculateTransform()
 		{
-			glm::vec3 radianRotation = {glm::radians(Rotation.x), glm::radians(Rotation.y), glm::radians(Rotation.z)};
+			glm::vec3 radianRotation = { glm::radians(Rotation.x), glm::radians(Rotation.y), glm::radians(Rotation.z) };
 			glm::mat4 rotation = glm::toMat4(glm::quat(radianRotation));
 
 			Transform = glm::translate(glm::mat4(1.0f), Position)
@@ -59,8 +62,8 @@ namespace Gravix
 				* glm::scale(glm::mat4(1.0f), Scale);
 		}
 
-		operator glm::mat4&() { return Transform; }
-		operator const glm::mat4&() const { return Transform; }
+		operator glm::mat4& () { return Transform; }
+		operator const glm::mat4& () const { return Transform; }
 	};
 
 	struct SpriteRendererComponent
@@ -72,10 +75,11 @@ namespace Gravix
 		SpriteRendererComponent() = default;
 		SpriteRendererComponent(const SpriteRendererComponent&) = default;
 		SpriteRendererComponent(const glm::vec4& color, const AssetHandle handle, float tilingFactor)
-			: Color(color), Texture(handle), TilingFactor(tilingFactor) {}
+			: Color(color), Texture(handle), TilingFactor(tilingFactor) {
+		}
 
-		operator glm::vec4&() { return Color; }
-		operator const glm::vec4&() const { return Color; }
+		operator glm::vec4& () { return Color; }
+		operator const glm::vec4& () const { return Color; }
 
 		operator AssetHandle& () { return Texture; }
 		operator const AssetHandle& () const { return Texture; }
@@ -84,7 +88,7 @@ namespace Gravix
 		operator const float& () const { return TilingFactor; }
 	};
 
-	struct CircleRendererComponent 
+	struct CircleRendererComponent
 	{
 		glm::vec4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
 		float Thickness = 1.0f;
@@ -93,7 +97,8 @@ namespace Gravix
 		CircleRendererComponent() = default;
 		CircleRendererComponent(const CircleRendererComponent&) = default;
 		CircleRendererComponent(const glm::vec4& color, float thickness, float fade)
-			: Color(color), Thickness(thickness), Fade(fade) {}
+			: Color(color), Thickness(thickness), Fade(fade) {
+		}
 	};
 
 	struct CameraComponent
@@ -118,7 +123,8 @@ namespace Gravix
 		Rigidbody2DComponent() = default;
 		Rigidbody2DComponent(const Rigidbody2DComponent&) = default;
 		Rigidbody2DComponent(BodyType type, bool fixedRotation)
-			: Type(type), FixedRotation(fixedRotation) {}
+			: Type(type), FixedRotation(fixedRotation) {
+		}
 	};
 
 	struct BoxCollider2DComponent
@@ -136,7 +142,27 @@ namespace Gravix
 		BoxCollider2DComponent() = default;
 		BoxCollider2DComponent(const BoxCollider2DComponent&) = default;
 		BoxCollider2DComponent(const glm::vec2& offset, const glm::vec2& size, float density, float friction, float restitution)
-			: Offset(offset), Size(size), Density(density), Friction(friction), Restitution(restitution) {}
+			: Offset(offset), Size(size), Density(density), Friction(friction), Restitution(restitution) {
+		}
+	};
+
+	struct CircleCollider2DComponent
+	{
+		glm::vec2 Offset = { 0.0f, 0.0f };
+		glm::vec2 Size = { 1.0f, 1.0f };
+
+		float Density = 1.0f;
+		float Friction = 0.5f;
+		float Restitution = 0.0f;
+
+		// Runtime physics shape stored as uint64_t (physics system converts to/from Box2D IDs)
+		uint64_t RuntimeShape = 0;
+
+		CircleCollider2DComponent() = default;
+		CircleCollider2DComponent(const CircleCollider2DComponent&) = default;
+		CircleCollider2DComponent(const glm::vec2& offset, const glm::vec2& size, float density, float friction, float restitution)
+			: Offset(offset), Size(size), Density(density), Friction(friction), Restitution(restitution) {
+		}
 	};
 
 	// Hidden component that tracks the order components were added to an entity

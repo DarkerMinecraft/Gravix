@@ -68,43 +68,10 @@ namespace Gravix
 					void* oldComponent = info->GetComponentFunc(other->m_Registry, oldEntityHandle);
 					void* newComponent = info->GetComponentFunc(newScene->m_Registry, newEntity);
 
-					// Copy component data based on type
-					if (componentType == typeid(SpriteRendererComponent))
+					// Use the component registry's copy function
+					if (oldComponent && newComponent && info->CopyFunc)
 					{
-						auto* oldSprite = static_cast<SpriteRendererComponent*>(oldComponent);
-						auto* newSprite = static_cast<SpriteRendererComponent*>(newComponent);
-						newSprite->Color = oldSprite->Color;
-						newSprite->Texture = oldSprite->Texture;
-						newSprite->TilingFactor = oldSprite->TilingFactor;
-					}
-					else if (componentType == typeid(CameraComponent))
-					{
-						auto* oldCamera = static_cast<CameraComponent*>(oldComponent);
-						auto* newCamera = static_cast<CameraComponent*>(newComponent);
-						newCamera->Camera = oldCamera->Camera;
-						newCamera->Primary = oldCamera->Primary;
-						newCamera->FixedAspectRatio = oldCamera->FixedAspectRatio;
-					}
-					else if (componentType == typeid(Rigidbody2DComponent))
-					{
-						auto* oldRb = static_cast<Rigidbody2DComponent*>(oldComponent);
-						auto* newRb = static_cast<Rigidbody2DComponent*>(newComponent);
-						newRb->Type = oldRb->Type;
-						newRb->FixedRotation = oldRb->FixedRotation;
-						// Don't copy RuntimeBody - it's runtime only
-						newRb->RuntimeBody = 0;
-					}
-					else if (componentType == typeid(BoxCollider2DComponent))
-					{
-						auto* oldCollider = static_cast<BoxCollider2DComponent*>(oldComponent);
-						auto* newCollider = static_cast<BoxCollider2DComponent*>(newComponent);
-						newCollider->Offset = oldCollider->Offset;
-						newCollider->Size = oldCollider->Size;
-						newCollider->Density = oldCollider->Density;
-						newCollider->Friction = oldCollider->Friction;
-						newCollider->Restitution = oldCollider->Restitution;
-						// Don't copy RuntimeShape - it's runtime only
-						newCollider->RuntimeShape = 0;
+						info->CopyFunc(newComponent, oldComponent);
 					}
 
 					// Update the component order tracking
@@ -158,7 +125,7 @@ namespace Gravix
 	{
 		if (!outDependencies)
 			return;
-		
+
 		auto view = m_Registry.view<SpriteRendererComponent>();
 		for (auto entity : view)
 		{
@@ -192,6 +159,13 @@ namespace Gravix
 					auto& boxCollider = entity.GetComponent<BoxCollider2DComponent>();
 					uint64_t shape = m_PhysicsWorld->CreateBoxShape(bodyID, transform, boxCollider);
 					boxCollider.RuntimeShape = shape;
+				}
+
+				if(entity.HasComponent<CircleCollider2DComponent>())
+				{
+					auto& circleCollider = entity.GetComponent<CircleCollider2DComponent>();
+					uint64_t shape = m_PhysicsWorld->CreateCircleShape(bodyID, transform, circleCollider);
+					circleCollider.RuntimeShape = shape;
 				}
 			}
 		}
@@ -316,39 +290,64 @@ namespace Gravix
 		Renderer2D::EndScene(cmd);
 	}
 
-	template<typename Component>
-	static void CopyComponentIfExists(Entity dst, Entity src)
-	{
-		if (src.HasComponent<Component>())
-		{
-			const auto& srcComponent = src.GetComponent<Component>();
-
-			if (dst.HasComponent<Component>())
-			{
-				// Component already exists (like TagComponent or TransformComponent), so just copy the data
-				dst.GetComponent<Component>() = srcComponent;
-			}
-			else
-			{
-				// Component doesn't exist, add it with the copied data
-				dst.AddComponent<Component>(srcComponent);
-			}
-		}
-	}
-
 	void Scene::DuplicateEntity(Entity entity)
 	{
 		// Create new entity with a different name and new UUID
 		std::string newName = entity.GetName() + " (Copy)";
 		Entity newEntity = CreateEntity(newName);
 
-		// Copy all components except TagComponent (already set with different name/UUID)
-		CopyComponentIfExists<TransformComponent>(newEntity, entity);
-		CopyComponentIfExists<SpriteRendererComponent>(newEntity, entity);
-		CopyComponentIfExists<CircleRendererComponent>(newEntity, entity);
-		CopyComponentIfExists<CameraComponent>(newEntity, entity);
-		CopyComponentIfExists<Rigidbody2DComponent>(newEntity, entity);
-		CopyComponentIfExists<BoxCollider2DComponent>(newEntity, entity);
+		// Get the component order from the source entity
+		if (entity.HasComponent<ComponentOrderComponent>())
+		{
+			auto& srcOrder = entity.GetComponent<ComponentOrderComponent>();
+			auto& dstOrder = newEntity.GetComponent<ComponentOrderComponent>();
+
+			// Copy components in the exact order they were added
+			for (const auto& componentType : srcOrder.ComponentOrder)
+			{
+				// Skip TagComponent (already created with new UUID) and ComponentOrderComponent
+				if (componentType == typeid(TagComponent) || componentType == typeid(ComponentOrderComponent))
+					continue;
+
+				const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(componentType);
+				if (!info)
+					continue;
+
+				// Check if source entity has this component
+				if (!info->HasComponentFunc(m_Registry, entity))
+					continue;
+
+				// Get source component
+				void* srcComponent = info->GetComponentFunc(m_Registry, entity);
+				if (!srcComponent)
+					continue;
+
+				// Handle TransformComponent specially (it already exists)
+				if (componentType == typeid(TransformComponent))
+				{
+					void* dstComponent = info->GetComponentFunc(m_Registry, newEntity);
+					if (dstComponent && info->CopyFunc)
+					{
+						info->CopyFunc(dstComponent, srcComponent);
+					}
+				}
+				else
+				{
+					// Add the component to the new entity
+					info->AddComponentFunc(m_Registry, newEntity);
+
+					// Get destination component and copy data
+					void* dstComponent = info->GetComponentFunc(m_Registry, newEntity);
+					if (dstComponent && info->CopyFunc)
+					{
+						info->CopyFunc(dstComponent, srcComponent);
+					}
+
+					// Update the component order tracking
+					dstOrder.ComponentOrder.push_back(componentType);
+				}
+			}
+		}
 	}
 
 	void Scene::OnViewportResize(uint32_t width, uint32_t height)
@@ -366,6 +365,24 @@ namespace Gravix
 				{
 					cameraComponent.Camera.SetViewportSize(width, height);
 				}
+			}
+		}
+	}
+
+
+	SceneCamera Scene::GetPrimaryCameraEntity(glm::mat4* transform)
+	{
+		for(auto entity : m_Registry.view<CameraComponent>())
+		{
+			auto& camera = m_Registry.get<CameraComponent>(entity);
+			if (camera.Primary)
+			{
+				if (transform)
+				{
+					auto& tc = m_Registry.get<TransformComponent>(entity);
+					*transform = tc.Transform;
+				}
+				return camera.Camera;
 			}
 		}
 	}

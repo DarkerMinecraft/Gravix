@@ -70,6 +70,41 @@ namespace Gravix
 		return b2StoreShapeId(shapeId);
 	}
 
+	uint64_t PhysicsWorld::CreateCircleShape(uint64_t bodyId, const TransformComponent& transform, const CircleCollider2DComponent& circleCollider)
+	{
+		const glm::vec2 scale = glm::vec2(transform.Scale.x, transform.Scale.y) * circleCollider.Size;
+
+		// Compute capsule parameters
+		float radius = std::min(scale.x, scale.y) * 0.5f;
+		float halfLength = (std::max(scale.x, scale.y) * 0.5f) - radius;
+
+		b2Capsule capsule;
+
+		// Determine capsule orientation based on which axis is larger
+		if (scale.x > scale.y)
+		{
+			// Horizontal capsule
+			capsule.center1 = b2Vec2(circleCollider.Offset.x - halfLength, circleCollider.Offset.y);
+			capsule.center2 = b2Vec2(circleCollider.Offset.x + halfLength, circleCollider.Offset.y);
+		}
+		else
+		{
+			// Vertical capsule
+			capsule.center1 = b2Vec2(circleCollider.Offset.x, circleCollider.Offset.y - halfLength);
+			capsule.center2 = b2Vec2(circleCollider.Offset.x, circleCollider.Offset.y + halfLength);
+		}
+
+		capsule.radius = radius;
+
+		b2ShapeDef circleShape = b2DefaultShapeDef();
+		circleShape.density = circleCollider.Density;
+		circleShape.material.friction = circleCollider.Friction;
+		circleShape.material.restitution = circleCollider.Restitution;
+		b2ShapeId shapeId = b2CreateCapsuleShape(b2LoadBodyId(bodyId), &circleShape, &capsule);
+		m_Shapes.push_back(shapeId);
+		return b2StoreShapeId(shapeId);
+	}
+
 	glm::vec2 PhysicsWorld::GetBodyPosition(uint64_t bodyId)
 	{
 		b2Vec2 pos = b2Body_GetPosition(b2LoadBodyId(bodyId));

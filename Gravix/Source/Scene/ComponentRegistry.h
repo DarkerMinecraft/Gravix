@@ -35,6 +35,7 @@ namespace Gravix
 		std::function<void(YAML::Emitter&, void*)> SerializeFunc;
 		std::function<void(void*, const YAML::Node&)> DeserializeFunc;
 		std::function<void(void*, ComponentUserSettings*)> ImGuiRenderFunc;
+		std::function<void(void*, void*)> CopyFunc; // Copy from source to destination component
 
 		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
 		std::function<bool(entt::registry&, entt::entity)> HasComponentFunc;
@@ -53,7 +54,8 @@ namespace Gravix
 			std::function<void(T&, Scene* scene)> onCreate,
 			std::function<void(YAML::Emitter&, T&)> serialize,
 			std::function<void(T&, const YAML::Node&)> deserialize,
-			std::function<void(T&)> imguiRender
+			std::function<void(T&)> imguiRender,
+			std::function<void(T&, const T&)> copyComponent = nullptr
 		)
 		{
 			ComponentInfo info;
@@ -62,6 +64,19 @@ namespace Gravix
 				{
 					if (onCreate)
 						onCreate(*reinterpret_cast<T*>(instance), scene);
+				};
+			info.CopyFunc = [copyComponent](void* dst, void* src) -> void
+				{
+					if (copyComponent)
+						copyComponent(*reinterpret_cast<T*>(dst), *reinterpret_cast<const T*>(src));
+					else
+					{
+						// Default: use copy constructor via placement new
+						T* dstPtr = reinterpret_cast<T*>(dst);
+						const T* srcPtr = reinterpret_cast<const T*>(src);
+						dstPtr->~T(); // Destroy existing object
+						new (dstPtr) T(*srcPtr); // Copy construct in place
+					}
 				};
 			info.SerializeFunc = [serialize, name](YAML::Emitter& out, void* instance) -> void
 				{

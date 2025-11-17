@@ -95,6 +95,12 @@ add_custom_command(
 add_custom_target(CopyRootAssets DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/root_assets.stamp")
 add_custom_target(CopyEditorAssets DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/editor_assets.stamp")
 set_target_properties(CopyRootAssets CopyEditorAssets PROPERTIES FOLDER "Editor/Assets")
+
+# Always build ScriptCore before Orbit (if scripting is enabled)
+if(GRAVIX_BUILD_SCRIPTING)
+    add_dependencies(Orbit Gravix-ScriptCore)
+endif()
+
 add_dependencies(Orbit CopyRootAssets CopyEditorAssets)
 
 # Slang DLL
@@ -104,6 +110,35 @@ add_custom_command(TARGET Orbit POST_BUILD
         "$<TARGET_FILE_DIR:Orbit>"
     COMMENT "Copying Slang DLL..."
 )
+
+# Gravix-ScriptCore DLL and dependencies (if scripting is enabled)
+if(GRAVIX_BUILD_SCRIPTING)
+    # Include NetHost configuration to get NETHOST_LIB path
+    include(${CMAKE_SOURCE_DIR}/cmake/NetHostConfig.cmake)
+
+    add_custom_command(TARGET Orbit POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll"
+            "$<TARGET_FILE_DIR:Orbit>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.deps.json"
+            "$<TARGET_FILE_DIR:Orbit>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.runtimeconfig.json"
+            "$<TARGET_FILE_DIR:Orbit>"
+        COMMENT "Copying GravixScripting DLL and dependencies..."
+    )
+
+    # Copy nethost.dll on Windows (on other platforms it's a .so/.dylib)
+    if(WIN32 AND DEFINED NETHOST_DLL)
+        add_custom_command(TARGET Orbit POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${NETHOST_DLL}"
+                "$<TARGET_FILE_DIR:Orbit>"
+            COMMENT "Copying nethost.dll..."
+        )
+    endif()
+endif()
 
 # ============================================================================
 # Platform-Specific Settings

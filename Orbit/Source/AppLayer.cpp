@@ -35,6 +35,7 @@ namespace Gravix
 		m_SceneManager.SetOnScenePlayCallback([this]() {
 			auto& viewportSize = m_ViewportPanel.GetViewportSize();
 			m_SceneManager.GetActiveScene()->OnViewportResize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
+			m_ViewportPanel.SetImGuizmoNone();
 			});
 
 		// Check if a project has been loaded
@@ -209,10 +210,9 @@ namespace Gravix
 			Command cmd(m_MSAAFramebuffer, 0, false);
 
 			cmd.BeginRendering();
-			if (m_SceneManager.GetSceneState() == SceneState::Edit)
-				m_SceneManager.GetActiveScene()->OnEditorRender(cmd, m_EditorCamera);
-			else
-				m_SceneManager.GetActiveScene()->OnRuntimeRender(cmd);
+			if (m_SceneManager.GetSceneState() == SceneState::Edit) m_SceneManager.GetActiveScene()->OnEditorRender(cmd, m_EditorCamera);
+			else m_SceneManager.GetActiveScene()->OnRuntimeRender(cmd);
+			OnOverlayRender(cmd);
 			cmd.EndRendering();
 
 			cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
@@ -311,12 +311,6 @@ namespace Gravix
 			ImGui::EndMenuBar();
 		}
 
-		// Show startup dialog if no project is loaded
-		if (m_ProjectManager.ShouldShowStartupDialog())
-		{
-			ShowStartupDialog();
-		}
-
 		// Only render panels if project is initialized
 		if (m_ProjectInitialized)
 		{
@@ -326,6 +320,7 @@ namespace Gravix
 			if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnImGuiRender();
 			m_ProjectSettingsPanel.OnImGuiRender();
 			UIToolbar();
+			UISettings();
 		}
 		ImGui::End();
 	}
@@ -363,6 +358,60 @@ namespace Gravix
 		ImGui::PopStyleColor(3);
 		ImGui::End();
 	}
+
+
+	void AppLayer::UISettings()
+	{
+		ImGui::Begin("Settings");
+		ImGui::Checkbox("Show Physics Colliders", &m_ShowPhysicsColliders);
+		ImGui::End();
+	}
+
+	void AppLayer::OnOverlayRender(Command& cmd)
+	{
+
+		if (m_SceneManager.GetSceneState() == SceneState::Edit)
+		{
+			Renderer2D::BeginScene(cmd, m_EditorCamera);
+		}
+		else
+		{
+			glm::mat4 transform;
+			auto cam = m_SceneManager.GetPrimaryCamera(&transform);
+			Renderer2D::BeginScene(cmd, cam, transform);
+		}
+
+		if (m_ShowPhysicsColliders) {
+			{
+				auto view = m_SceneManager.GetAllEntitiesWith<TransformComponent, CircleCollider2DComponent>();
+				view.each([&](auto entityID, TransformComponent& tc, CircleCollider2DComponent& collider)
+					{
+						glm::vec3 translation = tc.Position + glm::vec3(collider.Offset.x, collider.Offset.y, 0.001f);
+						glm::vec3 scale = tc.Scale * glm::vec3(collider.Size, 1.0f);
+						glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation)
+							* glm::scale(glm::mat4(1.0f), scale);
+
+						Renderer2D::DrawCircleOutline(transform, { 0.0, 1.0f, 0.0f, 1.0f });
+					});
+			}
+
+			{
+				auto view = m_SceneManager.GetAllEntitiesWith<TransformComponent, BoxCollider2DComponent>();
+				view.each([&](auto entityID, TransformComponent& tc, BoxCollider2DComponent& collider)
+					{
+						glm::vec3 translation = tc.Position + glm::vec3(collider.Offset.x, collider.Offset.y, 0.001f);
+						glm::vec3 scale = tc.Scale * glm::vec3(collider.Size.x * 2.0f, collider.Size.y * 2.0f, 1.0f);
+						glm::mat4 transform = glm::translate(glm::mat4(1.0f), translation)
+							* glm::rotate(glm::mat4(1.0f), glm::radians(tc.Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f))
+							* glm::scale(glm::mat4(1.0f), scale);
+
+						Renderer2D::DrawQuadOutline(transform, { 0.0, 1.0f, 0.0f, 1.0f });
+					});
+			}
+		}
+		Renderer2D::EndScene(cmd);
+	}
+
 	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
 	{
 		// Don't process shortcuts if ImGui wants keyboard input
@@ -440,97 +489,6 @@ namespace Gravix
 		if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnFileDrop(e.GetPaths());
 		return true;
 	}
-
-
-	void AppLayer::ShowStartupDialog()
-	{
-		// Center the modal dialog
-		ImGuiIO& io = ImGui::GetIO();
-		ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
-		ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Always);
-
-		// Open the modal on first frame
-		if (!ImGui::IsPopupOpen("Welcome to Orbit"))
-		{
-			ImGui::OpenPopup("Welcome to Orbit");
-		}
-
-		// Use a modal window
-		if (ImGui::BeginPopupModal("Welcome to Orbit", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
-		{
-			ImGui::Spacing();
-			ImGui::Spacing();
-
-			// Title
-			ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Welcome to Orbit Editor").x) * 0.5f);
-			ImGui::Text("Welcome to Orbit Editor");
-			ImGui::PopFont();
-
-			ImGui::Spacing();
-			ImGui::Spacing();
-			ImGui::Separator();
-			ImGui::Spacing();
-			ImGui::Spacing();
-
-			// Description
-			ImGui::TextWrapped("To get started, please create a new project or open an existing one.");
-
-			ImGui::Spacing();
-			ImGui::Spacing();
-			ImGui::Spacing();
-
-			// Center the buttons
-			float buttonWidth = 150.0f;
-			float spacing = 20.0f;
-			float totalWidth = buttonWidth * 2 + spacing;
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
-
-			// New Project button
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.529f, 0.808f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.353f, 0.627f, 0.902f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.208f, 0.471f, 0.749f, 1.0f));
-			ImGui::AlignTextToFramePadding();
-
-			if (ImGui::Button("New Project", ImVec2(buttonWidth, 40)))
-			{
-				if (m_ProjectManager.CreateNewProject())
-				{
-					// Refresh content browser panel
-					m_ContentBrowserPanel.emplace();
-					m_ContentBrowserPanel->SetAppLayer(this);
-				}
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::PopStyleColor(3);
-
-			ImGui::SameLine(0, spacing);
-			ImGui::AlignTextToFramePadding();
-
-			// Open Project button
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.443f, 0.443f, 0.443f, 1.0f));
-
-			if (ImGui::Button("Open Project", ImVec2(buttonWidth, 40)))
-			{
-				if (m_ProjectManager.OpenProject())
-				{
-					// Refresh content browser panel
-					m_ContentBrowserPanel.emplace();
-					m_ContentBrowserPanel->SetAppLayer(this);
-				}
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::PopStyleColor(3);
-
-			ImGui::EndPopup();
-		}
-	}
-
 
 	void AppLayer::UpdateWindowTitle()
 	{

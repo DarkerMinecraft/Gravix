@@ -34,6 +34,8 @@ namespace Gravix
 		bool IsViewportHovered() const { return m_ViewportHovered; }
 		bool IsViewportFocused() const { return m_ViewportFocused; }
 
+		void SetImGuizmoNone() { m_GuizmoType = -1; }
+
 		Entity GetHoveredEntity() const { return m_HoveredEntity; }
 
 		void UpdateViewport();

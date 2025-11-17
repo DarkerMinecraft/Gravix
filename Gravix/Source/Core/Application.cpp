@@ -6,6 +6,7 @@
 #include "Scene/ComponentRegistry.h"
 
 #include "Scripting/ScriptEngine.h"
+#include "Scripting/Interop/ScriptInstance.h"
 #include "Asset/EditorAssetManager.h"
 #include "Debug/Instrumentor.h"
 
@@ -37,14 +38,14 @@ namespace Gravix
 		m_ImGuiRender = new ImGuiRender();
 		ComponentRegistry::Get().RegisterAllComponents();
 
-		//ScriptEngine::Init("GravixScripting.dll");
+		ScriptEngine::Init("GravixScripting.dll");
 	}
 
 	Application::~Application()
 	{
 		GX_PROFILE_FUNCTION();
 
-		//ScriptEngine::Shutdown();
+		ScriptEngine::Shutdown();
 	}
 
 	void Application::Run()

@@ -53,6 +53,16 @@ namespace Gravix
 		void SetOnScenePlayCallback(std::function<void()> callback) { m_OnScenePlay = callback; }
 		void SetOnSceneStopCallback(std::function<void()> callback) { m_OnSceneStop = callback; }
 
+		SceneCamera GetPrimaryCamera(glm::mat4* transform) 
+		{
+			return m_ActiveScene->GetPrimaryCameraEntity(transform);
+		}
+
+		template<typename... Components>
+		auto GetAllEntitiesWith() 
+		{
+			return m_ActiveScene->GetAllEntitiesWith<Components...>();
+		}
 	private:
 		Ref<Scene> m_ActiveScene;
 		Ref<Scene> m_EditorScene;

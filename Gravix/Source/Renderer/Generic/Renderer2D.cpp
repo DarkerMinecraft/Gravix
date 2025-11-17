@@ -277,7 +277,7 @@ namespace Gravix
 		s_Data->LineVertexCount += 2;
 	}
 
-	void Renderer2D::DrawRect(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	void Renderer2D::DrawQuadOutline(const glm::vec3& position, const glm::vec2& size, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
 	{
 		glm::vec3 p0 = glm::vec3(position.x - size.x * 0.5f, position.y - size.y * 0.5f, position.z);
 		glm::vec3 p1 = glm::vec3(position.x + size.x * 0.5f, position.y - size.y * 0.5f, position.z);
@@ -291,7 +291,7 @@ namespace Gravix
 		DrawLine(p3, p0, color);
 	}
 
-	void Renderer2D::DrawRect(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	void Renderer2D::DrawQuadOutline(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
 	{
 		glm::vec3 lineVertices[4]; 
 		for(int i = 0; i < 4; i++)
@@ -301,6 +301,43 @@ namespace Gravix
 		DrawLine(lineVertices[1], lineVertices[2], color);
 		DrawLine(lineVertices[2], lineVertices[3], color);
 		DrawLine(lineVertices[3], lineVertices[0], color);
+	}
+
+	void Renderer2D::DrawCircleOutline(const glm::mat3& position, const glm::vec2& size, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	{
+		float pi = 3.14159265359f;
+		for (int i = 0; i < 15; i++) 
+		{
+			float theta0 = (i / 15.0f) * 2.0f * pi;
+			float theta1 = ((i + 1) / 15.0f) * 2.0f * pi;
+
+			glm::vec3 p0 = position * glm::vec3(cos(theta0) * size.x * 0.5f, sin(theta0) * size.y * 0.5f, 1.0f);
+			glm::vec3 p1 = position * glm::vec3(cos(theta1) * size.x * 0.5f, sin(theta1) * size.y * 0.5f, 1.0f);
+			DrawLine(p0, p1, color);
+		}
+	}
+
+	void Renderer2D::DrawCircleOutline(const glm::mat4& transformMatrix, const glm::vec4& color /*= { 1.0f, 1.0f, 1.0f, 1.0f }*/)
+	{
+		constexpr int segments = 32; // higher = smoother outline
+		constexpr float pi = 3.14159265359f;
+
+		for (int i = 0; i < segments; i++)
+		{
+			float theta0 = (i / (float)segments) * 2.0f * pi;
+			float theta1 = ((i + 1) / (float)segments) * 2.0f * pi;
+
+			// Local circle with radius 0.5 — scaling will come from transformMatrix
+			glm::vec4 localP0 = glm::vec4(cos(theta0) * 0.5f, sin(theta0) * 0.5f, 0.0f, 1.0f);
+			glm::vec4 localP1 = glm::vec4(cos(theta1) * 0.5f, sin(theta1) * 0.5f, 0.0f, 1.0f);
+
+			// Apply full transform (position, rotation, scale)
+			glm::vec3 p0 = glm::vec3(transformMatrix * localP0);
+			glm::vec3 p1 = glm::vec3(transformMatrix * localP1);
+
+			// Draw line segment
+			DrawLine(p0, p1, color);
+		}
 	}
 
 	void Renderer2D::EndScene(Command& cmd)
