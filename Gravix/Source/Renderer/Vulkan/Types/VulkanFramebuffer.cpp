@@ -201,12 +201,9 @@ namespace Gravix
 	{
 		AttachmentData& attachment = m_Attachments[index];
 
-		if (m_DescriptorSets[index] != VK_NULL_HANDLE) 
-		{
-			ImGui_ImplVulkan_RemoveTexture(m_DescriptorSets[index]);
-			m_DescriptorSets[index] = VK_NULL_HANDLE;
-		}
-
+		// Only allocate a new descriptor set if it doesn't exist yet
+		// Don't free and recreate every frame - that causes synchronization issues
+		// with in-flight command buffers
 		if (m_DescriptorSets[index] == VK_NULL_HANDLE)
 		{
 			m_DescriptorSets[index] = ImGui_ImplVulkan_AddTexture(
@@ -356,7 +353,15 @@ namespace Gravix
 				GX_CORE_CRITICAL("Failed to create sampler for framebuffer image.");
 			}
 
-			m_Attachments.push_back({ image, format, sampler, VK_IMAGE_LAYOUT_UNDEFINED });
+			// Transition image to shader read optimal for ImGui sampling
+			// This is especially important when no scene is active and the framebuffer is only displayed
+			VkImageLayout initialLayout = isDepthAttachment ? VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			m_Device->ImmediateSubmit([&](VkCommandBuffer cmd)
+			{
+				VulkanUtils::TransitionImage(cmd, image.Image, format, VK_IMAGE_LAYOUT_UNDEFINED, initialLayout);
+			});
+
+			m_Attachments.push_back({ image, format, sampler, initialLayout });
 		}
 	}
 
@@ -426,14 +431,29 @@ namespace Gravix
 		{
 			GX_CORE_CRITICAL("Failed to create sampler for framebuffer image.");
 		}
-		m_Attachments[index] = { image, oldAttachment.Format, sampler, VK_IMAGE_LAYOUT_UNDEFINED };
+
+		// Transition image to shader read optimal for ImGui sampling
+		// This is especially important when no scene is active and the framebuffer is only displayed
+		VkImageLayout initialLayout = isDepthAttachment ? VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		m_Device->ImmediateSubmit([&](VkCommandBuffer cmd)
+		{
+			VulkanUtils::TransitionImage(cmd, image.Image, oldAttachment.Format, VK_IMAGE_LAYOUT_UNDEFINED, initialLayout);
+		});
+
+		m_Attachments[index] = { image, oldAttachment.Format, sampler, initialLayout };
 
 		// Wait for GPU to finish using old attachment before destroying
 		m_Device->WaitIdle();
+
+		// Free the old ImGui descriptor set before destroying the image
+		if (m_DescriptorSets[index] != VK_NULL_HANDLE)
+		{
+			ImGui_ImplVulkan_RemoveTexture(m_DescriptorSets[index]);
+			m_DescriptorSets[index] = VK_NULL_HANDLE;
+		}
+
 		m_Device->DestroyImage(oldAttachment.Image);
 		vkDestroySampler(m_Device->GetDevice(), oldAttachment.Sampler, nullptr);
-
-		m_DescriptorSets[index] = VK_NULL_HANDLE;
 	}
 
 }

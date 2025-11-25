@@ -303,3 +303,4 @@ Version: 1.0.0 | C++23 | Windows 10+
 Updated: 2025-11-08
 - I will handle the cmake stuff and building stuff
 - The working directory is /out/build/Debug-x64/Orbit please refer to that when ask about timings for anything
+- Never build the engine

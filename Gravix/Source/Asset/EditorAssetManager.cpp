@@ -187,6 +187,7 @@ namespace Gravix
 			std::string filePathStr = metadata.FilePath.generic_string();
 			out << YAML::Key << "FilePath" << YAML::Value << filePathStr;
 			out << YAML::Key << "AssetType" << YAML::Value << AssetTypeToString(metadata.Type);
+			out << YAML::Key << "LastModifiedTime" << YAML::Value << metadata.LastModifiedTime;
 			out << YAML::EndMap;
 		}
 		out << YAML::EndSeq;
@@ -215,9 +216,11 @@ namespace Gravix
 				AssetHandle handle = assetNode["Handle"].as<uint64_t>();
 				std::filesystem::path filePath = assetNode["FilePath"].as<std::string>();
 				AssetType type = StringToAssetType(assetNode["AssetType"].as<std::string>());
+				uint64_t lastModifiedTime = assetNode["LastModifiedTime"].as<uint64_t>();
 				AssetMetadata metadata;
 				metadata.FilePath = filePath;
 				metadata.Type = type;
+				metadata.LastModifiedTime = lastModifiedTime;
 
 				m_AssetRegistry[handle] = metadata;
 			}

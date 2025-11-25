@@ -24,6 +24,8 @@ namespace Gravix
 
 	void SceneHierarchyPanel::OnImGuiRender()
 	{
+		if (m_Context == nullptr) return;
+
 		ImGui::Begin("Scene Hierarchy");
 
 		// Unity-style hierarchy rendering with entities sorted by creation order
@@ -120,6 +122,37 @@ namespace Gravix
 		if(ImGui::IsItemClicked())
 		{
 			m_SelectedEntity = entity;
+		}
+
+		// Drag and drop source
+		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+		{
+			ImGui::SetDragDropPayload("ENTITY_HIERARCHY", &entity, sizeof(Entity));
+			ImGui::Text("Move: %s", name.c_str());
+			ImGui::EndDragDropSource();
+		}
+
+		// Drag and drop target
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_HIERARCHY"))
+			{
+				Entity draggedEntity = *(Entity*)payload->Data;
+
+				// Swap creation indices to reorder entities
+				if (draggedEntity && entity && draggedEntity != entity)
+				{
+					auto& draggedTag = draggedEntity.GetComponent<TagComponent>();
+					auto& targetTag = entity.GetComponent<TagComponent>();
+
+					uint32_t tempIndex = draggedTag.CreationIndex;
+					draggedTag.CreationIndex = targetTag.CreationIndex;
+					targetTag.CreationIndex = tempIndex;
+
+					if (m_AppLayer) m_AppLayer->MarkSceneDirty();
+				}
+			}
+			ImGui::EndDragDropTarget();
 		}
 
 		// Unity-style context menu

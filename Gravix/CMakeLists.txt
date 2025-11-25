@@ -137,6 +137,8 @@ set(GRAVIX_CORE_SOURCES
 
     # Debug
     Source/Debug/Instrumentor.h
+    Source/Debug/ProfilerViewer.h
+    Source/Debug/ProfilerViewer.cpp
 )
 
 # ============================================================================
@@ -150,6 +152,8 @@ if(GRAVIX_USE_VULKAN)
         Source/Renderer/Vulkan/VulkanCommandImpl.h
         Source/Renderer/Vulkan/VulkanDevice.cpp
         Source/Renderer/Vulkan/VulkanDevice.h
+        Source/Renderer/Vulkan/VulkanSwapchain.h
+        Source/Renderer/Vulkan/VulkanSwapchain.cpp
         Source/Renderer/Vulkan/VulkanRenderCaps.cpp
         Source/Renderer/Vulkan/VulkanRenderCaps.h
 

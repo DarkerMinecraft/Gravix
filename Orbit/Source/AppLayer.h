@@ -54,6 +54,7 @@ namespace Gravix
 		Ref<Texture2D> m_IconStop;
 
 		EditorCamera m_EditorCamera;
+		glm::vec2 m_LastViewportSize = { 0.0f, 0.0f };
 
 		SceneHierarchyPanel m_SceneHierarchyPanel;
 		InspectorPanel m_InspectorPanel;

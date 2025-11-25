@@ -50,11 +50,13 @@ namespace Gravix
 	{
 		// Use ComponentOrderComponent to determine rendering order if it exists
 		std::vector<std::type_index> componentOrder;
+		bool hasOrderComponent = false;
 
 		if (entity.HasComponent<ComponentOrderComponent>())
 		{
-			const auto& orderComponent = entity.GetComponent<ComponentOrderComponent>();
+			auto& orderComponent = entity.GetComponent<ComponentOrderComponent>();
 			componentOrder = orderComponent.ComponentOrder;
+			hasOrderComponent = true;
 		}
 		else
 		{
@@ -62,24 +64,67 @@ namespace Gravix
 			componentOrder = ComponentRegistry::Get().GetComponentOrder();
 		}
 
+		int componentIndex = 0;
+		int draggedComponentIndex = -1;
+		int targetComponentIndex = -1;
+
 		for (auto typeIndex : componentOrder)
 		{
 			const auto& allComponents = ComponentRegistry::Get().GetAllComponents();
 			auto it = allComponents.find(typeIndex);
 			if (it == allComponents.end())
+			{
+				componentIndex++;
 				continue;
+			}
 
 			const auto& info = it->second;
 			if (info.ImGuiRenderFunc)
 			{
 				if(!entity.HasComponent(typeIndex))
+				{
+					componentIndex++;
 					continue;
+				}
 
 				void* component = entity.GetComponent(typeIndex);
 				if (component)
 				{
+					// Store cursor position before rendering component
+					ImVec2 cursorPosBefore = ImGui::GetCursorPos();
+
 					ComponentUserSettings userSettings;
 					info.ImGuiRenderFunc(component, &userSettings);
+
+					// Get the last item rect for drag and drop
+					ImVec2 cursorPosAfter = ImGui::GetCursorPos();
+					ImVec2 itemMin = ImVec2(cursorPosBefore.x, cursorPosBefore.y);
+					ImVec2 itemMax = ImVec2(cursorPosAfter.x, cursorPosAfter.y);
+
+					// Make the entire component area draggable
+					ImGui::SetCursorPos(cursorPosBefore);
+					ImGui::InvisibleButton(("##component_drag_" + std::to_string(componentIndex)).c_str(),
+						ImVec2(ImGui::GetContentRegionAvail().x, cursorPosAfter.y - cursorPosBefore.y));
+					ImGui::SetCursorPos(cursorPosAfter);
+
+					// Drag and drop source
+					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+					{
+						ImGui::SetDragDropPayload("COMPONENT_REORDER", &componentIndex, sizeof(int));
+						ImGui::Text("Reorder: %s", info.Name.c_str());
+						ImGui::EndDragDropSource();
+					}
+
+					// Drag and drop target
+					if (ImGui::BeginDragDropTarget())
+					{
+						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("COMPONENT_REORDER"))
+						{
+							draggedComponentIndex = *(int*)payload->Data;
+							targetComponentIndex = componentIndex;
+						}
+						ImGui::EndDragDropTarget();
+					}
 
 					// Mark scene dirty if component was modified
 					if (userSettings.WasModified)
@@ -96,6 +141,28 @@ namespace Gravix
 					}
 				}
 			}
+
+			componentIndex++;
+		}
+
+		// Apply component reordering if drag and drop occurred
+		if (draggedComponentIndex != -1 && targetComponentIndex != -1 && draggedComponentIndex != targetComponentIndex)
+		{
+			// Ensure entity has ComponentOrderComponent
+			if (!hasOrderComponent)
+			{
+				entity.AddComponent<ComponentOrderComponent>();
+				entity.GetComponent<ComponentOrderComponent>().ComponentOrder = componentOrder;
+			}
+
+			// Reorder components
+			auto& orderComponent = entity.GetComponent<ComponentOrderComponent>();
+			std::type_index draggedType = orderComponent.ComponentOrder[draggedComponentIndex];
+			orderComponent.ComponentOrder.erase(orderComponent.ComponentOrder.begin() + draggedComponentIndex);
+			orderComponent.ComponentOrder.insert(orderComponent.ComponentOrder.begin() + targetComponentIndex, draggedType);
+
+			if (m_AppLayer)
+				m_AppLayer->MarkSceneDirty();
 		}
 	}
 

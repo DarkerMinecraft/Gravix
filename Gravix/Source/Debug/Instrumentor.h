@@ -4,6 +4,9 @@
 #include <chrono>
 #include <algorithm>
 #include <fstream>
+#include <vector>
+#include <mutex>
+#include <unordered_map>
 
 #include <thread>
 
@@ -15,6 +18,8 @@ namespace Gravix
 		std::string Name;
 		long long Start, End;
 		uint32_t ThreadID;
+
+		float GetDuration() const { return (End - Start) / 1000.0f; } // Convert to milliseconds
 	};
 
 	struct InstrumentationSession
@@ -28,6 +33,14 @@ namespace Gravix
 		InstrumentationSession* m_CurrentSession;
 		std::ofstream m_OutputStream;
 		int m_ProfileCount;
+
+#ifdef ENGINE_DEBUG
+		// Real-time profiling data for viewer
+		std::vector<ProfileResult> m_FrameResults;
+		std::mutex m_DataMutex;
+		bool m_CaptureEnabled = true;
+#endif
+
 	public:
 		Instrumentor()
 			: m_CurrentSession(nullptr), m_ProfileCount(0)
@@ -75,6 +88,15 @@ namespace Gravix
 			m_OutputStream << "}";
 
 			m_OutputStream.flush();
+
+#ifdef ENGINE_DEBUG
+			// Store for real-time viewer
+			if (m_CaptureEnabled)
+			{
+				std::lock_guard<std::mutex> lock(m_DataMutex);
+				m_FrameResults.push_back(result);
+			}
+#endif
 		}
 
 		void WriteHeader()
@@ -94,6 +116,31 @@ namespace Gravix
 			static Instrumentor instance;
 			return instance;
 		}
+
+#ifdef ENGINE_DEBUG
+		// Real-time profiling methods for viewer
+		std::vector<ProfileResult> GetFrameResults()
+		{
+			std::lock_guard<std::mutex> lock(m_DataMutex);
+			return m_FrameResults;
+		}
+
+		void ClearFrameResults()
+		{
+			std::lock_guard<std::mutex> lock(m_DataMutex);
+			m_FrameResults.clear();
+		}
+
+		void SetCaptureEnabled(bool enabled)
+		{
+			m_CaptureEnabled = enabled;
+		}
+
+		bool IsCaptureEnabled() const
+		{
+			return m_CaptureEnabled;
+		}
+#endif
 	};
 	class InstrumentationTimer
 	{

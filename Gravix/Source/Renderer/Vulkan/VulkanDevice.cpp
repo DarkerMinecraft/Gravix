@@ -20,7 +20,11 @@ namespace Gravix
 		: m_Vsync(deviceProperties.VSync)
 	{
 		InitVulkan(deviceProperties);
-		CreateSwapchain(deviceProperties.Width, deviceProperties.Height, deviceProperties.VSync);
+
+		// Create and initialize swapchain
+		m_Swapchain = CreateScope<VulkanSwapchain>(m_Device, m_PhysicalDevice, m_Surface);
+		m_Swapchain->Create(deviceProperties.Width, deviceProperties.Height, deviceProperties.VSync);
+
 		VulkanRenderCaps::Init(this);
 		InitCommandBuffers();
 		InitSyncStructures();
@@ -40,15 +44,7 @@ namespace Gravix
 			vkDeviceWaitIdle(m_Device);
 		}
 
-		// Clean up per-swapchain-image present semaphores
-		for (auto& syncData : m_SwapchainSyncData)
-		{
-			if (syncData.RenderSemaphore != VK_NULL_HANDLE)
-			{
-				vkDestroySemaphore(m_Device, syncData.RenderSemaphore, nullptr);
-				syncData.RenderSemaphore = VK_NULL_HANDLE;
-			}
-		}
+		m_Swapchain.reset();
 
 		// Clean up per-frame resources
 		for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
@@ -116,8 +112,7 @@ namespace Gravix
 			m_Allocator = VK_NULL_HANDLE;
 		}
 
-		// Destroy swapchain
-		DestroySwapchain();
+		// Swapchain cleanup handled by VulkanSwapchain destructor
 
 		// Destroy surface
 		if (m_Surface != VK_NULL_HANDLE)
@@ -179,11 +174,11 @@ namespace Gravix
 		{
 			GX_PROFILE_SCOPE("AcquireSwapchainImage");
 			// Acquire next swapchain image - signal per-frame semaphore when ready
-			VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX,
-				GetCurrentFrameData().SwapchainSemaphore, nullptr, &m_SwapchainImageIndex);
+			uint32_t imageIndex;
+			VkResult result = m_Swapchain->AcquireNextImage(GetCurrentFrameData().SwapchainSemaphore, &imageIndex);
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
-				RecreateSwapchain(width, height, m_Vsync);
+				m_Swapchain->Recreate(width, height, m_Vsync);
 				return;
 			}
 			else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -203,8 +198,8 @@ namespace Gravix
 
 			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			//transition the swapchain image to a color attachment
-			VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex],
-				m_SwapchainImageFormat, m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, GetCurrentSwapchainImage(),
+				GetSwapchainImageFormat(), m_SwapchainImageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 			m_SwapchainImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		}
@@ -224,7 +219,7 @@ namespace Gravix
 
 			{
 				GX_PROFILE_SCOPE("TransitionImageForPresent");
-				VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, m_SwapchainImages[m_SwapchainImageIndex], m_SwapchainImageFormat,
+				VulkanUtils::TransitionImage(GetCurrentFrameData().CommandBuffer, GetCurrentSwapchainImage(), GetSwapchainImageFormat(),
 					m_SwapchainImageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 				m_SwapchainImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
@@ -244,7 +239,7 @@ namespace Gravix
 				// Signal per-swapchain-image present semaphore (waited on by vkQueuePresentKHR)
 				VkSemaphoreSubmitInfo signalInfo = VulkanInitializers::SemaphoreSubmitInfo(
 					VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-					m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore);
+					m_Swapchain->GetCurrentRenderSemaphore());
 
 				VkSubmitInfo2 submit = VulkanInitializers::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
 
@@ -255,25 +250,12 @@ namespace Gravix
 
 			{
 				GX_PROFILE_SCOPE("PresentSwapchain");
-				//prepare present
-				// this will put the image we just rendered to into the visible window.
-				// we want to wait on the per-swapchain-image render semaphore for that,
-				// as its necessary that drawing commands have finished before the image is displayed to the user
-				VkPresentInfoKHR presentInfo = {};
-				presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-				presentInfo.pNext = nullptr;
-				presentInfo.pSwapchains = &m_Swapchain;
-				presentInfo.swapchainCount = 1;
+				// Present the swapchain image
+				VkResult result = m_Swapchain->Present(m_GraphicsQueue, m_Swapchain->GetCurrentImageIndex());
 
-				presentInfo.pWaitSemaphores = &m_SwapchainSyncData[m_SwapchainImageIndex].RenderSemaphore;
-				presentInfo.waitSemaphoreCount = 1;
-
-				presentInfo.pImageIndices = &m_SwapchainImageIndex;
-
-				VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
 				if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 				{
-					RecreateSwapchain(width, height, m_Vsync);
+					m_Swapchain->Recreate(width, height, m_Vsync);
 				}
 				else if (result != VK_SUCCESS)
 				{
@@ -560,99 +542,6 @@ namespace Gravix
 		m_TransferQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::transfer).value();
 	}
 
-	void VulkanDevice::CreateSwapchain(uint32_t width, uint32_t height, bool vSync)
-	{
-		// Don't create swapchain with zero dimensions (window minimized)
-		if (width == 0 || height == 0)
-		{
-			GX_CORE_WARN("Cannot create swapchain with zero dimensions (width={}, height={}). Window may be minimized.", width, height);
-			return;
-		}
-
-		vkb::SwapchainBuilder swapchainBuilder{ m_PhysicalDevice, m_Device, m_Surface };
-
-		m_SwapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-
-		vkb::Swapchain vkbSwapchain = swapchainBuilder
-			.set_desired_format(VkSurfaceFormatKHR{ .format = m_SwapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
-			.set_desired_extent(width, height)
-			.set_desired_present_mode(vSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR)
-			.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-			.build()
-			.value();
-
-		m_SwapchainExtent = vkbSwapchain.extent;
-		//store swapchain and its related images
-		m_Swapchain = vkbSwapchain.swapchain;
-		m_SwapchainImages = vkbSwapchain.get_images().value();
-		m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
-	}
-
-	void VulkanDevice::DestroySwapchain()
-	{
-		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-
-		// destroy swapchain resources
-		for (int i = 0; i < m_SwapchainImageViews.size(); i++) {
-
-			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
-		}
-	}
-
-	void VulkanDevice::RecreateSwapchain(uint32_t width, uint32_t height, bool vSync)
-	{
-		// Don't recreate swapchain with zero dimensions (window minimized)
-		if (width == 0 || height == 0)
-		{
-			GX_CORE_WARN("Cannot recreate swapchain with zero dimensions (width={}, height={}). Window may be minimized.", width, height);
-			return;
-		}
-
-		// Wait for GPU to finish before destroying swapchain resources
-		vkDeviceWaitIdle(m_Device);
-
-		// Destroy old swapchain image views
-		for (int i = 0; i < m_SwapchainImageViews.size(); i++) {
-			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
-		}
-
-		// Destroy old per-swapchain-image semaphores
-		for (auto& syncData : m_SwapchainSyncData)
-		{
-			vkDestroySemaphore(m_Device, syncData.RenderSemaphore, nullptr);
-		}
-		m_SwapchainSyncData.clear();
-
-		vkb::SwapchainBuilder swapchainBuilder{ m_PhysicalDevice, m_Device, m_Surface };
-
-		m_SwapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-
-		vkb::Swapchain vkbSwapchain = swapchainBuilder
-			.set_desired_format(VkSurfaceFormatKHR{ .format = m_SwapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
-			.set_desired_extent(width, height)
-			.set_old_swapchain(m_Swapchain)
-			.set_desired_present_mode(vSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR)
-			.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-			.build()
-			.value();
-
-		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-
-		m_SwapchainExtent = vkbSwapchain.extent;
-		//store swapchain and its related images
-		m_Swapchain = vkbSwapchain.swapchain;
-		m_SwapchainImages = vkbSwapchain.get_images().value();
-		m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
-
-		// Recreate per-swapchain-image present semaphores
-		VkSemaphoreCreateInfo semaphoreCreateInfo = VulkanInitializers::SemaphoreCreateInfo();
-		m_SwapchainSyncData.resize(m_SwapchainImages.size());
-		for (size_t i = 0; i < m_SwapchainImages.size(); i++)
-		{
-			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_SwapchainSyncData[i].RenderSemaphore);
-		}
-	}
-
 	void VulkanDevice::InitDescriptorPool()
 	{
 		// Get recommended bindless limits from capabilities
@@ -862,12 +751,7 @@ namespace Gravix
 			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].SwapchainSemaphore);
 		}
 
-		// Create per-swapchain-image present semaphores
-		m_SwapchainSyncData.resize(m_SwapchainImages.size());
-		for (size_t i = 0; i < m_SwapchainImages.size(); i++)
-		{
-			vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_SwapchainSyncData[i].RenderSemaphore);
-		}
+		// Per-swapchain-image present semaphores are now created and managed by VulkanSwapchain
 
 		vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_ImmediateFence);
 	}

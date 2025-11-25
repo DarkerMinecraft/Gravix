@@ -40,37 +40,10 @@ namespace Gravix
 
 		ScriptEngine::Init("GravixScripting.dll");
 
-		// Test CreateInstance and call instance methods via reflection
-		{
-			GX_CORE_INFO("[Application] Testing C# Main class with instance methods");
-
-			// Create an instance of Main (calls constructor)
-			auto mainInstance = ScriptEngine::CreateInstance("GravixEngine.Main");
-
-			if (mainInstance.IsValid())
-			{
-				GX_CORE_INFO("[Application] Main instance created successfully");
-
-				// Call all instance methods via reflection
-				GX_CORE_INFO("[Application] Calling PrintMessage()");
-				mainInstance.Call("PrintMessage");
-
-				GX_CORE_INFO("[Application] Calling PrintInt(42)");
-				mainInstance.Call("PrintInt", 42);
-
-				GX_CORE_INFO("[Application] Calling PrintInts(123, 456)");
-				mainInstance.Call("PrintInts", 123, 456);
-
-				GX_CORE_INFO("[Application] Calling PrintCustomMessage(\"Hello from C++!\")");
-				mainInstance.Call("PrintCustomMessage", "Hello from C++!");
-			}
-			else
-			{
-				GX_CORE_ERROR("[Application] Failed to create Main instance");
-			}
-
-			GX_CORE_INFO("[Application] Finished testing C# Main class");
-		}
+#ifdef ENGINE_DEBUG
+		// Initialize profiler viewer in debug builds
+		m_ProfilerViewer = CreateScope<ProfilerViewer>();
+#endif
 	}
 
 	Application::~Application()
@@ -132,6 +105,12 @@ namespace Gravix
 						m_ImGuiRender->Begin();
 						for (Ref<Layer> layer : m_LayerStack)
 							layer->OnImGuiRender();
+
+#ifdef ENGINE_DEBUG
+						// Render profiler viewer in debug builds
+						m_ProfilerViewer->OnImGuiRender(deltaTime);
+#endif
+
 						m_ImGuiRender->End();
 					}
 				}

@@ -9,6 +9,10 @@
 
 #include "Project/Project.h"
 
+#ifdef ENGINE_DEBUG
+#include "Debug/ProfilerViewer.h"
+#endif
+
 #include <chrono>
 #include <filesystem>
 
@@ -138,6 +142,14 @@ namespace Gravix
 		 */
 		ImGuiRender& GetImGui() { return *m_ImGuiRender; }
 
+#ifdef ENGINE_DEBUG
+		/**
+		 * @brief Get the profiler viewer (Debug builds only)
+		 * @return Reference to the real-time profiler viewer
+		 */
+		ProfilerViewer& GetProfiler() { return *m_ProfilerViewer; }
+#endif
+
 		/**
 		 * @brief Get the global application instance
 		 * @return Reference to the singleton application
@@ -151,6 +163,10 @@ namespace Gravix
 		Scope<Scheduler> m_Scheduler;
 
 		ImGuiRender* m_ImGuiRender = nullptr;
+
+#ifdef ENGINE_DEBUG
+		Scope<ProfilerViewer> m_ProfilerViewer;
+#endif
 
 		bool m_IsRunning = false;
 		bool m_IsMinimize = false;

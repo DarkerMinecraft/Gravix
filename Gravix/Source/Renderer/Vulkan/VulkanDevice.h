@@ -8,11 +8,12 @@
 
 #include "Utils/VulkanTypes.h"
 #include "Utils/ShaderCompiler.h"
+#include "VulkanSwapchain.h"
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	struct FrameData
@@ -22,11 +23,6 @@ namespace Gravix
 
 		VkFence RenderFence;
 		VkSemaphore SwapchainSemaphore;  // Per-frame: signaled by acquire, waited by submit
-	};
-
-	struct SwapchainSyncData
-	{
-		VkSemaphore RenderSemaphore;  // Per-swapchain-image: signaled by submit, waited by present
 	};
 
 
@@ -65,20 +61,19 @@ namespace Gravix
 
 		VkDescriptorPool GetImGuiDescriptorPool() { return m_ImGuiDescriptorPool; }
 
-		VkImageView GetCurrentSwapchainImageView() const { return m_SwapchainImageViews[m_SwapchainImageIndex]; }
-		VkImage GetCurrentSwapchainImage() const { return m_SwapchainImages[m_SwapchainImageIndex]; }
+		VkImageView GetCurrentSwapchainImageView() const { return m_Swapchain->GetCurrentImageView(); }
+		VkImage GetCurrentSwapchainImage() const { return m_Swapchain->GetCurrentImage(); }
 		VkImageLayout GetCurrentSwapchainImageLayout() const { return m_SwapchainImageLayout; }
-		VkExtent2D GetSwapchainExtent() const { return m_SwapchainExtent; }
-		VkFormat GetSwapchainImageFormat() const { return m_SwapchainImageFormat; }
+		VkExtent2D GetSwapchainExtent() const { return m_Swapchain->GetExtent(); }
+		VkFormat GetSwapchainImageFormat() const { return m_Swapchain->GetImageFormat(); }
 		void SetCurrentSwapchainImageLayout(VkImageLayout layout) { m_SwapchainImageLayout = layout; }
+		VulkanSwapchain* GetSwapchain() { return m_Swapchain.get(); }
 
 		FrameData& GetCurrentFrameData() { return m_Frames[m_CurrentFrame % FRAME_OVERLAP]; }
 		VmaAllocator& GetAllocator() { return m_Allocator; }
 	private:
 		void InitVulkan(const DeviceProperties& properties);
-		void CreateSwapchain(uint32_t width, uint32_t height, bool vSync);
-		void DestroySwapchain();
-		void RecreateSwapchain(uint32_t width, uint32_t height, bool vSync);
+	
 
 		void InitDescriptorPool();
 		void CreateBindlessDescriptorSets();
@@ -119,20 +114,13 @@ namespace Gravix
 
 		VkPipelineLayout m_PipelineLayout;
 
-		VkSwapchainKHR m_Swapchain;
-		VkFormat m_SwapchainImageFormat;
+		Scope<VulkanSwapchain> m_Swapchain;
 		VkImageLayout m_SwapchainImageLayout;
-
-		std::vector<VkImage> m_SwapchainImages;
-		std::vector<VkImageView> m_SwapchainImageViews;
-		std::vector<SwapchainSyncData> m_SwapchainSyncData;  // Per-swapchain-image semaphores
-		VkExtent2D m_SwapchainExtent;
 
 		FrameData m_Frames[FRAME_OVERLAP];
 		uint32_t m_CurrentFrame = 0;
 
-		uint32_t m_SwapchainImageIndex = 0;
-		bool m_Vsync;
+			bool m_Vsync;
 		bool m_FrameStarted = false;
 
 #ifdef ENGINE_DEBUG

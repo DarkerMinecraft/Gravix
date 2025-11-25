@@ -147,34 +147,44 @@ namespace Gravix
 			}
 		}
 
+		// Only resize if viewport size actually changed
+		if (m_ViewportPanel.IsViewportValid())
 		{
-			GX_PROFILE_SCOPE("ViewportResize");
-			if (m_ViewportPanel.IsViewportValid())
+			auto& viewportSize = m_ViewportPanel.GetViewportSize();
+
+			// Check if size changed
+			if (viewportSize.x != m_LastViewportSize.x || viewportSize.y != m_LastViewportSize.y)
 			{
-				auto& viewportSize = m_ViewportPanel.GetViewportSize();
+				GX_PROFILE_SCOPE("ViewportResize");
+				m_LastViewportSize = viewportSize;
 
 				m_MSAAFramebuffer->Resize(viewportSize.x, viewportSize.y);
-				m_SceneManager.GetActiveScene()->OnViewportResize(viewportSize.x, viewportSize.y);
+				if(m_SceneManager.IsValidScene())
+					m_SceneManager.GetActiveScene()->OnViewportResize(viewportSize.x, viewportSize.y);
 
 				m_ViewportPanel.ResizeFramebuffer();
 				m_EditorCamera.SetViewportSize(viewportSize.x, viewportSize.y);
-
-				m_ViewportPanel.UpdateViewport();
 			}
+
+			// Update viewport mouse picking every frame (cheap operation)
+			m_ViewportPanel.UpdateViewport();
 		}
 
 		{
 			GX_PROFILE_SCOPE("SceneUpdate");
-			if (m_SceneManager.GetSceneState() == SceneState::Edit)
+			if (m_SceneManager.IsValidScene()) 
 			{
-				m_SceneManager.GetActiveScene()->OnEditorUpdate(deltaTime);
+				if (m_SceneManager.GetSceneState() == SceneState::Edit)
+				{
+					m_SceneManager.GetActiveScene()->OnEditorUpdate(deltaTime);
 
-				if (m_ViewportPanel.IsViewportHovered())
-					m_EditorCamera.OnUpdate(deltaTime);
-			}
-			else
-			{
-				m_SceneManager.GetActiveScene()->OnRuntimeUpdate(deltaTime);
+					if (m_ViewportPanel.IsViewportHovered())
+						m_EditorCamera.OnUpdate(deltaTime);
+				}
+				else
+				{
+					m_SceneManager.GetActiveScene()->OnRuntimeUpdate(deltaTime);
+				}
 			}
 		}
 
@@ -207,15 +217,18 @@ namespace Gravix
 
 		{
 			GX_PROFILE_SCOPE("SceneRender");
-			Command cmd(m_MSAAFramebuffer, 0, false);
+			if (m_SceneManager.IsValidScene())
+			{
+				Command cmd(m_MSAAFramebuffer, 0, false);
 
-			cmd.BeginRendering();
-			if (m_SceneManager.GetSceneState() == SceneState::Edit) m_SceneManager.GetActiveScene()->OnEditorRender(cmd, m_EditorCamera);
-			else m_SceneManager.GetActiveScene()->OnRuntimeRender(cmd);
-			OnOverlayRender(cmd);
-			cmd.EndRendering();
+				cmd.BeginRendering();
+				if (m_SceneManager.GetSceneState() == SceneState::Edit) m_SceneManager.GetActiveScene()->OnEditorRender(cmd, m_EditorCamera);
+				else m_SceneManager.GetActiveScene()->OnRuntimeRender(cmd);
+				OnOverlayRender(cmd);
+				cmd.EndRendering();
 
-			cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
+				cmd.ResolveFramebuffer(m_FinalFramebuffer, true);
+			}
 		}
 	}
 
@@ -300,6 +313,17 @@ namespace Gravix
 				}
 
 				ImGui::Separator();
+
+#ifdef ENGINE_DEBUG
+				// Toggle profiler viewer
+				bool profilerVisible = Application::Get().GetProfiler().IsVisible();
+				if (ImGui::MenuItem("Profiler Viewer", nullptr, &profilerVisible))
+				{
+					Application::Get().GetProfiler().SetVisible(profilerVisible);
+				}
+
+				ImGui::Separator();
+#endif
 
 				if (m_ProjectInitialized && ImGui::MenuItem("Preferences..."))
 				{

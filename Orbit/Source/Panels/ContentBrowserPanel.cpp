@@ -211,7 +211,20 @@ namespace Gravix
 
 				if (ImGui::MenuItem("Delete"))
 				{
-					// TODO: Implement delete functionality
+					std::filesystem::path targetPath = m_CurrentDirectory / item.filename();
+					try
+					{
+						if (isDirectory)
+							std::filesystem::remove_all(targetPath);
+						else
+							std::filesystem::remove(targetPath);
+						GX_CORE_INFO("Deleted: {0}", targetPath.filename().string());
+						RefreshAssetTree();
+					}
+					catch (const std::filesystem::filesystem_error& e)
+					{
+						GX_CORE_ERROR("Failed to delete: {0}", e.what());
+					}
 				}
 
 				ImGui::EndPopup();
@@ -442,8 +455,22 @@ namespace Gravix
 	{
 		// Build full paths using current directory (not asset directory)
 		std::filesystem::path fullOldPath = m_CurrentDirectory / oldPath;
-		std::filesystem::path extension = oldPath.extension();
-		std::filesystem::path newFilename = newName + extension.string();
+
+		// Check if it's a directory or file and handle extension accordingly
+		bool isDirectory = std::filesystem::is_directory(fullOldPath);
+		std::filesystem::path newFilename;
+		if (isDirectory)
+		{
+			// Directories don't have extensions
+			newFilename = newName;
+		}
+		else
+		{
+			// Files need to keep their extension
+			std::filesystem::path extension = oldPath.extension();
+			newFilename = newName + extension.string();
+		}
+
 		std::filesystem::path fullNewPath = fullOldPath.parent_path() / newFilename;
 
 		// Calculate relative path from asset directory for metadata lookup
@@ -451,41 +478,77 @@ namespace Gravix
 
 		try
 		{
-			// Rename the file on disk
+			// Rename the file/folder on disk
 			std::filesystem::rename(fullOldPath, fullNewPath);
 
 			// Update asset metadata in the asset manager
 			Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
 			const auto& assetRegistry = assetManager->GetAssetRegistry();
+			bool metadataUpdated = false;
 
-			// Find the asset handle for the old path
-			for (auto& [handle, metadata] : assetRegistry)
+			if (isDirectory)
 			{
-				if (metadata.FilePath == oldRelativePath)
+				// For directories, update all assets whose paths start with the old directory path
+				std::filesystem::path oldRelativePathNormalized = oldRelativePath;
+				std::filesystem::path newRelativePath = std::filesystem::relative(fullNewPath, m_AssetDirectory);
+
+				for (auto& [handle, metadata] : assetRegistry)
 				{
-					// Update the metadata file path
-					auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
-					mutableMetadata.FilePath = std::filesystem::relative(fullNewPath, m_AssetDirectory);
-
-					// Serialize the updated asset registry
-					assetManager->SerializeAssetRegistry();
-
-					// Refresh the asset tree
-					m_TreeNodes.clear();
-					m_TreeNodes.push_back(TreeNode(".", 0));
-					RefreshAssetTree();
-					ScanAndImportAssets();
-
-					// Update window title if this is the active scene
-					if (m_AppLayer && metadata.Type == AssetType::Scene && handle == m_AppLayer->GetActiveSceneHandle())
+					// Check if this asset is inside the renamed directory
+					auto relPath = metadata.FilePath.lexically_relative(oldRelativePathNormalized);
+					if (!relPath.empty() && relPath.string().find("..") == std::string::npos)
 					{
-						m_AppLayer->UpdateWindowTitle();
-					}
+						// This asset is inside the renamed directory - update its path
+						auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
+						mutableMetadata.FilePath = newRelativePath / relPath;
+						metadataUpdated = true;
 
-					GX_CORE_INFO("Renamed asset: {0} -> {1}", oldRelativePath.string(), mutableMetadata.FilePath.string());
-					break;
+						// Update window title if this is the active scene
+						if (m_AppLayer && metadata.Type == AssetType::Scene && handle == m_AppLayer->GetActiveSceneHandle())
+						{
+							m_AppLayer->UpdateWindowTitle();
+						}
+					}
+				}
+
+				if (metadataUpdated)
+				{
+					assetManager->SerializeAssetRegistry();
+				}
+
+				GX_CORE_INFO("Renamed directory: {0} -> {1}", oldRelativePath.string(), newRelativePath.string());
+			}
+			else
+			{
+				// For files, find and update the specific asset
+				for (auto& [handle, metadata] : assetRegistry)
+				{
+					if (metadata.FilePath == oldRelativePath)
+					{
+						// Update the metadata file path
+						auto& mutableMetadata = const_cast<AssetMetadata&>(metadata);
+						mutableMetadata.FilePath = std::filesystem::relative(fullNewPath, m_AssetDirectory);
+
+						// Serialize the updated asset registry
+						assetManager->SerializeAssetRegistry();
+
+						// Update window title if this is the active scene
+						if (m_AppLayer && metadata.Type == AssetType::Scene && handle == m_AppLayer->GetActiveSceneHandle())
+						{
+							m_AppLayer->UpdateWindowTitle();
+						}
+
+						GX_CORE_INFO("Renamed file: {0} -> {1}", oldRelativePath.string(), mutableMetadata.FilePath.string());
+						break;
+					}
 				}
 			}
+
+			// Always refresh the asset tree after renaming
+			m_TreeNodes.clear();
+			m_TreeNodes.push_back(TreeNode(".", 0));
+			RefreshAssetTree();
+			ScanAndImportAssets();
 		}
 		catch (const std::filesystem::filesystem_error& e)
 		{
@@ -505,6 +568,12 @@ namespace Gravix
 
 		try
 		{
+			// Ensure the parent directory exists
+			if (!std::filesystem::exists(m_CurrentDirectory))
+			{
+				std::filesystem::create_directories(m_CurrentDirectory);
+			}
+
 			// Create a new empty scene
 			Ref<Scene> newScene = CreateRef<Scene>();
 

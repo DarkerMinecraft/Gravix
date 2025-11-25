@@ -58,6 +58,8 @@ namespace Gravix
 			GX_CORE_WARN("Unsupported asset type for file: {0}", filePath.string());
 		}
 
+		outMetadata->LastModifiedTime = std::filesystem::last_write_time(Project::GetAssetDirectory() / filePath).time_since_epoch().count();
+
 		return AssetHandle();
 	}
 

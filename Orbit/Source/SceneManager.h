@@ -47,6 +47,8 @@ namespace Gravix
 		void MarkSceneDirty();
 		bool IsSceneDirty() const { return m_SceneDirty; }
 
+		bool IsValidScene() const { return m_ActiveScene != nullptr; }
+
 		// Callbacks
 		void SetOnSceneChangedCallback(std::function<void()> callback) { m_OnSceneChanged = callback; }
 		void SetOnSceneDirtyCallback(std::function<void()> callback) { m_OnSceneDirty = callback; }
