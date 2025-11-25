@@ -113,9 +113,6 @@ add_custom_command(TARGET Orbit POST_BUILD
 
 # Gravix-ScriptCore DLL and dependencies (if scripting is enabled)
 if(GRAVIX_BUILD_SCRIPTING)
-    # Include NetHost configuration to get NETHOST_LIB path
-    include(${CMAKE_SOURCE_DIR}/cmake/NetHostConfig.cmake)
-
     add_custom_command(TARGET Orbit POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll"
@@ -128,16 +125,6 @@ if(GRAVIX_BUILD_SCRIPTING)
             "$<TARGET_FILE_DIR:Orbit>"
         COMMENT "Copying GravixScripting DLL and dependencies..."
     )
-
-    # Copy nethost.dll on Windows (on other platforms it's a .so/.dylib)
-    if(WIN32 AND DEFINED NETHOST_DLL)
-        add_custom_command(TARGET Orbit POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${NETHOST_DLL}"
-                "$<TARGET_FILE_DIR:Orbit>"
-            COMMENT "Copying nethost.dll..."
-        )
-    endif()
 endif()
 
 # ============================================================================

@@ -8,7 +8,6 @@ project(Gravix)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(VulkanConfig)
-include(NetHostConfig)
 
 # ============================================================================
 # Core Source Files
@@ -108,9 +107,8 @@ set(GRAVIX_CORE_SOURCES
     Source/Scene/SceneCamera.h
 
     # Scripting
-    Source/Scripting/HostInstance.h
-    Source/Scripting/HostInstance.cpp
-    Source/Scripting/EngineAPI.h
+    Source/Scripting/ScriptEngine.h
+    Source/Scripting/ScriptEngine.cpp
 
     # Serialization
     Source/Serialization/BinaryDeserializer.h
@@ -249,7 +247,6 @@ target_link_libraries(Gravix
         slang
         yaml-cpp
         box2d
-        ${NETHOST_LIB}
 )
 
 # Vulkan-specific libraries
