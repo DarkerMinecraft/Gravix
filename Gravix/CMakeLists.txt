@@ -108,8 +108,9 @@ set(GRAVIX_CORE_SOURCES
     Source/Scene/SceneCamera.h
 
     # Scripting
-    Source/Scripting/ScriptEngine.cpp
-    Source/Scripting/ScriptEngine.h
+    Source/Scripting/HostInstance.h
+    Source/Scripting/HostInstance.cpp
+    Source/Scripting/EngineAPI.h
 
     # Serialization
     Source/Serialization/BinaryDeserializer.h
