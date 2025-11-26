@@ -7,6 +7,8 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace Gravix
 {
@@ -66,6 +68,85 @@ namespace fmt
 			default: type_str = "unknown"; break;
 			}
 			return formatter<std::string>::format(type_str, ctx);
+		}
+	};
+
+	// GLM vec2 formatter
+	template <>
+	struct fmt::formatter<glm::vec2> : fmt::formatter<std::string>
+	{
+		auto format(const glm::vec2& v, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "vec2({:.3f}, {:.3f})", v.x, v.y);
+		}
+	};
+
+	// GLM vec3 formatter
+	template <>
+	struct fmt::formatter<glm::vec3> : fmt::formatter<std::string>
+	{
+		auto format(const glm::vec3& v, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "vec3({:.3f}, {:.3f}, {:.3f})", v.x, v.y, v.z);
+		}
+	};
+
+	// GLM vec4 formatter
+	template <>
+	struct fmt::formatter<glm::vec4> : fmt::formatter<std::string>
+	{
+		auto format(const glm::vec4& v, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "vec4({:.3f}, {:.3f}, {:.3f}, {:.3f})", v.x, v.y, v.z, v.w);
+		}
+	};
+
+	// GLM mat2 formatter
+	template <>
+	struct fmt::formatter<glm::mat2> : fmt::formatter<std::string>
+	{
+		auto format(const glm::mat2& m, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "mat2([{:.3f}, {:.3f}], [{:.3f}, {:.3f}])",
+				m[0][0], m[0][1],
+				m[1][0], m[1][1]);
+		}
+	};
+
+	// GLM mat3 formatter
+	template <>
+	struct fmt::formatter<glm::mat3> : fmt::formatter<std::string>
+	{
+		auto format(const glm::mat3& m, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "mat3([{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}])",
+				m[0][0], m[0][1], m[0][2],
+				m[1][0], m[1][1], m[1][2],
+				m[2][0], m[2][1], m[2][2]);
+		}
+	};
+
+	// GLM mat4 formatter
+	template <>
+	struct fmt::formatter<glm::mat4> : fmt::formatter<std::string>
+	{
+		auto format(const glm::mat4& m, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "mat4([{:.3f}, {:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}, {:.3f}])",
+				m[0][0], m[0][1], m[0][2], m[0][3],
+				m[1][0], m[1][1], m[1][2], m[1][3],
+				m[2][0], m[2][1], m[2][2], m[2][3],
+				m[3][0], m[3][1], m[3][2], m[3][3]);
+		}
+	};
+
+	// GLM quat formatter
+	template <>
+	struct fmt::formatter<glm::quat> : fmt::formatter<std::string>
+	{
+		auto format(const glm::quat& q, format_context& ctx) const
+		{
+			return fmt::format_to(ctx.out(), "quat({:.3f}, {:.3f}, {:.3f}, {:.3f})", q.w, q.x, q.y, q.z);
 		}
 	};
 }

@@ -14,10 +14,10 @@ namespace Gravix
 
 		switch (device->GetType())
 		{
-		case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return nullptr;
+		case DeviceType::None:    GX_VERIFY("DeviceType::None is currently not supported!"); return nullptr;
 		case DeviceType::Vulkan: return CreateRef<VulkanMesh>(device, vertexSize);
 		}
-		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
+		GX_VERIFY("Unknown RendererAPI!");
 		return nullptr;
 	}
 

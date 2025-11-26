@@ -15,15 +15,21 @@ file(GLOB_RECURSE CS_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cs")
 
 set(OUTPUT_DLL "${SCRIPTCORE_OUTPUT_DIR}/GravixScripting.dll")
 
-add_custom_target(Gravix-ScriptCore ALL
+# Only rebuild when C# source files change
+add_custom_command(
+    OUTPUT "${OUTPUT_DLL}"
     COMMAND "${MONO_CSHARP_COMPILER}"
         -target:library
         -out:"${OUTPUT_DLL}"
         ${CS_FILES}
+    DEPENDS ${CS_FILES}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Building Gravix-ScriptCore C# project with Mono compiler"
+)
+
+add_custom_target(Gravix-ScriptCore ALL
+    DEPENDS "${OUTPUT_DLL}"
     SOURCES ${CS_FILES}
-    BYPRODUCTS "${OUTPUT_DLL}"
 )
 
 # ----------------------------------------

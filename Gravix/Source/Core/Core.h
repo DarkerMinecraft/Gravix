@@ -10,18 +10,13 @@
 #endif
 
 #ifdef GX_ENABLE_ASSERTS
-#define GX_ASSERT(x, ...) {if(!(x)) { GX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
-#define GX_CORE_ASSERT(x, ...) {if(!(x)) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
-
-#define GX_STATIC_ASSERT(...) { GX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
-#define GX_STATIC_CORE_ASSERT(...) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
-
+#define GX_ASSERT(x, ...) {if(!(x)) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }}
+#define GX_DEBUGBREAK() __debugbreak();
+#define GX_VERIFY(...) { GX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); }
 #else
 #define GX_ASSERT(x, ...)
-#define GX_CORE_ASSERT(x, ...)
-
-#define GX_STATIC_ASSERT(...)
-#define GX_STATIC_CORE_ASSERT(...)
+#define GX_DEBUGBREAK()
+#define GX_VERIFY() 
 #endif
 
 

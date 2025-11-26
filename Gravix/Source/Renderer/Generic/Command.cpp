@@ -110,10 +110,10 @@ namespace Gravix
 
 		switch (device->GetType())
 		{
-		case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return;
+		case DeviceType::None:    GX_VERIFY("DeviceType::None is currently not supported!"); return;
 		case DeviceType::Vulkan:  m_Impl = new VulkanCommandImpl(device, framebuffer, presentIndex, shouldCopy); return;
 		}
-		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
+		GX_VERIFY("Unknown RendererAPI!");
 		return;
 	}
 

@@ -474,7 +474,7 @@ namespace Gravix
 			&m_Data
 		);
 
-		GX_CORE_ASSERT(m_Window, "Could not create Win32 window!");
+		GX_ASSERT(m_Window, "Could not create Win32 window!");
 
 		// Additional step: Set the icon for the window instance
 		// This ensures the icon appears correctly in all contexts

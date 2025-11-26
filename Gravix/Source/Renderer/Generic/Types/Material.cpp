@@ -13,10 +13,10 @@ namespace Gravix
 
 		switch (device->GetType())
 		{
-		case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return nullptr;
+		case DeviceType::None:    GX_VERIFY("DeviceType::None is currently not supported!"); return nullptr;
 		case DeviceType::Vulkan: return CreateRef<VulkanMaterial>(device, spec);
 		}
-		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
+		GX_VERIFY("Unknown RendererAPI!");
 		return nullptr;
 	}
 
@@ -26,10 +26,10 @@ namespace Gravix
 
 		switch (device->GetType())
 		{
-		case DeviceType::None:    GX_STATIC_CORE_ASSERT("DeviceType::None is currently not supported!"); return nullptr;
+		case DeviceType::None:    GX_VERIFY("DeviceType::None is currently not supported!"); return nullptr;
 		case DeviceType::Vulkan:  return CreateRef<VulkanMaterial>(device, debugName, shaderFilePath);
 		}
-		GX_STATIC_CORE_ASSERT("Unknown RendererAPI!");
+		GX_VERIFY("Unknown RendererAPI!");
 		return nullptr;
 	}
 }

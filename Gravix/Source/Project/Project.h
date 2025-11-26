@@ -43,19 +43,19 @@ namespace Gravix
 
 		static std::filesystem::path& GetAssetDirectory()
 		{
-			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			GX_ASSERT(s_ActiveProject, "No active project!");
 			return s_ActiveProject->m_Config.AssetDirectory;
 		};
 
 		static std::filesystem::path& GetLibraryDirectory()
 		{
-			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			GX_ASSERT(s_ActiveProject, "No active project!");
 			return s_ActiveProject->m_Config.LibraryDirectory;
 		};
 
 		static std::filesystem::path& GetWorkingDirectory() 
 		{
-			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			GX_ASSERT(s_ActiveProject, "No active project!");
 			return s_ActiveProject->m_WorkingDirectory;
 		}
 
@@ -63,7 +63,7 @@ namespace Gravix
 
 		static Ref<Project> GetActive() 
 		{
-			GX_CORE_ASSERT(s_ActiveProject, "No active project!");
+			GX_ASSERT(s_ActiveProject, "No active project!");
 			return s_ActiveProject;
 		}
 

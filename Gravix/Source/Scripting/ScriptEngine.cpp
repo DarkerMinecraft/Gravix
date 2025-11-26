@@ -6,6 +6,7 @@
 
 #include <mono/jit/jit.h>
 #include <mono/metadata/assembly.h>
+#include <mono/metadata/object.h>
 
 namespace Gravix 
 {
@@ -78,7 +79,7 @@ namespace Gravix
 			const char* nameSpace = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAMESPACE]);
 			const char* name = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAME]);
 
-			printf("%s.%s\n", nameSpace, name);
+			GX_CORE_TRACE("{0}.{1}", nameSpace, name);
 		}
 	}
 
@@ -107,12 +108,12 @@ namespace Gravix
 
 	void ScriptEngine::InitMono()
 	{
-		mono_set_assemblies_path("mono/lib");
+		mono_set_assemblies_path("lib/mono/4.5");
 
 		MonoDomain* domain = mono_jit_init("GravixJITRuntime");
-		if (domain == nullptr) 
+		if (domain == nullptr)
 		{
-			GX_STATIC_CORE_ASSERT("Failed to initialize Mono JIT runtime!");
+			GX_VERIFY("Failed to initialize Mono JIT runtime!");
 		}
 
 		s_Data->RootDomain = domain;
@@ -121,6 +122,31 @@ namespace Gravix
 
 		s_Data->CoreAssembly = LoadCSharpAssembly("GravixScripting.dll");
 		PrintAssemblyTypes(s_Data->CoreAssembly);
+
+		MonoImage* assemblyImage = mono_assembly_get_image(s_Data->CoreAssembly);
+		MonoClass* monoClass = mono_class_from_name(assemblyImage, "Gravix", "Main");
+
+		MonoObject* instance = mono_object_new(s_Data->AppDomain, monoClass);
+		mono_runtime_object_init(instance);
+
+		MonoMethod* printMessageFunc = mono_class_get_method_from_name(monoClass, "PrintMessage", 0);
+		mono_runtime_invoke(printMessageFunc, instance, nullptr, nullptr);
+
+		MonoMethod* printIntFunc = mono_class_get_method_from_name(monoClass, "PrintInt", 1);
+		int value = 5;
+		void* param = &value;
+		mono_runtime_invoke(printIntFunc, instance, &param, nullptr);
+
+		MonoMethod* printIntsFunc = mono_class_get_method_from_name(monoClass, "PrintInts", 2);
+		int value2 = 508;
+		void* params2[2] = { &value, &value2 };
+		mono_runtime_invoke(printIntsFunc, instance, params2, nullptr);
+
+		MonoMethod* printCustomMessageFunc = mono_class_get_method_from_name(monoClass, "PrintCustomMessage", 1);
+		MonoString* monoString = mono_string_new(s_Data->AppDomain, "Hello World From C++");
+		mono_runtime_invoke(printCustomMessageFunc, instance, (void**)&monoString, nullptr);
+
+		GX_DEBUGBREAK();
 	}
 
 	void ScriptEngine::ShudownMono()

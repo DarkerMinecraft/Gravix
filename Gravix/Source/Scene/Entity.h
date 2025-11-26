@@ -24,7 +24,7 @@ namespace Gravix
 		template<typename T, typename... Args>
 		T& AddComponent(Args&&... args)
 		{
-			GX_CORE_ASSERT(!HasComponent<T>(), "Entity already has componenet!");
+			GX_ASSERT(!HasComponent<T>(), "Entity already has componenet!");
 
 			T& component = m_Scene->m_Registry.emplace<T>(m_EntityHandle, std::forward<Args>(args)...);
 
@@ -75,7 +75,7 @@ namespace Gravix
 		template<typename T>
 		T& GetComponent()
 		{
-			GX_CORE_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
+			GX_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
 
 			return m_Scene->m_Registry.get<T>(m_EntityHandle);
 		}
@@ -83,7 +83,7 @@ namespace Gravix
 		template<typename T>
 		const T& GetComponent() const
 		{
-			GX_CORE_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
+			GX_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
 
 			return m_Scene->m_Registry.get<T>(m_EntityHandle);
 		}
@@ -91,7 +91,7 @@ namespace Gravix
 		template<typename T>
 		void RemoveComponent()
 		{
-			GX_CORE_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
+			GX_ASSERT(HasComponent<T>(), "Entity does not has componenet!");
 
 			m_Scene->m_Registry.remove<T>(m_EntityHandle);
 
@@ -127,7 +127,7 @@ namespace Gravix
 
 		void* GetComponent(std::type_index typeIndex)
 		{
-			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not has componenet!");
+			GX_ASSERT(HasComponent(typeIndex), "Entity does not has componenet!");
 
 			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
 			return info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
@@ -136,9 +136,9 @@ namespace Gravix
 		void AddComponent(std::type_index typeIndex)
 		{
 			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
-			GX_CORE_ASSERT(info, "Component type not registered!");
-			GX_CORE_ASSERT(info->AddComponentFunc, "Component has no AddComponentFunc!");
-			GX_CORE_ASSERT(!HasComponent(typeIndex), "Entity already has componenet!");
+			GX_ASSERT(info, "Component type not registered!");
+			GX_ASSERT(info->AddComponentFunc, "Component has no AddComponentFunc!");
+			GX_ASSERT(!HasComponent(typeIndex), "Entity already has componenet!");
 
 			info->AddComponentFunc(m_Scene->m_Registry, m_EntityHandle);
 			if (info->OnCreateFunc)
@@ -161,9 +161,9 @@ namespace Gravix
 		void RemoveComponent(std::type_index typeIndex)
 		{
 			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
-			GX_CORE_ASSERT(info, "Component type not registered!");
-			GX_CORE_ASSERT(info->RemoveComponentFunc, "Component has no RemoveComponentFunc!");
-			GX_CORE_ASSERT(HasComponent(typeIndex), "Entity does not have this component!");
+			GX_ASSERT(info, "Component type not registered!");
+			GX_ASSERT(info->RemoveComponentFunc, "Component has no RemoveComponentFunc!");
+			GX_ASSERT(HasComponent(typeIndex), "Entity does not have this component!");
 
 			info->RemoveComponentFunc(m_Scene->m_Registry, m_EntityHandle);
 

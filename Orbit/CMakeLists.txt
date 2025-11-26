@@ -113,24 +113,31 @@ add_custom_command(TARGET Orbit POST_BUILD
 
 # Gravix-ScriptCore DLL and dependencies (if scripting is enabled)
 if(GRAVIX_BUILD_SCRIPTING)
+    # Copy the scripting DLL (always, only if different)
     add_custom_command(TARGET Orbit POST_BUILD
-
-        # Copy the scripting DLL
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll"
             "$<TARGET_FILE_DIR:Orbit>"
-
-        # Create the mono runtime directory in the output folder
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-            "$<TARGET_FILE_DIR:Orbit>/lib/mono/4.5"
-
-        # Copy the entire Mono runtime folder (recursive)
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "C:/Program Files/Mono/lib/mono/4.5"
-            "$<TARGET_FILE_DIR:Orbit>/lib/mono/4.5"
-
-        COMMENT "Copying GravixScripting DLL and Mono 4.5 runtime..."
+        COMMENT "Copying GravixScripting DLL..."
     )
+
+    # Copy Mono runtime folder only once (use stamp file)
+    set(MONO_RUNTIME_SOURCE "C:/Program Files/Mono/lib/mono/4.5")
+    set(MONO_RUNTIME_DEST "$<TARGET_FILE_DIR:Orbit>/lib/mono/4.5")
+
+    add_custom_command(
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/mono_runtime.stamp"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${MONO_RUNTIME_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${MONO_RUNTIME_SOURCE}"
+            "${MONO_RUNTIME_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/mono_runtime.stamp"
+        COMMENT "Copying Mono 4.5 runtime (one-time)..."
+        VERBATIM
+    )
+
+    add_custom_target(CopyMonoRuntime DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/mono_runtime.stamp")
+    add_dependencies(Orbit CopyMonoRuntime)
 endif()
 
 

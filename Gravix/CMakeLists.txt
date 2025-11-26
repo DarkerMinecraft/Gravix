@@ -257,15 +257,30 @@ if(GRAVIX_USE_VULKAN)
     )
 endif()
 
-if(GRAVIX_BUILD_SCRIPTING) 
+if(GRAVIX_BUILD_SCRIPTING)
     target_link_libraries(Gravix
         PRIVATE
-            "${CMAKE_SOURCE_DIR}/ThirdParties/mono/lib/${CMAKE_VS_PLATFORM_NAME}/mono-2.0-sgen.lib"
+            debug "${CMAKE_SOURCE_DIR}/ThirdParties/mono/lib/Debug/libmono-static-sgen.lib"
+            optimized "${CMAKE_SOURCE_DIR}/ThirdParties/mono/lib/Release/libmono-static-sgen.lib"
     )
     target_include_directories(Gravix
         PRIVATE
             ${CMAKE_SOURCE_DIR}/ThirdParties/mono/include
     )
+
+    # Define MONO_STATIC_BUILD for static linking
+    target_compile_definitions(Gravix PRIVATE MONO_STATIC_BUILD)
+
+    # Windows dependencies required for static Mono linking
+    if(WIN32)
+        target_link_libraries(Gravix
+            PRIVATE
+                Ws2_32.lib      # WinSock
+                Winmm.lib       # Windows Multimedia
+                Version.lib     # Version API
+                Bcrypt.lib      # Windows Cryptography API
+        )
+    endif()
 endif()
 
 # Platform-specific libraries
