@@ -1,106 +1,131 @@
 #include "pch.h"
 #include "ScriptEngine.h"
 
-#include <nethost.h>
-#include <coreclr_delegates.h>
-#include <hostfxr.h>
+#include <fstream>
+#include <filesystem>
 
-static void* LoadAndGetLibrary(const char_t* libraryPath) 
-{
-#ifdef ENGINE_PLATFORM_WINDOWS
-	return LoadLibraryW(libraryPath);
-#else 
-	return dlOpen(libraryPath, RTLD_LAZY | RTLD_LOCAL);
-#endif 
-}
-
-static void* GetExport(void* host, const char* name) 
-{
-#ifdef ENGINE_PLATFORM_WINDOWS
-	return ::GetProcAddress((HMODULE)host, name);
-#else
-	return dlysm(host, name);
-#endif
-}
+#include <mono/jit/jit.h>
+#include <mono/metadata/assembly.h>
 
 namespace Gravix 
 {
 
-	struct DotNetData 
+	static char* ReadBytes(const std::filesystem::path& filepath, uint32_t* outSize)
 	{
-		void* HostModule;
+		std::ifstream stream(filepath, std::ios::binary | std::ios::ate);
 
-		hostfxr_initialize_for_runtime_config_fn InitFuncPtr;
-		hostfxr_get_runtime_delegate_fn GetDelegateFuncPtr;
-		hostfxr_close_fn CloseFuncPtr;
+		if (!stream)
+		{
+			// Failed to open the file
+			return nullptr;
+		}
 
-		load_assembly_and_get_function_pointer_fn GetDotnetLoadAssemblyFuncPtr;
+		std::streampos end = stream.tellg();
+		stream.seekg(0, std::ios::beg);
+		uint32_t size = end - stream.tellg();
+
+		if (size == 0)
+		{
+			// File is empty
+			return nullptr;
+		}
+
+		char* buffer = new char[size];
+		stream.read((char*)buffer, size);
+		stream.close();
+
+		*outSize = size;
+		return buffer;
+	}
+
+	static MonoAssembly* LoadCSharpAssembly(const std::string& assemblyPath)
+	{
+		uint32_t fileSize = 0;
+		char* fileData = ReadBytes(assemblyPath, &fileSize);
+
+		// NOTE: We can't use this image for anything other than loading the assembly because this image doesn't have a reference to the assembly
+		MonoImageOpenStatus status;
+		MonoImage* image = mono_image_open_from_data_full(fileData, fileSize, 1, &status, 0);
+
+		if (status != MONO_IMAGE_OK)
+		{
+			const char* errorMessage = mono_image_strerror(status);
+			GX_CORE_ERROR("Failed to open C# assembly image from data: {0}", errorMessage);
+
+			return nullptr;
+		}
+
+		MonoAssembly* assembly = mono_assembly_load_from_full(image, assemblyPath.c_str(), &status, 0);
+		mono_image_close(image);
+
+		// Don't forget to free the file data
+		delete[] fileData;
+
+		return assembly;
+	}
+
+	static void PrintAssemblyTypes(MonoAssembly* assembly)
+	{
+		MonoImage* image = mono_assembly_get_image(assembly);
+		const MonoTableInfo* typeDefinitionsTable = mono_image_get_table_info(image, MONO_TABLE_TYPEDEF);
+		int32_t numTypes = mono_table_info_get_rows(typeDefinitionsTable);
+
+		for (int32_t i = 0; i < numTypes; i++)
+		{
+			uint32_t cols[MONO_TYPEDEF_SIZE];
+			mono_metadata_decode_row(typeDefinitionsTable, i, cols, MONO_TYPEDEF_SIZE);
+
+			const char* nameSpace = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAMESPACE]);
+			const char* name = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAME]);
+
+			printf("%s.%s\n", nameSpace, name);
+		}
+	}
+
+	struct ScriptEngineData 
+	{
+		MonoDomain* RootDomain = nullptr;
+		MonoDomain* AppDomain = nullptr;
+
+		MonoAssembly* CoreAssembly = nullptr;
 	};
 
-	static DotNetData* s_Data;
+	static ScriptEngineData* s_Data = nullptr;
 
-	void ScriptEngine::Initialize(const std::filesystem::path& runtimeLibraryPath)
+	void ScriptEngine::Initialize()
 	{
-		s_Data = new DotNetData();
+		s_Data = new ScriptEngineData();
 
-		if (!LoadHostFxr())
-			GX_CORE_ERROR("Failed to load HostFXR");
-		if (!LoadRuntime(runtimeLibraryPath))
-			GX_CORE_ERROR("Failed to load runtime");
+		InitMono();
 	}
 
-	bool ScriptEngine::LoadHostFxr()
+	void ScriptEngine::Shutdown()
 	{
-		char_t buffer[MAX_PATH];
-		size_t bufferSize = sizeof(buffer) / sizeof(char_t);
-
-		int32_t result = get_hostfxr_path(buffer, &bufferSize, nullptr);
-		if (result != 0) 
-		{
-			GX_CORE_ERROR("Unable to find hostfxr (.NET Runtime)");
-			return false;
-		}
-
-		s_Data->HostModule = LoadAndGetLibrary(buffer);
-
-		if (!s_Data->HostModule) 
-		{
-			GX_CORE_ERROR("Unable to load hostfxr");
-			return false;
-		}
-
-		s_Data->InitFuncPtr = (hostfxr_initialize_for_runtime_config_fn)GetExport(s_Data->HostModule, "hostfxr_initialize_for_runtime_config");
-		s_Data->GetDelegateFuncPtr = (hostfxr_get_runtime_delegate_fn)GetExport(s_Data->HostModule, "hostfxr_get_runtime_delegate");
-		s_Data->CloseFuncPtr = (hostfxr_close_fn)GetExport(s_Data->HostModule, "hostfxr_close");
-
-		return (s_Data->InitFuncPtr && s_Data->GetDelegateFuncPtr && s_Data->CloseFuncPtr);
+		ShudownMono();
+		delete s_Data;
 	}
 
-	bool ScriptEngine::LoadRuntime(const std::filesystem::path& runtimeConfigPath)
+	void ScriptEngine::InitMono()
 	{
-		hostfxr_handle cxt = nullptr;
-		int rc = s_Data->InitFuncPtr(runtimeConfigPath.c_str(), nullptr, &cxt);
-		if (rc != 0 || cxt == nullptr) 
+		mono_set_assemblies_path("mono/lib");
+
+		MonoDomain* domain = mono_jit_init("GravixJITRuntime");
+		if (domain == nullptr) 
 		{
-			GX_CORE_ERROR("Init Failed: {0}", rc);
-			s_Data->CloseFuncPtr(cxt);
-			return false;
+			GX_STATIC_CORE_ASSERT("Failed to initialize Mono JIT runtime!");
 		}
 
-		void* load_assembly_and_get_function_pointer = nullptr;
-		rc = s_Data->GetDelegateFuncPtr(
-			cxt,
-			hdt_load_assembly_and_get_function_pointer,
-			&load_assembly_and_get_function_pointer);
-		if (rc != 0 || load_assembly_and_get_function_pointer == nullptr) 
-		{
-			GX_CORE_ERROR("Get Delegate Failed: {0}", rc);
-			s_Data->CloseFuncPtr(cxt);
-			return false;
-		}
+		s_Data->RootDomain = domain;
+		s_Data->AppDomain = mono_domain_create_appdomain((char*)"GravixScriptRuntime", nullptr);
+		mono_domain_set(s_Data->AppDomain, true);
 
-		s_Data->GetDotnetLoadAssemblyFuncPtr = (load_assembly_and_get_function_pointer_fn)load_assembly_and_get_function_pointer;
-		return true;
+		s_Data->CoreAssembly = LoadCSharpAssembly("GravixScripting.dll");
+		PrintAssemblyTypes(s_Data->CoreAssembly);
+	}
+
+	void ScriptEngine::ShudownMono()
+	{
+
 	}
 
 }

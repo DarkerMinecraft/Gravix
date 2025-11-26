@@ -38,7 +38,7 @@ namespace Gravix
 		m_ImGuiRender = new ImGuiRender();
 		ComponentRegistry::Get().RegisterAllComponents();
 
-		ScriptEngine::Initialize("GravixScripting.dll");
+		ScriptEngine::Initialize();
 
 #ifdef ENGINE_DEBUG
 		// Initialize profiler viewer in debug builds

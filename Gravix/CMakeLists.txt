@@ -214,7 +214,6 @@ target_include_directories(Gravix
         ${CMAKE_SOURCE_DIR}/ThirdParties/stb/
         ${CMAKE_SOURCE_DIR}/ThirdParties/yaml/include
         ${CMAKE_SOURCE_DIR}/ThirdParties/Box2D/include
-        ${NETHOST_INCLUDE_DIR}
 )
 
 # Vulkan-specific includes
@@ -255,6 +254,17 @@ if(GRAVIX_USE_VULKAN)
         PRIVATE
             ${Vulkan_LIBRARIES}
             vk-bootstrap
+    )
+endif()
+
+if(GRAVIX_BUILD_SCRIPTING) 
+    target_link_libraries(Gravix
+        PRIVATE
+            "${CMAKE_SOURCE_DIR}/ThirdParties/mono/lib/${CMAKE_VS_PLATFORM_NAME}/mono-2.0-sgen.lib"
+    )
+    target_include_directories(Gravix
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/ThirdParties/mono/include
     )
 endif()
 

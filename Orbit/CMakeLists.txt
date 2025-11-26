@@ -114,18 +114,25 @@ add_custom_command(TARGET Orbit POST_BUILD
 # Gravix-ScriptCore DLL and dependencies (if scripting is enabled)
 if(GRAVIX_BUILD_SCRIPTING)
     add_custom_command(TARGET Orbit POST_BUILD
+
+        # Copy the scripting DLL
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll"
             "$<TARGET_FILE_DIR:Orbit>"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.deps.json"
-            "$<TARGET_FILE_DIR:Orbit>"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.runtimeconfig.json"
-            "$<TARGET_FILE_DIR:Orbit>"
-        COMMENT "Copying GravixScripting DLL and dependencies..."
+
+        # Create the mono runtime directory in the output folder
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:Orbit>/lib/mono/4.5"
+
+        # Copy the entire Mono runtime folder (recursive)
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "C:/Program Files/Mono/lib/mono/4.5"
+            "$<TARGET_FILE_DIR:Orbit>/lib/mono/4.5"
+
+        COMMENT "Copying GravixScripting DLL and Mono 4.5 runtime..."
     )
 endif()
+
 
 # ============================================================================
 # Platform-Specific Settings

@@ -1,17 +1,16 @@
 #pragma once
 
-#include <filesystem>
-
 namespace Gravix 
 {
 
 	class ScriptEngine 
 	{
 	public:
-		static void Initialize(const std::filesystem::path& runtimeLibraryPath);
+		static void Initialize();
+		static void Shutdown();
 	private:
-		static bool LoadHostFxr();
-		static bool LoadRuntime(const std::filesystem::path& runtimeConfigPath);
+		static void InitMono();
+		static void ShudownMono();
 	};
 
 }
