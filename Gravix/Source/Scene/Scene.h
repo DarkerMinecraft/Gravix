@@ -107,6 +107,7 @@ namespace Gravix
 		 */
 		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID(), uint32_t creationIndex = (uint32_t)-1);
 
+		Entity GetEntityByUUID(UUID uuid);
 		/**
 		 * @brief Remove an entity and all its components from the scene
 		 * @param entity Entity to destroy
@@ -236,12 +237,18 @@ namespace Gravix
 			return m_Registry.view<Component...>();
 		}
 	private:
+		void OnPhysics2DStart();
+		void OnPhysics2DUpdate();
+		void OnPhysics2DStop();
+	private:
 		entt::registry m_Registry;
 
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 		uint32_t m_NextCreationIndex = 0;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
+
+		std::unordered_map<UUID, entt::entity> m_EntityMap;
 
 		friend class Entity;
 		friend class SceneSerializer;

@@ -109,6 +109,8 @@ set(GRAVIX_CORE_SOURCES
     # Scripting
     Source/Scripting/ScriptEngine.h
     Source/Scripting/ScriptEngine.cpp
+    Source/Scripting/ScriptGlue.h
+    Source/Scripting/ScriptGlue.cpp
 
     # Serialization
     Source/Serialization/BinaryDeserializer.h

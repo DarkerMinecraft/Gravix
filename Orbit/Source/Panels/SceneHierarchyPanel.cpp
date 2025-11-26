@@ -170,7 +170,7 @@ namespace Gravix
 
 			ImGui::Separator();
 
-			if (ImGui::MenuItem("Delete", "Delete"))
+			if (ImGui::MenuItem("Delete"))
 				entityDeleted = true;
 
 			ImGui::EndPopup();

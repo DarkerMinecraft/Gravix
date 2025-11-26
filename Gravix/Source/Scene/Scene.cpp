@@ -7,6 +7,8 @@
 #include "Renderer/Generic/Renderer2D.h"
 #include "Physics/PhysicsWorld.h"
 
+#include "Scripting/ScriptEngine.h"
+
 namespace Gravix
 {
 
@@ -105,6 +107,8 @@ namespace Gravix
 		entity.AddComponent<TagComponent>(name, uuid, creationIndex == (uint32_t)-1 ? m_NextCreationIndex++ : creationIndex);
 		entity.AddComponent<TransformComponent>();
 
+		m_EntityMap[uuid] = entity;
+
 		// Manually initialize the component order with the default components
 		// (AddComponent tracking happens automatically for these, but we need them in the right order)
 		orderComponent.ComponentOrder = {
@@ -115,10 +119,20 @@ namespace Gravix
 		return entity;
 	}
 
+
+	Entity Scene::GetEntityByUUID(UUID uuid)
+	{
+		GX_ASSERT(m_EntityMap.find(uuid) != m_EntityMap.end(), "Entity with UUID not found in scene!");
+		return Entity{ m_EntityMap[uuid], this };
+	}
+
 	void Scene::DestroyEntity(Entity entity)
 	{
 		if (entity)
+		{
 			m_Registry.destroy(entity);
+			m_EntityMap.erase(entity.GetID());
+		}
 	}
 
 	void Scene::ExtractSceneDependencies(std::vector<AssetHandle>* outDependencies) const
@@ -141,40 +155,25 @@ namespace Gravix
 	}
 	void Scene::OnRuntimeStart()
 	{
-		m_PhysicsWorld = new PhysicsWorld();
-
+		OnPhysics2DStart();
 		{
-			auto view = m_Registry.view<Rigidbody2DComponent>();
-			for (auto e : view)
+			ScriptEngine::OnRuntimeStart(this);
+			
+			auto view = m_Registry.view<ScriptComponent>();
+			for(auto entity : view)
 			{
-				Entity entity = { e, this };
-				auto& transform = entity.GetComponent<TransformComponent>();
-
-				auto& rb2d = view.get<Rigidbody2DComponent>(e);
-				uint64_t bodyID = m_PhysicsWorld->CreateBody(transform, rb2d);
-				rb2d.RuntimeBody = bodyID;
-
-				if (entity.HasComponent<BoxCollider2DComponent>())
-				{
-					auto& boxCollider = entity.GetComponent<BoxCollider2DComponent>();
-					uint64_t shape = m_PhysicsWorld->CreateBoxShape(bodyID, transform, boxCollider);
-					boxCollider.RuntimeShape = shape;
-				}
-
-				if(entity.HasComponent<CircleCollider2DComponent>())
-				{
-					auto& circleCollider = entity.GetComponent<CircleCollider2DComponent>();
-					uint64_t shape = m_PhysicsWorld->CreateCircleShape(bodyID, transform, circleCollider);
-					circleCollider.RuntimeShape = shape;
-				}
+				Entity e = { entity, this };
+				auto& scriptComp = view.get<ScriptComponent>(entity);
+				const auto& entityClasses = ScriptEngine::GetEntityClasses();
+				if (ScriptEngine::IsEntityClassExists(scriptComp.Name))
+					ScriptEngine::OnCreateEntity(e);
 			}
 		}
 	}
 
 	void Scene::OnRuntimeStop()
 	{
-		delete m_PhysicsWorld;
-		m_PhysicsWorld = nullptr;
+		OnPhysics2DStop();
 	}
 
 	void Scene::OnEditorUpdate(float ts)
@@ -184,32 +183,18 @@ namespace Gravix
 
 	void Scene::OnRuntimeUpdate(float ts)
 	{
-		// SCRIPTS FIRST
-
 		{
-			m_PhysicsWorld->Step(1.0f / 60.0f, 4);
-
-			auto view = m_Registry.view<Rigidbody2DComponent>();
-			for (auto e : view)
+			auto view = m_Registry.view<ScriptComponent>();
+			for (auto entity : view)
 			{
-				Entity entity = { e, this };
-				auto& transform = entity.GetComponent<TransformComponent>();
-				auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-				if (rb2d.RuntimeBody)
-				{
-					uint64_t bodyID = rb2d.RuntimeBody;
-					glm::vec2 position = m_PhysicsWorld->GetBodyPosition(bodyID);
-					float rotation = m_PhysicsWorld->GetBodyRotation(bodyID);
-
-					transform.Position.x = position.x;
-					transform.Position.y = position.y;
-					transform.Rotation.z = rotation;
-
-					// Recalculate transform matrix after updating from physics
-					transform.CalculateTransform();
-				}
+				Entity e = { entity, this };
+				auto& scriptComp = view.get<ScriptComponent>(entity);
+				const auto& entityClasses = ScriptEngine::GetEntityClasses();
+				if (ScriptEngine::IsEntityClassExists(scriptComp.Name))
+					ScriptEngine::OnUpdateEntity(e, ts);
 			}
 		}
+		OnPhysics2DUpdate();
 	}
 
 	void Scene::OnEditorRender(Command& cmd, EditorCamera& camera)
@@ -372,7 +357,7 @@ namespace Gravix
 
 	SceneCamera Scene::GetPrimaryCameraEntity(glm::mat4* transform)
 	{
-		for(auto entity : m_Registry.view<CameraComponent>())
+		for (auto entity : m_Registry.view<CameraComponent>())
 		{
 			auto& camera = m_Registry.get<CameraComponent>(entity);
 			if (camera.Primary)
@@ -385,6 +370,71 @@ namespace Gravix
 				return camera.Camera;
 			}
 		}
+		return SceneCamera();
+	}
+
+
+	void Scene::OnPhysics2DStart()
+	{
+		m_PhysicsWorld = new PhysicsWorld();
+
+		auto view = m_Registry.view<Rigidbody2DComponent>();
+		for (auto e : view)
+		{
+			Entity entity = { e, this };
+			auto& transform = entity.GetComponent<TransformComponent>();
+
+			auto& rb2d = view.get<Rigidbody2DComponent>(e);
+			uint64_t bodyID = m_PhysicsWorld->CreateBody(transform, rb2d);
+			rb2d.RuntimeBody = bodyID;
+
+			if (entity.HasComponent<BoxCollider2DComponent>())
+			{
+				auto& boxCollider = entity.GetComponent<BoxCollider2DComponent>();
+				uint64_t shape = m_PhysicsWorld->CreateBoxShape(bodyID, transform, boxCollider);
+				boxCollider.RuntimeShape = shape;
+			}
+
+			if (entity.HasComponent<CircleCollider2DComponent>())
+			{
+				auto& circleCollider = entity.GetComponent<CircleCollider2DComponent>();
+				uint64_t shape = m_PhysicsWorld->CreateCircleShape(bodyID, transform, circleCollider);
+				circleCollider.RuntimeShape = shape;
+			}
+		}
+	}
+
+
+	void Scene::OnPhysics2DUpdate()
+	{
+		m_PhysicsWorld->Step(1.0f / 60.0f, 4);
+
+		auto view = m_Registry.view<Rigidbody2DComponent>();
+		for (auto e : view)
+		{
+			Entity entity = { e, this };
+			auto& transform = entity.GetComponent<TransformComponent>();
+			auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+			if (rb2d.RuntimeBody)
+			{
+				uint64_t bodyID = rb2d.RuntimeBody;
+				glm::vec2 position = m_PhysicsWorld->GetBodyPosition(bodyID);
+				float rotation = m_PhysicsWorld->GetBodyRotation(bodyID);
+
+				transform.Position.x = position.x;
+				transform.Position.y = position.y;
+				transform.Rotation.z = rotation;
+
+				// Recalculate transform matrix after updating from physics
+				transform.CalculateTransform();
+			}
+		}
+	}
+
+	void Scene::OnPhysics2DStop()
+	{
+		delete m_PhysicsWorld;
+		m_PhysicsWorld = nullptr;
 	}
 
 }

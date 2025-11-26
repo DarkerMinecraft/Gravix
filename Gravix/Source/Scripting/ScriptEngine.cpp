@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "ScriptEngine.h"
 
+#include "ScriptGlue.h"
+
 #include <fstream>
 #include <filesystem>
 
@@ -8,9 +10,8 @@
 #include <mono/metadata/assembly.h>
 #include <mono/metadata/object.h>
 
-namespace Gravix 
+namespace Utils 
 {
-
 	static char* ReadBytes(const std::filesystem::path& filepath, uint32_t* outSize)
 	{
 		std::ifstream stream(filepath, std::ios::binary | std::ios::ate);
@@ -39,10 +40,10 @@ namespace Gravix
 		return buffer;
 	}
 
-	static MonoAssembly* LoadCSharpAssembly(const std::string& assemblyPath)
+	static MonoAssembly* LoadMonoAssembly(const std::filesystem::path& assemblyPath)
 	{
 		uint32_t fileSize = 0;
-		char* fileData = ReadBytes(assemblyPath, &fileSize);
+		char* fileData = ReadBytes(assemblyPath.string(), &fileSize);
 
 		// NOTE: We can't use this image for anything other than loading the assembly because this image doesn't have a reference to the assembly
 		MonoImageOpenStatus status;
@@ -56,7 +57,7 @@ namespace Gravix
 			return nullptr;
 		}
 
-		MonoAssembly* assembly = mono_assembly_load_from_full(image, assemblyPath.c_str(), &status, 0);
+		MonoAssembly* assembly = mono_assembly_load_from_full(image, assemblyPath.string().c_str(), &status, 0);
 		mono_image_close(image);
 
 		// Don't forget to free the file data
@@ -79,9 +80,18 @@ namespace Gravix
 			const char* nameSpace = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAMESPACE]);
 			const char* name = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAME]);
 
+			MonoClass* monoClass = mono_class_from_name(image, nameSpace, name);
+			MonoClass* entityClass = mono_class_from_name(image, "Gravix", "Entity");
+
+			bool isEntity = mono_class_is_subclass_of(monoClass, entityClass, false);
+
 			GX_CORE_TRACE("{0}.{1}", nameSpace, name);
 		}
 	}
+}
+
+namespace Gravix 
+{
 
 	struct ScriptEngineData 
 	{
@@ -89,6 +99,14 @@ namespace Gravix
 		MonoDomain* AppDomain = nullptr;
 
 		MonoAssembly* CoreAssembly = nullptr;
+		MonoImage* CoreAssemblyImage = nullptr;
+
+		Scene* SceneContext = nullptr;
+
+		Ref<ScriptClass> EntityClass;
+
+		std::unordered_map<std::string, Ref<ScriptClass>> EntityClasses;
+		std::unordered_map<UUID, Ref<ScriptInstance>> EntityInstances;
 	};
 
 	static ScriptEngineData* s_Data = nullptr;
@@ -98,12 +116,70 @@ namespace Gravix
 		s_Data = new ScriptEngineData();
 
 		InitMono();
+		LoadAssembly("GravixScripting.dll");
 	}
 
 	void ScriptEngine::Shutdown()
 	{
 		ShudownMono();
 		delete s_Data;
+	}
+
+	void ScriptEngine::LoadAssembly(const std::filesystem::path& assemblyPath)
+	{
+		s_Data->AppDomain = mono_domain_create_appdomain((char*)"GravixScriptRuntime", nullptr);
+		mono_domain_set(s_Data->AppDomain, true);
+
+		s_Data->CoreAssembly = Utils::LoadMonoAssembly(assemblyPath);
+		s_Data->CoreAssemblyImage = mono_assembly_get_image(s_Data->CoreAssembly);
+		LoadAssemblyClasses(s_Data->CoreAssemblyImage);
+		ScriptGlue::RegisterFunctions();
+		s_Data->EntityClass = CreateRef<ScriptClass>("GravixEngine", "Entity");
+	}
+
+	void ScriptEngine::OnRuntimeStart(Scene* scene)
+	{
+		s_Data->SceneContext = scene;
+	}
+
+	void ScriptEngine::OnRuntimeStop()
+	{
+		s_Data->EntityInstances.clear();
+		s_Data->SceneContext = nullptr;
+	}
+
+	void ScriptEngine::OnCreateEntity(Entity entity)
+	{
+		const auto& sc = entity.GetComponent<ScriptComponent>();
+		if (ScriptEngine::IsEntityClassExists(sc.Name)) 
+		{
+			Ref<ScriptInstance> instance = CreateRef<ScriptInstance>(s_Data->EntityClasses[sc.Name], entity);
+			s_Data->EntityInstances[entity.GetID()] = instance;
+			instance->InvokeOnCreate();
+		}
+	}
+
+	void ScriptEngine::OnUpdateEntity(Entity entity, float deltaTime)
+	{
+		UUID uuid = entity.GetID();
+		GX_ASSERT(s_Data->EntityInstances.find(uuid) != s_Data->EntityInstances.end(), "Script instance not found for entity!");
+
+		s_Data->EntityInstances[uuid]->InvokeOnUpdate(deltaTime);
+	}
+
+	Scene* ScriptEngine::GetSceneContext()
+	{
+		return s_Data->SceneContext;
+	}
+
+	std::unordered_map<std::string, Ref<ScriptClass>>& ScriptEngine::GetEntityClasses()
+	{
+		return s_Data->EntityClasses;
+	}
+
+	bool ScriptEngine::IsEntityClassExists(const std::string& fullClassName)
+	{
+		return s_Data->EntityClasses.contains(fullClassName);
 	}
 
 	void ScriptEngine::InitMono()
@@ -117,41 +193,100 @@ namespace Gravix
 		}
 
 		s_Data->RootDomain = domain;
-		s_Data->AppDomain = mono_domain_create_appdomain((char*)"GravixScriptRuntime", nullptr);
-		mono_domain_set(s_Data->AppDomain, true);
-
-		s_Data->CoreAssembly = LoadCSharpAssembly("GravixScripting.dll");
-		PrintAssemblyTypes(s_Data->CoreAssembly);
-
-		MonoImage* assemblyImage = mono_assembly_get_image(s_Data->CoreAssembly);
-		MonoClass* monoClass = mono_class_from_name(assemblyImage, "Gravix", "Main");
-
-		MonoObject* instance = mono_object_new(s_Data->AppDomain, monoClass);
-		mono_runtime_object_init(instance);
-
-		MonoMethod* printMessageFunc = mono_class_get_method_from_name(monoClass, "PrintMessage", 0);
-		mono_runtime_invoke(printMessageFunc, instance, nullptr, nullptr);
-
-		MonoMethod* printIntFunc = mono_class_get_method_from_name(monoClass, "PrintInt", 1);
-		int value = 5;
-		void* param = &value;
-		mono_runtime_invoke(printIntFunc, instance, &param, nullptr);
-
-		MonoMethod* printIntsFunc = mono_class_get_method_from_name(monoClass, "PrintInts", 2);
-		int value2 = 508;
-		void* params2[2] = { &value, &value2 };
-		mono_runtime_invoke(printIntsFunc, instance, params2, nullptr);
-
-		MonoMethod* printCustomMessageFunc = mono_class_get_method_from_name(monoClass, "PrintCustomMessage", 1);
-		MonoString* monoString = mono_string_new(s_Data->AppDomain, "Hello World From C++");
-		mono_runtime_invoke(printCustomMessageFunc, instance, (void**)&monoString, nullptr);
-
-		GX_DEBUGBREAK();
 	}
 
 	void ScriptEngine::ShudownMono()
 	{
+		s_Data->AppDomain = nullptr;
+		s_Data->RootDomain = nullptr;
+	}
 
+
+	void ScriptEngine::LoadAssemblyClasses(MonoImage* assemblyImage)
+	{
+		s_Data->EntityClasses.clear();
+
+		const MonoTableInfo* typeDefinitionsTable = mono_image_get_table_info(assemblyImage, MONO_TABLE_TYPEDEF);
+		int32_t numTypes = mono_table_info_get_rows(typeDefinitionsTable);
+
+		for (int32_t i = 0; i < numTypes; i++)
+		{
+			uint32_t cols[MONO_TYPEDEF_SIZE];
+			mono_metadata_decode_row(typeDefinitionsTable, i, cols, MONO_TYPEDEF_SIZE);
+
+			const char* nameSpace = mono_metadata_string_heap(assemblyImage, cols[MONO_TYPEDEF_NAMESPACE]);
+			const char* name = mono_metadata_string_heap(assemblyImage, cols[MONO_TYPEDEF_NAME]);
+			std::string fullName;
+			if(strlen(nameSpace) != 0)
+				fullName = fmt::format("{}.{}", nameSpace, name);
+			else
+				fullName = name;
+
+
+			MonoClass* monoClass = mono_class_from_name(assemblyImage, nameSpace, name);
+			MonoClass* entityClass = mono_class_from_name(assemblyImage, "GravixEngine", "Entity");
+
+			bool isEntity = mono_class_is_subclass_of(monoClass, entityClass, false);
+			if (isEntity) 
+			{
+				s_Data->EntityClasses[fullName] = CreateRef<ScriptClass>(nameSpace, name);
+			}
+		}
+	}
+
+	MonoObject* ScriptEngine::InstantiateClass(MonoClass* monoClass)
+	{
+		MonoObject* instance = mono_object_new(s_Data->AppDomain, monoClass);
+		mono_runtime_object_init(instance);
+		return instance;
+	}
+
+	ScriptClass::ScriptClass(const std::string& classNamespace, const std::string& className)
+		: m_ClassNamespace(classNamespace), m_ClassName(className)
+	{
+		m_MonoClass = mono_class_from_name(s_Data->CoreAssemblyImage, classNamespace.c_str(), className.c_str());
+	}
+
+	MonoObject* ScriptClass::Instantiate()
+	{
+		return ScriptEngine::InstantiateClass(m_MonoClass);
+	}
+
+	MonoMethod* ScriptClass::GetMethod(const std::string& name, int parameterCount)
+	{
+		return mono_class_get_method_from_name(m_MonoClass, name.c_str(), parameterCount);
+	}
+
+	MonoObject* ScriptClass::InvokeMethod(MonoObject* instance, MonoMethod* method, void** params /*= nullptr*/)
+	{
+		return mono_runtime_invoke(method, instance, params, nullptr);
+	}
+
+	ScriptInstance::ScriptInstance(Ref<ScriptClass> scriptClass, Entity entity)
+		: m_ScriptClass(scriptClass)
+	{
+		m_Instance = scriptClass->Instantiate();
+
+		m_Constructor = s_Data->EntityClass->GetMethod(".ctor", 1);
+		m_OnCreateMethod = m_ScriptClass->GetMethod("OnCreate", 0);
+		m_OnUpdateMethod = m_ScriptClass->GetMethod("OnUpdate", 1);
+
+		// Call the constructor
+		UUID entityID = entity.GetID();
+		void* params = &entityID;
+
+		scriptClass->InvokeMethod(m_Instance, m_Constructor, &params);
+	}
+
+	void ScriptInstance::InvokeOnCreate()
+	{
+		m_ScriptClass->InvokeMethod(m_Instance, m_OnCreateMethod);
+	}
+
+	void ScriptInstance::InvokeOnUpdate(float deltaTime)
+	{
+		void* params = &deltaTime;
+		m_ScriptClass->InvokeMethod(m_Instance, m_OnUpdateMethod, &params);
 	}
 
 }

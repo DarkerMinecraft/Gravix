@@ -8,6 +8,8 @@
 #include "Project/Project.h"
 #include "Serialization/YAMLConverters.h"
 
+#include "Scripting/ScriptEngine.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -81,6 +83,42 @@ namespace Gravix
 				ImGuiHelpers::DrawVec3Control("Scale", c.Scale, 1.0f);
 				// Update the transform matrix when values change
 				c.CalculateTransform();
+			}
+		);
+
+		RegisterComponent<ScriptComponent>(
+			"Script",
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
+			nullptr,
+			[](YAML::Emitter& out, ScriptComponent& c)
+			{
+				out << YAML::Key << "Name" << YAML::Value << c.Name;
+			},
+			[](ScriptComponent& c, const YAML::Node& node)
+			{
+				c.Name = node["Name"].as<std::string>();
+			},
+			[](ScriptComponent& c)
+			{
+				bool scriptClassExists = false;
+				if (ScriptEngine::IsEntityClassExists(c.Name))
+					scriptClassExists = true;
+
+				ImGuiHelpers::BeginPropertyRow("Class");
+				char buffer[256];
+				memset(buffer, 0, sizeof(buffer));
+				strcpy_s(buffer, c.Name.c_str());
+				if(!scriptClassExists)
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.3f, 1.0f));
+
+				if (ImGui::InputText("##Class", buffer, sizeof(buffer)))
+				{
+					c.Name = std::string(buffer);
+				}
+
+				if (!scriptClassExists)
+					ImGui::PopStyleColor();
+				ImGuiHelpers::EndPropertyRow();
 			}
 		);
 

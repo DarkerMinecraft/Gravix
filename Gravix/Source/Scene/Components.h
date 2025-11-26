@@ -111,6 +111,14 @@ namespace Gravix
 		CameraComponent(const CameraComponent&) = default;
 	};
 
+	struct ScriptComponent 
+	{
+		std::string Name;
+
+		ScriptComponent() = default;
+		ScriptComponent(const ScriptComponent&) = default;
+	};
+
 	struct Rigidbody2DComponent
 	{
 		enum class BodyType { Static = 0, Dynamic, Kinematic };
