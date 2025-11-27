@@ -122,7 +122,24 @@ namespace Gravix
 		bool HasComponent(std::type_index typeIndex)
 		{
 			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
-			return info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle);
+			bool hasInRegistry = info->GetComponentFunc(m_Scene->m_Registry, m_EntityHandle) != nullptr;
+
+			// Also check multi-component storage
+			if (!hasInRegistry && info->Specification.AllowMultiple)
+			{
+				UUID entityID = GetID();
+				auto entityIt = m_Scene->m_MultiComponents.find(entityID);
+				if (entityIt != m_Scene->m_MultiComponents.end())
+				{
+					auto compIt = entityIt->second.find(typeIndex);
+					if (compIt != entityIt->second.end() && !compIt->second.empty())
+					{
+						return true;
+					}
+				}
+			}
+
+			return hasInRegistry;
 		}
 
 		void* GetComponent(std::type_index typeIndex)
@@ -137,6 +154,10 @@ namespace Gravix
 		{
 			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
 			GX_ASSERT(info, "Component type not registered!");
+
+			// Multi-instance components should use AddComponentInstance<T>() instead
+			GX_ASSERT(!info->Specification.AllowMultiple, "Cannot add multi-instance component through AddComponent(type_index). Use AddComponentInstance<T>() instead!");
+
 			GX_ASSERT(info->AddComponentFunc, "Component has no AddComponentFunc!");
 			GX_ASSERT(!HasComponent(typeIndex), "Entity already has componenet!");
 
@@ -179,6 +200,78 @@ namespace Gravix
 			}
 		}
 
+		// Multi-instance component support
+		template<typename T>
+		std::vector<T*> GetComponents()
+		{
+			std::vector<T*> result;
+			UUID entityID = GetID();
+
+			auto entityIt = m_Scene->m_MultiComponents.find(entityID);
+			if (entityIt != m_Scene->m_MultiComponents.end())
+			{
+				auto compIt = entityIt->second.find(typeid(T));
+				if (compIt != entityIt->second.end())
+				{
+					for (auto& compPtr : compIt->second)
+					{
+						result.push_back(static_cast<T*>(compPtr.get()));
+					}
+				}
+			}
+
+			return result;
+		}
+
+		template<typename T, typename... Args>
+		T& AddComponentInstance(Args&&... args)
+		{
+			auto* info = ComponentRegistry::Get().GetComponentInfo(typeid(T));
+			GX_ASSERT(info && info->Specification.AllowMultiple, "Component must have AllowMultiple=true!");
+
+			UUID entityID = GetID();
+			auto componentPtr = std::make_shared<T>(std::forward<Args>(args)...);
+			T* component = componentPtr.get();
+
+			m_Scene->m_MultiComponents[entityID][typeid(T)].push_back(componentPtr);
+
+			if (info->OnCreateFunc)
+				info->OnCreateFunc(component, m_Scene);
+
+			return *component;
+		}
+
+		template<typename T>
+		void RemoveComponentInstance(int index)
+		{
+			UUID entityID = GetID();
+			auto entityIt = m_Scene->m_MultiComponents.find(entityID);
+			if (entityIt != m_Scene->m_MultiComponents.end())
+			{
+				auto compIt = entityIt->second.find(typeid(T));
+				if (compIt != entityIt->second.end() && index >= 0 && index < compIt->second.size())
+				{
+					compIt->second.erase(compIt->second.begin() + index);
+				}
+			}
+		}
+
+		template<typename T>
+		int GetComponentCount()
+		{
+			UUID entityID = GetID();
+			auto entityIt = m_Scene->m_MultiComponents.find(entityID);
+			if (entityIt != m_Scene->m_MultiComponents.end())
+			{
+				auto compIt = entityIt->second.find(typeid(T));
+				if (compIt != entityIt->second.end())
+				{
+					return compIt->second.size();
+				}
+			}
+			return 0;
+		}
+
 		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }
 		UUID& GetID() { return GetComponent<TagComponent>(); }
 		std::string& GetName() { return GetComponent<TagComponent>(); }
@@ -186,6 +279,8 @@ namespace Gravix
 		const glm::mat4& GetTransform() const { return GetComponent<TransformComponent>(); }
 		const UUID& GetID() const { return GetComponent<TagComponent>(); }
 		const std::string& GetName() const { return GetComponent<TagComponent>(); }
+
+		Scene* GetScene() const { return m_Scene; }
 
 		operator bool() const { return m_EntityHandle != entt::null; }
 		operator uint64_t() const { return (uint64_t)GetID(); }

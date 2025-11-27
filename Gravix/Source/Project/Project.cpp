@@ -70,6 +70,9 @@ namespace Gravix
 		Ref<EditorAssetManager> editorAssetManager = CreateRef<EditorAssetManager>();
 		s_ActiveProject->m_AssetManager = editorAssetManager;
 
+		// Setup scripting environment (create Sandbox.csproj and copy GravixScripting.dll)
+		s_ActiveProject->SetupScriptingEnvironment();
+
 		return s_ActiveProject;
 	}
 
@@ -98,6 +101,9 @@ namespace Gravix
 			editorAssetManager->DeserializeAssetRegistry();
 			s_ActiveProject->m_WorkingDirectory = path.parent_path();
 
+			// Setup scripting environment (create Sandbox.csproj and copy GravixScripting.dll)
+			s_ActiveProject->SetupScriptingEnvironment();
+
 			return s_ActiveProject;
 		}
 
@@ -108,6 +114,164 @@ namespace Gravix
 	{
 		ProjectSerializer serializer(s_ActiveProject);
 		serializer.Serialize(path);
+	}
+
+	void Project::SetupScriptingEnvironment()
+	{
+		// Create Scripts/bin directory if it doesn't exist
+		std::filesystem::path scriptBinPath = m_Config.ScriptPath / "bin";
+		if (!std::filesystem::exists(scriptBinPath))
+		{
+			std::filesystem::create_directories(scriptBinPath);
+			GX_CORE_INFO("Created Scripts/bin directory: {}", scriptBinPath.string());
+		}
+
+		// Handle renaming: remove old .csproj files with different names
+		for (const auto& entry : std::filesystem::directory_iterator(m_Config.ScriptPath))
+		{
+			if (entry.path().extension() == ".csproj")
+			{
+				std::string existingName = entry.path().stem().string();
+				if (existingName != m_Config.Name)
+				{
+					std::filesystem::remove(entry.path());
+					GX_CORE_INFO("Removed old .csproj file: {}", entry.path().string());
+				}
+			}
+		}
+
+		// Create [ProjectName].csproj if it doesn't exist
+		std::filesystem::path csprojPath = m_Config.ScriptPath / (m_Config.Name + ".csproj");
+		if (!std::filesystem::exists(csprojPath))
+		{
+			std::ofstream csprojFile(csprojPath);
+			if (csprojFile.is_open())
+			{
+				csprojFile << R"(<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Build a DLL -->
+    <OutputType>Library</OutputType>
+    <TargetFramework>net48</TargetFramework>
+
+    <!-- Enable recursive include -->
+    <EnableDefaultItems>false</EnableDefaultItems>
+
+    <!-- Mono compatibility -->
+    <UseMscorlib>true</UseMscorlib>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+
+    <!-- Allow older C# syntax required by mcs -->
+    <LangVersion>7.3</LangVersion>
+
+    <!-- Output paths -->
+    <AssemblyName>)" << m_Config.Name << R"(</AssemblyName>
+    <OutputPath>bin/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <!-- Recursive source include from Assets directory -->
+  <ItemGroup>
+    <Compile Include="../Assets/**/*.cs" />
+  </ItemGroup>
+
+  <!-- Reference to GravixScripting.dll (engine core) -->
+  <ItemGroup>
+    <Reference Include="GravixScripting">
+      <HintPath>bin\GravixScripting.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Mono system libraries -->
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Runtime" />
+  </ItemGroup>
+
+  <!-- ILRepack to merge GravixScripting.dll into output -->
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.18.2" />
+  </ItemGroup>
+
+  <Target Name="ILRepack" AfterTargets="Build">
+    <PropertyGroup>
+      <WorkingDirectory>$(MSBuildThisFileDirectory)bin</WorkingDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <InputAssemblies Include="$(OutputPath)GravixScripting.dll" />
+      <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
+    </ItemGroup>
+    <Message Text="Merging GravixScripting.dll + $(AssemblyName).dll into OrbitPlayer.dll..." Importance="High" />
+    <ILRepack
+      OutputType="Dll"
+      MainAssembly="$(OutputPath)GravixScripting.dll"
+      OutputAssembly="$(OutputPath)OrbitPlayer.dll"
+      InputAssemblies="@(InputAssemblies)"
+      WorkingDirectory="$(WorkingDirectory)"
+      Internalize="false"
+    />
+  </Target>
+
+</Project>
+)";
+				csprojFile.close();
+				GX_CORE_INFO("Created {}.csproj: {}", m_Config.Name, csprojPath.string());
+			}
+			else
+			{
+				GX_CORE_ERROR("Failed to create {}.csproj at: {}", m_Config.Name, csprojPath.string());
+			}
+		}
+
+		// Always copy GravixScripting.dll to Scripts/bin
+		// Get the current executable directory
+		std::filesystem::path exePath = std::filesystem::current_path();
+		std::filesystem::path sourceDllPath = exePath / "GravixScripting.dll";
+		std::filesystem::path destDllPath = scriptBinPath / "GravixScripting.dll";
+
+		if (std::filesystem::exists(sourceDllPath))
+		{
+			try
+			{
+				// Copy the DLL, always overwriting
+				std::filesystem::copy_file(sourceDllPath, destDllPath, std::filesystem::copy_options::overwrite_existing);
+				GX_CORE_INFO("Copied GravixScripting.dll to: {}", destDllPath.string());
+			}
+			catch (const std::filesystem::filesystem_error& e)
+			{
+				GX_CORE_ERROR("Failed to copy GravixScripting.dll: {}", e.what());
+			}
+		}
+		else
+		{
+			GX_CORE_ERROR("GravixScripting.dll not found at: {} - Cannot setup scripting environment!", sourceDllPath.string());
+		}
+
+		// Build the game scripts DLL using dotnet build
+		GX_CORE_INFO("Building game scripts...");
+
+		// Use dotnet build (uses Roslyn compiler internally)
+		std::string buildCommand = "dotnet build \"" + csprojPath.string() + "\" -c Release --nologo -v quiet";
+		int buildResult = std::system(buildCommand.c_str());
+
+		if (buildResult == 0)
+		{
+			std::filesystem::path gameDllPath = scriptBinPath / "OrbitPlayer.dll";
+			if (std::filesystem::exists(gameDllPath))
+			{
+				GX_CORE_INFO("Successfully built OrbitPlayer.dll (merged GravixScripting.dll + {}.dll)", m_Config.Name);
+			}
+			else
+			{
+				GX_CORE_WARN("Build completed but OrbitPlayer.dll not found at expected location: {}", gameDllPath.string());
+			}
+		}
+		else
+		{
+			GX_CORE_ERROR("Failed to build game scripts. dotnet build returned error code: {}", buildResult);
+		}
 	}
 
 }

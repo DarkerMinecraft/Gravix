@@ -81,63 +81,131 @@ namespace Gravix
 			const auto& info = it->second;
 			if (info.ImGuiRenderFunc)
 			{
-				if(!entity.HasComponent(typeIndex))
+				// Check if this component allows multiple instances
+				if (info.Specification.AllowMultiple)
 				{
-					componentIndex++;
-					continue;
-				}
+					// Handle multi-instance components
+					Scene* scene = entity.GetScene();
+					UUID entityID = entity.GetID();
 
-				void* component = entity.GetComponent(typeIndex);
-				if (component)
-				{
-					// Store cursor position before rendering component
-					ImVec2 cursorPosBefore = ImGui::GetCursorPos();
-
-					ComponentUserSettings userSettings;
-					info.ImGuiRenderFunc(component, &userSettings);
-
-					// Get the last item rect for drag and drop
-					ImVec2 cursorPosAfter = ImGui::GetCursorPos();
-					ImVec2 itemMin = ImVec2(cursorPosBefore.x, cursorPosBefore.y);
-					ImVec2 itemMax = ImVec2(cursorPosAfter.x, cursorPosAfter.y);
-
-					// Make the entire component area draggable
-					ImGui::SetCursorPos(cursorPosBefore);
-					ImGui::InvisibleButton(("##component_drag_" + std::to_string(componentIndex)).c_str(),
-						ImVec2(ImGui::GetContentRegionAvail().x, cursorPosAfter.y - cursorPosBefore.y));
-					ImGui::SetCursorPos(cursorPosAfter);
-
-					// Drag and drop source
-					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+					auto entityIt = scene->m_MultiComponents.find(entityID);
+					if (entityIt != scene->m_MultiComponents.end())
 					{
-						ImGui::SetDragDropPayload("COMPONENT_REORDER", &componentIndex, sizeof(int));
-						ImGui::Text("Reorder: %s", info.Name.c_str());
-						ImGui::EndDragDropSource();
-					}
-
-					// Drag and drop target
-					if (ImGui::BeginDragDropTarget())
-					{
-						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("COMPONENT_REORDER"))
+						auto compIt = entityIt->second.find(typeIndex);
+						if (compIt != entityIt->second.end())
 						{
-							draggedComponentIndex = *(int*)payload->Data;
-							targetComponentIndex = componentIndex;
+							auto& instances = compIt->second;
+
+							// Render each instance
+							for (size_t i = 0; i < instances.size(); i++)
+							{
+								void* component = instances[i].get();
+
+								// Store cursor position before rendering component
+								ImVec2 cursorPosBefore = ImGui::GetCursorPos();
+
+								ComponentUserSettings userSettings;
+								info.ImGuiRenderFunc(component, &userSettings);
+
+								// Get the last item rect for drag and drop
+								ImVec2 cursorPosAfter = ImGui::GetCursorPos();
+
+								// Mark scene dirty if component was modified
+								if (userSettings.WasModified)
+								{
+									if (m_AppLayer)
+										m_AppLayer->MarkSceneDirty();
+								}
+
+								if(userSettings.RemoveComponent)
+								{
+									// Remove this specific instance
+									instances.erase(instances.begin() + i);
+									if (m_AppLayer)
+										m_AppLayer->MarkSceneDirty();
+									break; // Exit loop after removal to avoid iterator issues
+								}
+							}
+
+							// Add button to create new instances
+							ImGui::Spacing();
+							std::string addButtonLabel = "+ Add " + info.Name;
+							if (ImGui::Button(addButtonLabel.c_str()))
+							{
+								// Add new instance using AddComponentInstance
+								// For ScriptComponent specifically
+								if (typeIndex == typeid(ScriptComponent))
+								{
+									entity.AddComponentInstance<ScriptComponent>();
+									if (m_AppLayer)
+										m_AppLayer->MarkSceneDirty();
+								}
+							}
+							ImGui::Spacing();
 						}
-						ImGui::EndDragDropTarget();
+					}
+				}
+				else
+				{
+					// Handle single-instance components
+					if(!entity.HasComponent(typeIndex))
+					{
+						componentIndex++;
+						continue;
 					}
 
-					// Mark scene dirty if component was modified
-					if (userSettings.WasModified)
+					void* component = entity.GetComponent(typeIndex);
+					if (component)
 					{
-						if (m_AppLayer)
-							m_AppLayer->MarkSceneDirty();
-					}
+						// Store cursor position before rendering component
+						ImVec2 cursorPosBefore = ImGui::GetCursorPos();
 
-					if(userSettings.RemoveComponent && info.RemoveComponentFunc)
-					{
-						entity.RemoveComponent(typeIndex);
-						if (m_AppLayer)
-							m_AppLayer->MarkSceneDirty();
+						ComponentUserSettings userSettings;
+						info.ImGuiRenderFunc(component, &userSettings);
+
+						// Get the last item rect for drag and drop
+						ImVec2 cursorPosAfter = ImGui::GetCursorPos();
+						ImVec2 itemMin = ImVec2(cursorPosBefore.x, cursorPosBefore.y);
+						ImVec2 itemMax = ImVec2(cursorPosAfter.x, cursorPosAfter.y);
+
+						// Make the entire component area draggable
+						ImGui::SetCursorPos(cursorPosBefore);
+						ImGui::InvisibleButton(("##component_drag_" + std::to_string(componentIndex)).c_str(),
+							ImVec2(ImGui::GetContentRegionAvail().x, cursorPosAfter.y - cursorPosBefore.y));
+						ImGui::SetCursorPos(cursorPosAfter);
+
+						// Drag and drop source
+						if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+						{
+							ImGui::SetDragDropPayload("COMPONENT_REORDER", &componentIndex, sizeof(int));
+							ImGui::Text("Reorder: %s", info.Name.c_str());
+							ImGui::EndDragDropSource();
+						}
+
+						// Drag and drop target
+						if (ImGui::BeginDragDropTarget())
+						{
+							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("COMPONENT_REORDER"))
+							{
+								draggedComponentIndex = *(int*)payload->Data;
+								targetComponentIndex = componentIndex;
+							}
+							ImGui::EndDragDropTarget();
+						}
+
+						// Mark scene dirty if component was modified
+						if (userSettings.WasModified)
+						{
+							if (m_AppLayer)
+								m_AppLayer->MarkSceneDirty();
+						}
+
+						if(userSettings.RemoveComponent && info.RemoveComponentFunc)
+						{
+							entity.RemoveComponent(typeIndex);
+							if (m_AppLayer)
+								m_AppLayer->MarkSceneDirty();
+						}
 					}
 				}
 			}
@@ -209,7 +277,9 @@ namespace Gravix
 					continue;
 
 				bool hasComponent = entity.HasComponent(typeIndex);
-				if (!hasComponent)
+
+				// Allow multi-instance components to be added multiple times
+				if (!hasComponent || info.Specification.AllowMultiple)
 				{
 					if(info.Name.empty())
 						continue;
@@ -228,7 +298,19 @@ namespace Gravix
 
 					if (ImGui::MenuItem(info.Name.c_str()))
 					{
-						entity.AddComponent(typeIndex);
+						// For multi-instance components, use AddComponentInstance
+						if (info.Specification.AllowMultiple)
+						{
+							if (typeIndex == typeid(ScriptComponent))
+							{
+								entity.AddComponentInstance<ScriptComponent>();
+							}
+						}
+						else
+						{
+							entity.AddComponent(typeIndex);
+						}
+
 						if (m_AppLayer)
 							m_AppLayer->MarkSceneDirty();
 						searchBuffer[0] = '\0'; // Clear search on selection

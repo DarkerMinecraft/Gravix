@@ -32,6 +32,7 @@ namespace Gravix
 		std::filesystem::path AssetDirectory;
 		std::filesystem::path LibraryDirectory;
 		std::filesystem::path ScriptPath;
+		std::filesystem::path ScriptEditorPath;
 
 		PhysicsSettings Physics;
 	};
@@ -52,6 +53,12 @@ namespace Gravix
 			GX_ASSERT(s_ActiveProject, "No active project!");
 			return s_ActiveProject->m_Config.LibraryDirectory;
 		};
+
+		static std::filesystem::path& GetScriptPath()
+		{
+			GX_ASSERT(s_ActiveProject, "No active project!");
+			return s_ActiveProject->m_Config.ScriptPath;
+		}
 
 		static std::filesystem::path& GetWorkingDirectory() 
 		{
@@ -81,6 +88,8 @@ namespace Gravix
 		static Ref<Project> Load(const std::filesystem::path& path);
 		static void SaveActive(const std::filesystem::path& path);
 	private:
+		void SetupScriptingEnvironment();
+
 		ProjectConfig m_Config;
 		std::filesystem::path m_WorkingDirectory;
 

@@ -30,6 +30,7 @@ namespace Gravix
 		out << YAML::Key << "AssetDirectory" << YAML::Value << relativeAssetDir.string();
 		out << YAML::Key << "LibraryDirectory" << YAML::Value << relativeLibraryDir.string();
 		out << YAML::Key << "ScriptPath" << YAML::Value << relativeScriptPath.string();
+		out << YAML::Key << "ScriptEditorPath" << YAML::Value << config.ScriptEditorPath.string();
 
 		// Serialize Physics Settings
 		out << YAML::Key << "Physics" << YAML::BeginMap;
@@ -70,6 +71,10 @@ namespace Gravix
 		config.AssetDirectory = projectNode["AssetDirectory"].as<std::string>();
 		config.LibraryDirectory = projectNode["LibraryDirectory"].as<std::string>();
 		config.ScriptPath = projectNode["ScriptPath"].as<std::string>();
+
+		// ScriptEditorPath is optional (for backwards compatibility)
+		if (projectNode["ScriptEditorPath"])
+			config.ScriptEditorPath = projectNode["ScriptEditorPath"].as<std::string>();
 
 		// Deserialize Physics Settings (with defaults if not present)
 		auto physicsNode = projectNode["Physics"];

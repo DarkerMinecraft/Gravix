@@ -8,6 +8,11 @@
 
 #include <filesystem>
 #include <imgui.h>
+#include <algorithm>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 namespace Gravix 
 {
@@ -36,78 +41,9 @@ namespace Gravix
 		// Top toolbar with modern styling
 		ImGui::BeginGroup();
 
-		// Create button with dropdown menu
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.529f, 0.808f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.353f, 0.627f, 0.902f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.208f, 0.471f, 0.749f, 1.0f));
-		ImGui::PushFont(io.Fonts->Fonts[1]); // Bold font
-		ImGui::AlignTextToFramePadding();
-		if (ImGui::Button("+ Create", ImVec2(80.0f, 0.0f)))
-		{
-			ImGui::OpenPopup("CreateAssetPopup");
-		}
-		ImGui::PopFont();
-		ImGui::PopStyleColor(3);
-
-		// Create asset popup menu
-		if (ImGui::BeginPopup("CreateAssetPopup"))
-		{
-			ImGui::PushFont(io.Fonts->Fonts[1]);
-			ImGui::TextColored(ImVec4(0.267f, 0.529f, 0.808f, 1.0f), "Create New Asset");
-			ImGui::PopFont();
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Scene"))
-			{
-				CreateNewScene();
-				ImGui::CloseCurrentPopup();
-			}
-
-			if (ImGui::MenuItem("Material"))
-			{
-				// TODO: Create new material
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::Separator();
-
-			if (ImGui::MenuItem("Folder"))
-			{
-				// Create new folder in current directory
-				std::filesystem::path newFolderPath = m_CurrentDirectory / "New Folder";
-				int counter = 1;
-				while (std::filesystem::exists(newFolderPath))
-				{
-					newFolderPath = m_CurrentDirectory / ("New Folder " + std::to_string(counter++));
-				}
-
-				try
-				{
-					std::filesystem::create_directory(newFolderPath);
-					GX_CORE_INFO("Created folder: {0}", newFolderPath.filename().string());
-					RefreshAssetTree();
-				}
-				catch (const std::filesystem::filesystem_error& e)
-				{
-					GX_CORE_ERROR("Failed to create folder: {0}", e.what());
-				}
-
-				ImGui::CloseCurrentPopup();
-			}
-
-			if (ImGui::MenuItem("C++ Script"))
-			{
-				// TODO: Create new C++ script
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-
 		// Unity-style navigation bar with back button
 		if(m_CurrentDirectory != m_AssetDirectory)
 		{
-			ImGui::SameLine();
 			// Styled back button
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.267f, 0.267f, 0.267f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.349f, 0.349f, 0.349f, 1.0f));
@@ -193,8 +129,18 @@ namespace Gravix
 			ImGui::PopStyleColor(3);
 			if (ImGui::IsItemHovered())
 			{
-				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && isDirectory)
-					m_CurrentDirectory /= item.filename();
+				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				{
+					if (isDirectory)
+					{
+						m_CurrentDirectory /= item.filename();
+					}
+					else if (fullPath.extension() == ".cs")
+					{
+						// Open C# script file with configured editor
+						OpenScriptFile(fullPath);
+					}
+				}
 			}
 
 			// Right-click context menu
@@ -244,6 +190,44 @@ namespace Gravix
 		}
 
 		ImGui::Columns(1);
+
+		// Right-click context menu in empty space
+		if (ImGui::BeginPopupContextWindow("ContentBrowserContextMenu", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+		{
+			if (ImGui::MenuItem("Scene"))
+			{
+				CreateNewScene();
+			}
+
+			if (ImGui::MenuItem("Script (C#)"))
+			{
+				CreateNewScript();
+			}
+
+			if (ImGui::MenuItem("Folder"))
+			{
+				// Create new folder in current directory
+				std::filesystem::path newFolderPath = m_CurrentDirectory / "New Folder";
+				int counter = 1;
+				while (std::filesystem::exists(newFolderPath))
+				{
+					newFolderPath = m_CurrentDirectory / ("New Folder " + std::to_string(counter++));
+				}
+
+				try
+				{
+					std::filesystem::create_directory(newFolderPath);
+					GX_CORE_INFO("Created folder: {0}", newFolderPath.filename().string());
+					RefreshAssetTree();
+				}
+				catch (const std::filesystem::filesystem_error& e)
+				{
+					GX_CORE_ERROR("Failed to create folder: {0}", e.what());
+				}
+			}
+
+			ImGui::EndPopup();
+		}
 
 		// Rename dialog
 		if (m_IsRenaming)
@@ -368,14 +352,11 @@ namespace Gravix
 			}
 		}
 
-		// Now scan for all directories (including empty ones) and add them to the tree
+		// Now scan for all files and directories and add them to the tree
 		try
 		{
 			for (const auto& entry : std::filesystem::recursive_directory_iterator(m_AssetDirectory))
 			{
-				if (!entry.is_directory())
-					continue;
-
 				auto relativePath = std::filesystem::relative(entry.path(), m_AssetDirectory);
 				uint32_t currentNodeIndex = 0;
 
@@ -389,7 +370,8 @@ namespace Gravix
 					}
 					else
 					{
-						TreeNode newNode(p, 0); // Directories don't have asset handles
+						// Create new node for both files and directories
+						TreeNode newNode(p, 0); // Non-asset files get handle 0
 						newNode.Parent = currentNodeIndex;
 						m_TreeNodes.push_back(newNode);
 
@@ -401,7 +383,7 @@ namespace Gravix
 		}
 		catch (const std::filesystem::filesystem_error& e)
 		{
-			GX_CORE_ERROR("Failed to scan directories: {0}", e.what());
+			GX_CORE_ERROR("Failed to scan filesystem: {0}", e.what());
 		}
 	}
 
@@ -596,6 +578,145 @@ namespace Gravix
 		{
 			GX_CORE_ERROR("Failed to create new scene: {0}", e.what());
 		}
+	}
+
+	void ContentBrowserPanel::CreateNewScript()
+	{
+		// Generate a unique script file name
+		std::filesystem::path newScriptPath = m_CurrentDirectory / "NewScript.cs";
+		int counter = 1;
+		while (std::filesystem::exists(newScriptPath))
+		{
+			newScriptPath = m_CurrentDirectory / ("NewScript" + std::to_string(counter++) + ".cs");
+		}
+
+		try
+		{
+			// Ensure the parent directory exists
+			if (!std::filesystem::exists(m_CurrentDirectory))
+			{
+				std::filesystem::create_directories(m_CurrentDirectory);
+			}
+
+			// Get the class name from the filename
+			std::string className = newScriptPath.stem().string();
+
+			// Create the C# script with a basic template
+			std::ofstream scriptFile(newScriptPath);
+			if (scriptFile.is_open())
+			{
+				scriptFile << "using GravixEngine;\n";
+				scriptFile << "\n";
+				scriptFile << "public class " << className << " : Entity\n";
+				scriptFile << "{\n";
+				scriptFile << "    public void OnCreate()\n";
+				scriptFile << "    {\n";
+				scriptFile << "        \n";
+				scriptFile << "    }\n";
+				scriptFile << "\n";
+				scriptFile << "    public void OnUpdate(float deltaTime)\n";
+				scriptFile << "    {\n";
+				scriptFile << "        \n";
+				scriptFile << "    }\n";
+				scriptFile << "}\n";
+
+				scriptFile.close();
+
+				// Refresh the asset tree to show the new script
+				RefreshAssetTree();
+
+				GX_CORE_INFO("Created new script: {0}", newScriptPath.filename().string());
+			}
+			else
+			{
+				GX_CORE_ERROR("Failed to create script file: {0}", newScriptPath.string());
+			}
+		}
+		catch (const std::exception& e)
+		{
+			GX_CORE_ERROR("Failed to create new script: {0}", e.what());
+		}
+	}
+
+	void ContentBrowserPanel::OpenScriptFile(const std::filesystem::path& scriptPath)
+	{
+		auto& config = Project::GetActive()->GetConfig();
+
+		// Check if script editor is configured
+		if (config.ScriptEditorPath.empty())
+		{
+			GX_CORE_WARN("No external script editor configured. Please set one in Project Settings.");
+			return;
+		}
+
+		// Check if the configured editor exists
+		if (!std::filesystem::exists(config.ScriptEditorPath))
+		{
+			GX_CORE_ERROR("Script editor not found at: {0}", config.ScriptEditorPath.string());
+			return;
+		}
+
+		// Find the .csproj file in the Scripts directory
+		std::filesystem::path csprojPath = config.ScriptPath / (config.Name + ".csproj");
+
+		std::string command;
+
+		// Check if .csproj exists
+		if (std::filesystem::exists(csprojPath))
+		{
+			// For Visual Studio (devenv.exe), open the project and navigate to the file
+			std::string editorName = config.ScriptEditorPath.filename().string();
+			std::transform(editorName.begin(), editorName.end(), editorName.begin(), ::tolower);
+
+			if (editorName.find("devenv") != std::string::npos)
+			{
+				// Visual Studio: open project and navigate to file
+				command = "\"" + config.ScriptEditorPath.string() + "\" \"" + csprojPath.string() + "\" /Edit \"" + scriptPath.string() + "\"";
+			}
+			else
+			{
+				// Other editors: open project file
+				command = "\"" + config.ScriptEditorPath.string() + "\" \"" + csprojPath.string() + "\"";
+			}
+
+			GX_CORE_INFO("Opening project: {0} with file: {1}", csprojPath.filename().string(), scriptPath.filename().string());
+		}
+		else
+		{
+			// Fallback: just open the script file
+			command = "\"" + config.ScriptEditorPath.string() + "\" \"" + scriptPath.string() + "\"";
+			GX_CORE_WARN("Project file not found: {0}. Opening script file directly.", csprojPath.string());
+		}
+
+		// Launch the process (Windows)
+#ifdef _WIN32
+		STARTUPINFOA si = { sizeof(si) };
+		PROCESS_INFORMATION pi;
+
+		if (CreateProcessA(
+			NULL,
+			const_cast<char*>(command.c_str()),
+			NULL,
+			NULL,
+			FALSE,
+			0,
+			NULL,
+			NULL,
+			&si,
+			&pi))
+		{
+			// Close handles as we don't need to wait for the process
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+		}
+		else
+		{
+			GX_CORE_ERROR("Failed to open script file with editor");
+		}
+#else
+		// For other platforms, use system()
+		system(command.c_str());
+#endif
 	}
 
 }

@@ -10,6 +10,7 @@
 
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
+#include <typeindex>
 #include "SceneCamera.h"
 
 namespace Gravix
@@ -253,6 +254,10 @@ namespace Gravix
 		Ref<PhysicsWorld> m_PhysicsWorld;
 
 		std::unordered_map<UUID, entt::entity> m_EntityMap;
+
+		// Storage for components with AllowMultiple=true
+		// Maps: Entity UUID -> Component Type -> Vector of component instances
+		std::unordered_map<UUID, std::unordered_map<std::type_index, std::vector<std::shared_ptr<void>>>> m_MultiComponents;
 
 		friend class Entity;
 		friend class SceneSerializer;

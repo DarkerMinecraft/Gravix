@@ -88,7 +88,7 @@ namespace Gravix
 
 		RegisterComponent<ScriptComponent>(
 			"Script",
-			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true },
+			ComponentSpecification{ .HasNodeTree = true, .CanRemoveComponent = true, .AllowMultiple = true },
 			nullptr,
 			[](YAML::Emitter& out, ScriptComponent& c)
 			{

@@ -22,10 +22,37 @@ namespace Gravix
 			const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
 			if (info.SerializeFunc && info.GetComponentFunc)
 			{
-				void* component = info.GetComponentFunc(m_Scene->m_Registry, entity);
-				if (component)
+				// Check if this is a multi-instance component
+				if (info.Specification.AllowMultiple)
 				{
-					info.SerializeFunc(out, component);
+					// Serialize all instances of this component
+					UUID entityID = entity.GetID();
+					auto entityIt = m_Scene->m_MultiComponents.find(entityID);
+					if (entityIt != m_Scene->m_MultiComponents.end())
+					{
+						auto compIt = entityIt->second.find(typeIndex);
+						if (compIt != entityIt->second.end() && !compIt->second.empty())
+						{
+							// Serialize as array
+							out << YAML::Key << info.Name + "Components" << YAML::BeginSeq;
+							for (auto& compPtr : compIt->second)
+							{
+								out << YAML::BeginMap;
+								info.SerializeFunc(out, compPtr.get());
+								out << YAML::EndMap;
+							}
+							out << YAML::EndSeq;
+						}
+					}
+				}
+				else
+				{
+					// Single instance component - serialize normally
+					void* component = info.GetComponentFunc(m_Scene->m_Registry, entity);
+					if (component)
+					{
+						info.SerializeFunc(out, component);
+					}
 				}
 			}
 		}
@@ -141,16 +168,41 @@ namespace Gravix
 					const auto& info = it->second;
 					if (info.DeserializeFunc)
 					{
-						std::string componentName = info.Name + "Component";
-						auto componentNode = entity[componentName];
-						if (componentNode)
+						// Check if this is a multi-instance component
+						if (info.Specification.AllowMultiple)
 						{
-							if (!deserializedEntity.HasComponent(typeIndex))
-								deserializedEntity.AddComponent(typeIndex);
+							// Look for the array format: "ScriptComponents"
+							std::string componentsArrayName = info.Name + "Components";
+							auto componentsArrayNode = entity[componentsArrayName];
+							if (componentsArrayNode && componentsArrayNode.IsSequence())
+							{
+								// Deserialize each instance
+								for (const auto& componentNode : componentsArrayNode)
+								{
+									// Create a new instance in multi-storage
+									if (typeIndex == typeid(ScriptComponent))
+									{
+										auto comp = std::make_shared<ScriptComponent>();
+										info.DeserializeFunc(comp.get(), componentNode);
+										m_Scene->m_MultiComponents[deserializedEntity.GetID()][typeIndex].push_back(comp);
+									}
+								}
+							}
+						}
+						else
+						{
+							// Single instance component
+							std::string componentName = info.Name + "Component";
+							auto componentNode = entity[componentName];
+							if (componentNode)
+							{
+								if (!deserializedEntity.HasComponent(typeIndex))
+									deserializedEntity.AddComponent(typeIndex);
 
-							void* component = deserializedEntity.GetComponent(typeIndex);
-							if (component)
-								info.DeserializeFunc(component, componentNode);
+								void* component = deserializedEntity.GetComponent(typeIndex);
+								if (component)
+									info.DeserializeFunc(component, componentNode);
+							}
 						}
 					}
 				}
@@ -264,16 +316,41 @@ namespace Gravix
 					const auto& info = it->second;
 					if (info.DeserializeFunc)
 					{
-						std::string componentName = info.Name + "Component";
-						auto componentNode = entity[componentName];
-						if (componentNode)
+						// Check if this is a multi-instance component
+						if (info.Specification.AllowMultiple)
 						{
-							if (!deserializedEntity.HasComponent(typeIndex))
-								deserializedEntity.AddComponent(typeIndex);
+							// Look for the array format: "ScriptComponents"
+							std::string componentsArrayName = info.Name + "Components";
+							auto componentsArrayNode = entity[componentsArrayName];
+							if (componentsArrayNode && componentsArrayNode.IsSequence())
+							{
+								// Deserialize each instance
+								for (const auto& componentNode : componentsArrayNode)
+								{
+									// Create a new instance in multi-storage
+									if (typeIndex == typeid(ScriptComponent))
+									{
+										auto comp = std::make_shared<ScriptComponent>();
+										info.DeserializeFunc(comp.get(), componentNode);
+										m_Scene->m_MultiComponents[deserializedEntity.GetID()][typeIndex].push_back(comp);
+									}
+								}
+							}
+						}
+						else
+						{
+							// Single instance component
+							std::string componentName = info.Name + "Component";
+							auto componentNode = entity[componentName];
+							if (componentNode)
+							{
+								if (!deserializedEntity.HasComponent(typeIndex))
+									deserializedEntity.AddComponent(typeIndex);
 
-							void* component = deserializedEntity.GetComponent(typeIndex);
-							if (component)
-								info.DeserializeFunc(component, componentNode);
+								void* component = deserializedEntity.GetComponent(typeIndex);
+								if (component)
+									info.DeserializeFunc(component, componentNode);
+							}
 						}
 					}
 				}

@@ -111,7 +111,7 @@ namespace Gravix
 		CameraComponent(const CameraComponent&) = default;
 	};
 
-	struct ScriptComponent 
+	struct ScriptComponent
 	{
 		std::string Name;
 

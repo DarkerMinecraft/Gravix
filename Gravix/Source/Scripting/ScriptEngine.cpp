@@ -93,7 +93,7 @@ namespace Utils
 namespace Gravix 
 {
 
-	struct ScriptEngineData 
+	struct ScriptEngineData
 	{
 		MonoDomain* RootDomain = nullptr;
 		MonoDomain* AppDomain = nullptr;
@@ -106,7 +106,7 @@ namespace Gravix
 		Ref<ScriptClass> EntityClass;
 
 		std::unordered_map<std::string, Ref<ScriptClass>> EntityClasses;
-		std::unordered_map<UUID, Ref<ScriptInstance>> EntityInstances;
+		std::unordered_map<UUID, std::vector<Ref<ScriptInstance>>> EntityInstances;
 	};
 
 	static Ref<ScriptEngineData> s_Data = nullptr;
@@ -150,21 +150,34 @@ namespace Gravix
 
 	void ScriptEngine::OnCreateEntity(Entity entity)
 	{
-		const auto& sc = entity.GetComponent<ScriptComponent>();
-		if (ScriptEngine::IsEntityClassExists(sc.Name)) 
+		UUID entityID = entity.GetID();
+		s_Data->EntityInstances[entityID].clear();
+
+		// Get all script components (supports multiple)
+		auto scriptComponents = entity.GetComponents<ScriptComponent>();
+		for (auto* sc : scriptComponents)
 		{
-			Ref<ScriptInstance> instance = CreateRef<ScriptInstance>(s_Data->EntityClasses[sc.Name], entity);
-			s_Data->EntityInstances[entity.GetID()] = instance;
-			instance->InvokeOnCreate();
+			if (ScriptEngine::IsEntityClassExists(sc->Name))
+			{
+				Ref<ScriptInstance> instance = CreateRef<ScriptInstance>(s_Data->EntityClasses[sc->Name], entity);
+				s_Data->EntityInstances[entityID].push_back(instance);
+				instance->InvokeOnCreate();
+			}
 		}
 	}
 
 	void ScriptEngine::OnUpdateEntity(Entity entity, float deltaTime)
 	{
 		UUID uuid = entity.GetID();
-		GX_ASSERT(s_Data->EntityInstances.find(uuid) != s_Data->EntityInstances.end(), "Script instance not found for entity!");
 
-		s_Data->EntityInstances[uuid]->InvokeOnUpdate(deltaTime);
+		// Update all script instances for this entity
+		if (s_Data->EntityInstances.find(uuid) != s_Data->EntityInstances.end())
+		{
+			for (auto& instance : s_Data->EntityInstances[uuid])
+			{
+				instance->InvokeOnUpdate(deltaTime);
+			}
+		}
 	}
 
 	Scene* ScriptEngine::GetSceneContext()

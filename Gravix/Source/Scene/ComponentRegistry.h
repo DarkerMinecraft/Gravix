@@ -20,6 +20,7 @@ namespace Gravix
 	{
 		bool HasNodeTree = false;
 		bool CanRemoveComponent = true;
+		bool AllowMultiple = false;
 	};
 
 	struct ComponentUserSettings
@@ -31,6 +32,7 @@ namespace Gravix
 	struct ComponentInfo
 	{
 		std::string Name;
+		ComponentSpecification Specification;
 		std::function<void(void*, Scene*)> OnCreateFunc;
 		std::function<void(YAML::Emitter&, void*)> SerializeFunc;
 		std::function<void(void*, const YAML::Node&)> DeserializeFunc;
@@ -60,6 +62,7 @@ namespace Gravix
 		{
 			ComponentInfo info;
 			info.Name = name;
+			info.Specification = specification;
 			info.OnCreateFunc = [onCreate](void* instance, Scene* scene)
 				{
 					if (onCreate)

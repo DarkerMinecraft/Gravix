@@ -34,6 +34,7 @@ namespace Gravix
 				strncpy(m_AssetDirectoryBuffer, config.AssetDirectory.string().c_str(), sizeof(m_AssetDirectoryBuffer) - 1);
 				strncpy(m_LibraryDirectoryBuffer, config.LibraryDirectory.string().c_str(), sizeof(m_LibraryDirectoryBuffer) - 1);
 				strncpy(m_ScriptPathBuffer, config.ScriptPath.string().c_str(), sizeof(m_ScriptPathBuffer) - 1);
+				strncpy(m_ScriptEditorPathBuffer, config.ScriptEditorPath.string().c_str(), sizeof(m_ScriptEditorPathBuffer) - 1);
 				initialized = true;
 			}
 
@@ -78,6 +79,7 @@ namespace Gravix
 				config.AssetDirectory = m_AssetDirectoryBuffer;
 				config.LibraryDirectory = m_LibraryDirectoryBuffer;
 				config.ScriptPath = m_ScriptPathBuffer;
+				config.ScriptEditorPath = m_ScriptEditorPathBuffer;
 
 				Project::SaveActive(Project::GetActive()->GetWorkingDirectory() / ".orbproj");
 			}
@@ -91,6 +93,7 @@ namespace Gravix
 				strncpy(m_AssetDirectoryBuffer, config.AssetDirectory.string().c_str(), sizeof(m_AssetDirectoryBuffer) - 1);
 				strncpy(m_LibraryDirectoryBuffer, config.LibraryDirectory.string().c_str(), sizeof(m_LibraryDirectoryBuffer) - 1);
 				strncpy(m_ScriptPathBuffer, config.ScriptPath.string().c_str(), sizeof(m_ScriptPathBuffer) - 1);
+				strncpy(m_ScriptEditorPathBuffer, config.ScriptEditorPath.string().c_str(), sizeof(m_ScriptEditorPathBuffer) - 1);
 			}
 
 			ImGui::SameLine();
@@ -142,6 +145,21 @@ namespace Gravix
 		ImGui::Text("Script Path");
 		ImGui::SetNextItemWidth(-1);
 		ImGui::InputText("##ScriptPath", m_ScriptPathBuffer, sizeof(m_ScriptPathBuffer));
+		ImGui::Spacing();
+
+		// Script Editor
+		ImGui::Text("External Script Editor");
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80.0f); // Leave space for Browse button
+		ImGui::InputText("##ScriptEditorPath", m_ScriptEditorPathBuffer, sizeof(m_ScriptEditorPathBuffer));
+		ImGui::SameLine();
+		if (ImGui::Button("Browse...", ImVec2(75, 0)))
+		{
+			std::filesystem::path filepath = FileDialogs::OpenFile("Executable Files (*.exe)\0*.exe\0All Files\0*.*\0");
+			if (!filepath.empty())
+			{
+				strncpy(m_ScriptEditorPathBuffer, filepath.string().c_str(), sizeof(m_ScriptEditorPathBuffer) - 1);
+			}
+		}
 		ImGui::Spacing();
 
 		ImGui::Separator();

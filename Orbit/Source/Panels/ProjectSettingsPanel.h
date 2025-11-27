@@ -32,6 +32,7 @@ namespace Gravix
 		char m_AssetDirectoryBuffer[512] = "";
 		char m_LibraryDirectoryBuffer[512] = "";
 		char m_ScriptPathBuffer[512] = "";
+		char m_ScriptEditorPathBuffer[512] = "";
 	};
 
 }

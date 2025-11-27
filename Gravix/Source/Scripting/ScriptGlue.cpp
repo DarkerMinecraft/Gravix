@@ -3,12 +3,12 @@
 #include "ScriptEngine.h"
 
 #include "Physics/PhysicsWorld.h"
-#include "Core/UUID.h"
 #include "Scene/Scene.h"
 #include "Scene/Entity.h"
 #include "Scene/Components.h"
 #include "Scene/ComponentRegistry.h"
 
+#include "Core/UUID.h"
 #include "Core/Input.h"
 
 #include <mono/metadata/loader.h>
@@ -22,6 +22,20 @@ namespace Gravix
 {
 
 	std::unordered_map<MonoType*, std::type_index> s_MonoTypeToTypeIndex;
+
+	#pragma region Input
+
+	static bool Input_IsKeyDown(Key key)
+	{
+		return Input::IsKeyDown(key);
+	}
+
+	static bool Input_IsKeyPressed(Key key)
+	{
+		return Input::IsKeyPressed(key);
+	}
+
+	#pragma endregion
 
 	#pragma region Entity
 	static bool Entity_HasComponent(UUID entityID, MonoReflectionType* componentType)
@@ -109,20 +123,6 @@ namespace Gravix
 		GX_ASSERT(entity.HasComponent<TransformComponent>(), "Entity does not have TransformComponent!");
 		entity.GetComponent<TransformComponent>().Scale = *scale;
 	}
-	#pragma endregion
-
-	#pragma region Input
-
-	static bool Input_IsKeyDown(Key key)
-	{
-		return Input::IsKeyDown(key);
-	}
-
-	static bool Input_IsKeyPressed(Key key)
-	{
-		return Input::IsKeyPressed(key);
-	}
-
 	#pragma endregion
 
 	#pragma region Rigidbody2DComponent
