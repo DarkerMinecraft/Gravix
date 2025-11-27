@@ -71,13 +71,15 @@ namespace Gravix
 	public:
 		/**
 		 * @brief Default constructor
+		 * Defined in .cpp to allow Ref<PhysicsWorld> to work with incomplete type
 		 */
-		Scene() = default;
+		Scene();
 
 		/**
 		 * @brief Default destructor
+		 * Defined in .cpp to allow Ref<PhysicsWorld> to work with incomplete type
 		 */
-		~Scene() = default;
+		~Scene();
 
 		/**
 		 * @brief Create a deep copy of a scene
@@ -214,6 +216,8 @@ namespace Gravix
 		 */
 		uint32_t GetViewportHeight() const { return m_ViewportHeight; }
 
+		Ref<PhysicsWorld> GetPhysicsWorld2D(); 
+
 		/**
 		 * @brief Get the primary camera entity in the scene
 		 * @return Entity with CameraComponent marked as primary
@@ -246,7 +250,7 @@ namespace Gravix
 		uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 		uint32_t m_NextCreationIndex = 0;
 
-		PhysicsWorld* m_PhysicsWorld = nullptr;
+		Ref<PhysicsWorld> m_PhysicsWorld;
 
 		std::unordered_map<UUID, entt::entity> m_EntityMap;
 

@@ -25,7 +25,7 @@ namespace Gravix
 		// Vertex buffer device address
 		virtual uint64_t GetVertexBufferAddress() const = 0;
 
-		static Ref<Mesh> Create(size_t vertexSize);
+		static Ref<Mesh> Create(size_t vertexSize, size_t vertexCapacity = 1024, size_t indexCapacity = 1024);
 	};
 
 }

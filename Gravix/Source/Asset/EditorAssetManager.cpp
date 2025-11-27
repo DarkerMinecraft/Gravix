@@ -23,7 +23,7 @@ namespace Gravix
 		return IsAssetHandleValid(handle) ? m_AssetRegistry.at(handle).Type : AssetType::None;
 	}
 
-	void EditorAssetManager::PushToCompletionQueue(AsyncLoadRequest* request)
+	void EditorAssetManager::PushToCompletionQueue(Ref<AsyncLoadRequest> request)
 	{
 		std::lock_guard<std::mutex> lock(m_CompletionQueueMutex);
 		m_CompletionQueue.push(request);
@@ -33,7 +33,7 @@ namespace Gravix
 	{
 		GX_PROFILE_FUNCTION();
 
-		std::vector<AsyncLoadRequest*> completedRequests;
+		std::vector<Ref<AsyncLoadRequest>> completedRequests;
 		{
 			GX_PROFILE_SCOPE("GatherCompletedRequests");
 			std::lock_guard<std::mutex> lock(m_CompletionQueueMutex);
@@ -48,14 +48,13 @@ namespace Gravix
 
 		{
 			GX_PROFILE_SCOPE("ProcessCompletedRequests");
-			for(AsyncLoadRequest* request : completedRequests)
+			for(Ref<AsyncLoadRequest> request : completedRequests)
 			{
 			if (request->State == AssetState::Failed)
 			{
 				GX_CORE_ERROR("Failed to load asset asynchronously: {0}", request->FilePath.string());
 				m_LoadingAssets.erase(request->Handle);
-
-				delete request;
+				// No delete needed - Ref<> handles cleanup
 				continue;
 			}
 			if (request->State == AssetState::ReadyForGPU)
@@ -77,7 +76,7 @@ namespace Gravix
 								{
 									AssetMetadata depMetadata = GetAssetMetadata(depHandle);
 
-									AsyncLoadRequest* depRequest = new AsyncLoadRequest();
+									Ref<AsyncLoadRequest> depRequest = CreateRef<AsyncLoadRequest>();
 									depRequest->Handle = depHandle;
 									depRequest->FilePath = depMetadata.FilePath;
 									depRequest->State = AssetState::NotLoaded;
@@ -85,7 +84,7 @@ namespace Gravix
 
 									m_LoadingAssets[depHandle] = depRequest;
 
-									AsyncLoadTask* depLoadTask = new AsyncLoadTask(1);
+									AsyncLoadTask* depLoadTask = new AsyncLoadTask(1); // enkiTS manages this
 									depLoadTask->LoadRequests.push_back(depRequest);
 									Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(depLoadTask);
 
@@ -105,7 +104,7 @@ namespace Gravix
 				{
 					GX_CORE_ERROR("Failed to import asset after async load: {0}", request->FilePath.string());
 					m_LoadingAssets.erase(request->Handle);
-					delete request;
+					// No delete needed - Ref<> handles cleanup
 					continue;
 				}
 				request->State = AssetState::Loaded;
@@ -114,7 +113,7 @@ namespace Gravix
 				m_LoadingAssets.erase(request->Handle);
 				GX_CORE_INFO("Asynchronously loaded asset: {0}", request->FilePath.string());
 				registryChanged = true;
-				delete request;
+				// No delete needed - Ref<> handles cleanup
 			}
 			}
 		}
@@ -136,7 +135,7 @@ namespace Gravix
 		AssetMetadata metadata;
 		AssetHandle handle = AssetImporter::GenerateAssetHandle(filePath, &metadata);
 
-		AsyncLoadRequest* request = new AsyncLoadRequest();
+		Ref<AsyncLoadRequest> request = CreateRef<AsyncLoadRequest>();
 		request->Handle = handle;
 		request->FilePath = metadata.FilePath;
 		request->State = AssetState::NotLoaded;
@@ -145,7 +144,7 @@ namespace Gravix
 		m_LoadingAssets[handle] = request;
 		m_AssetRegistry[handle] = metadata;
 
-		AsyncLoadTask* loadTask = new AsyncLoadTask(1);
+		AsyncLoadTask* loadTask = new AsyncLoadTask(1); // enkiTS manages this
 		loadTask->LoadRequests.push_back(request);
 		Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(loadTask);
 	}
@@ -249,7 +248,7 @@ namespace Gravix
 			return m_LoadedAssets.at(handle);
 		}
 
-		AsyncLoadRequest* request = new AsyncLoadRequest();
+		Ref<AsyncLoadRequest> request = CreateRef<AsyncLoadRequest>();
 		request->Handle = handle;
 		request->FilePath = metadata.FilePath;
 		request->State = AssetState::NotLoaded;
@@ -258,7 +257,7 @@ namespace Gravix
 		m_LoadingAssets[handle] = request;
 		m_AssetRegistry[handle] = metadata;
 
-		AsyncLoadTask* loadTask = new AsyncLoadTask(1);
+		AsyncLoadTask* loadTask = new AsyncLoadTask(1); // enkiTS manages this
 		loadTask->LoadRequests.push_back(request);
 		Application::Get().GetScheduler().GetTaskScheduler().AddTaskSetToPipe(loadTask);
 		return nullptr;

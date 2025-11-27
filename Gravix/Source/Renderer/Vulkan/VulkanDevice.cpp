@@ -31,12 +31,12 @@ namespace Gravix
 		InitDescriptorPool();
 		CreateImGuiPool();
 
-		m_ShaderCompiler = new ShaderCompiler();
+		m_ShaderCompiler = CreateRef<ShaderCompiler>();
 	}
 
 	VulkanDevice::~VulkanDevice()
 	{
-		delete m_ShaderCompiler;
+		m_ShaderCompiler = nullptr; // Automatically cleaned up by Ref<>
 
 		// Wait for all operations to complete before cleanup
 		if (m_Device != VK_NULL_HANDLE)

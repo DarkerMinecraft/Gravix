@@ -96,12 +96,12 @@ add_custom_target(CopyRootAssets DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/root_asset
 add_custom_target(CopyEditorAssets DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/editor_assets.stamp")
 set_target_properties(CopyRootAssets CopyEditorAssets PROPERTIES FOLDER "Editor/Assets")
 
+add_dependencies(Orbit CopyRootAssets CopyEditorAssets)
+
 # Always build ScriptCore before Orbit (if scripting is enabled)
 if(GRAVIX_BUILD_SCRIPTING)
     add_dependencies(Orbit Gravix-ScriptCore)
 endif()
-
-add_dependencies(Orbit CopyRootAssets CopyEditorAssets)
 
 # Slang DLL
 add_custom_command(TARGET Orbit POST_BUILD
@@ -113,13 +113,21 @@ add_custom_command(TARGET Orbit POST_BUILD
 
 # Gravix-ScriptCore DLL and dependencies (if scripting is enabled)
 if(GRAVIX_BUILD_SCRIPTING)
-    # Copy the scripting DLL (always, only if different)
-    add_custom_command(TARGET Orbit POST_BUILD
+    # Create a custom target that always copies the scripting DLL
+    # This ensures C# changes are always reflected in the output directory
+    set(SCRIPTCORE_DLL "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll")
+
+    add_custom_target(CopyScriptCoreDLL ALL
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll"
-            "$<TARGET_FILE_DIR:Orbit>"
-        COMMENT "Copying GravixScripting DLL..."
+            "${SCRIPTCORE_DLL}"
+            "$<TARGET_FILE_DIR:Orbit>/GravixScripting.dll"
+        DEPENDS "${SCRIPTCORE_DLL}" Gravix-ScriptCore
+        COMMENT "Copying GravixScripting.dll to Orbit output directory..."
+        VERBATIM
     )
+
+    add_dependencies(Orbit CopyScriptCoreDLL)
+    set_target_properties(CopyScriptCoreDLL PROPERTIES FOLDER "Editor/Assets")
 
     # Copy Mono runtime folder only once (use stamp file)
     set(MONO_RUNTIME_SOURCE "C:/Program Files/Mono/lib/mono/4.5")

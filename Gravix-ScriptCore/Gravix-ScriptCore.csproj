@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Build a DLL -->
+    <OutputType>Library</OutputType>
+    <TargetFramework>net48</TargetFramework>
+
+    <!-- Enable recursive include -->
+    <EnableDefaultItems>false</EnableDefaultItems>
+
+    <!-- Mono compatibility -->
+    <UseMscorlib>true</UseMscorlib>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+
+    <!-- Allow older C# syntax required by mcs -->
+    <LangVersion>7.3</LangVersion>
+
+    <!-- Output paths -->
+    <AssemblyName>YourAssemblyName</AssemblyName>
+    <OutputPath>bin/</OutputPath>
+  </PropertyGroup>
+
+  <!-- Recursive source include -->
+  <ItemGroup>
+    <Compile Include="**/*.cs" />
+  </ItemGroup>
+
+  <!-- (Optional) Reference the Mono libraries -->
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Runtime" />
+  </ItemGroup>
+
+</Project>

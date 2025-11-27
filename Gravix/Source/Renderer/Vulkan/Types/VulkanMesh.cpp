@@ -3,9 +3,11 @@
 
 namespace Gravix
 {
-	VulkanMesh::VulkanMesh(Device* device, size_t vertexSize)
+	VulkanMesh::VulkanMesh(Device* device, size_t vertexSize, size_t vertexCapacity, size_t indexCapacity)
 		: m_Device(static_cast<VulkanDevice*>(device))
 		, m_VertexSize(vertexSize)
+		, m_VertexCapacity(vertexCapacity)
+		, m_IndexCapacity(indexCapacity)
 	{
 		m_VertexBuffer = m_Device->CreateBuffer(
 			m_VertexSize * m_VertexCapacity,

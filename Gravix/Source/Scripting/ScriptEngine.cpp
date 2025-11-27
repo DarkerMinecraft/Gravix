@@ -109,11 +109,11 @@ namespace Gravix
 		std::unordered_map<UUID, Ref<ScriptInstance>> EntityInstances;
 	};
 
-	static ScriptEngineData* s_Data = nullptr;
+	static Ref<ScriptEngineData> s_Data = nullptr;
 
 	void ScriptEngine::Initialize()
 	{
-		s_Data = new ScriptEngineData();
+		s_Data = CreateRef<ScriptEngineData>();
 
 		InitMono();
 		LoadAssembly("GravixScripting.dll");
@@ -122,7 +122,7 @@ namespace Gravix
 	void ScriptEngine::Shutdown()
 	{
 		ShudownMono();
-		delete s_Data;
+		s_Data = nullptr; // Automatically cleaned up by Ref<>
 	}
 
 	void ScriptEngine::LoadAssembly(const std::filesystem::path& assemblyPath)
@@ -241,6 +241,11 @@ namespace Gravix
 		return instance;
 	}
 
+	MonoImage* ScriptEngine::GetCoreAssemblyImage()
+	{
+		return s_Data->CoreAssemblyImage;
+	}
+
 	ScriptClass::ScriptClass(const std::string& classNamespace, const std::string& className)
 		: m_ClassNamespace(classNamespace), m_ClassName(className)
 	{
@@ -280,13 +285,15 @@ namespace Gravix
 
 	void ScriptInstance::InvokeOnCreate()
 	{
-		m_ScriptClass->InvokeMethod(m_Instance, m_OnCreateMethod);
+		if(m_OnCreateMethod)
+			m_ScriptClass->InvokeMethod(m_Instance, m_OnCreateMethod);
 	}
 
 	void ScriptInstance::InvokeOnUpdate(float deltaTime)
 	{
 		void* params = &deltaTime;
-		m_ScriptClass->InvokeMethod(m_Instance, m_OnUpdateMethod, &params);
+		if(m_OnUpdateMethod)
+			m_ScriptClass->InvokeMethod(m_Instance, m_OnUpdateMethod, &params);
 	}
 
 }

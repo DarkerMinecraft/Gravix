@@ -273,6 +273,9 @@ if(GRAVIX_BUILD_SCRIPTING)
     # Define MONO_STATIC_BUILD for static linking
     target_compile_definitions(Gravix PRIVATE MONO_STATIC_BUILD)
 
+    # Ensure Gravix-ScriptCore DLL is always built before Gravix
+    add_dependencies(Gravix Gravix-ScriptCore)
+
     # Windows dependencies required for static Mono linking
     if(WIN32)
         target_link_libraries(Gravix

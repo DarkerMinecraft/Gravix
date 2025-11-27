@@ -58,8 +58,10 @@ namespace Gravix
 		static void LoadAssemblyClasses(MonoImage* image);
 
 		static MonoObject* InstantiateClass(MonoClass* monoClass);
+		static MonoImage* GetCoreAssemblyImage();
 
 		friend class ScriptClass;
+		friend class ScriptGlue;
 	};
 
 	class ScriptInstance : public RefCounted

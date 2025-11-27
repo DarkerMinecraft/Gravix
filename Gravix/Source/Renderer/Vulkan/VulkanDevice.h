@@ -90,7 +90,7 @@ namespace Gravix
 
 		VmaAllocator m_Allocator;
 
-		ShaderCompiler* m_ShaderCompiler;
+		Ref<ShaderCompiler> m_ShaderCompiler;
 
 		VkQueue m_GraphicsQueue;
 		uint32_t m_GraphicsQueueFamilyIndex;

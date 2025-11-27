@@ -4,6 +4,7 @@
 #include "Scene/Scene.h"
 #include "Serialization/Scene/SceneSerializer.h"
 #include "Project/Project.h"
+#include "Physics/PhysicsWorld.h"
 
 namespace Gravix 
 {

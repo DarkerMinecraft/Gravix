@@ -22,7 +22,7 @@ namespace Gravix
 		virtual bool IsAssetLoaded(AssetHandle handle) const = 0;
 		virtual AssetType GetAssetType(AssetHandle handle) const = 0;
 
-		virtual void PushToCompletionQueue(AsyncLoadRequest* request) = 0;
+		virtual void PushToCompletionQueue(Ref<AsyncLoadRequest> request) = 0;
 		virtual void ProcessAsyncLoads() = 0;
 	};
 }

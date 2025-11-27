@@ -3,6 +3,7 @@
 #include "Maths/Maths.h"
 #include "Core/Application.h"
 #include "AppLayer.h"
+#include "SceneManager.h"
 
 #include "Core/Input.h"
 
@@ -31,12 +32,16 @@ namespace Gravix
 		if (!m_ViewportFocused)
 			return false;
 
+		// Only process ImGuizmo shortcuts in Edit mode
+		if (!m_SceneManager || m_SceneManager->GetSceneState() != SceneState::Edit)
+			return false;
+
 		// Don't process shortcuts if ImGui wants keyboard input
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.WantCaptureKeyboard && (io.WantTextInput || ImGui::IsAnyItemActive()))
 			return false;
 
-		// Guizmo shortcuts
+		// Guizmo shortcuts (only in Edit mode)
 		switch (e.GetKeyCode())
 		{
 		case Key::Q:
@@ -93,40 +98,44 @@ namespace Gravix
 			ImGui::EndDragDropTarget();
 		}
 
-		Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
-		if (selectedEntity && m_GuizmoType != -1) 
+		// Only show ImGuizmo in Edit mode
+		if (m_SceneManager && m_SceneManager->GetSceneState() == SceneState::Edit)
 		{
-			ImGuizmo::SetOrthographic(false);
-			ImGuizmo::SetDrawlist();
-
-			float windowWidth = (float)ImGui::GetWindowWidth();
-			float windowHeight = (float)ImGui::GetWindowHeight();
-			ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
-
-			glm::mat4 cameraProjection = m_EditorCamera->GetProjection();
-			const glm::mat4& cameraView = m_EditorCamera->GetViewMatrix();
-			auto& tc = selectedEntity.GetComponent<TransformComponent>();
-			glm::mat4 transform = tc.Transform;
-
-			bool snap = Input::IsKeyDown(Key::LeftControl);
-			float snapValue = m_GuizmoType == ImGuizmo::OPERATION::ROTATE ? 45.0f : 0.5f;
-
-			float snapValues[3] = { snapValue, snapValue, snapValue };
-
-			ImGuizmo::Manipulate(glm::value_ptr(cameraView), glm::value_ptr(cameraProjection), (ImGuizmo::OPERATION)m_GuizmoType,
-				ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
-
-			if (ImGuizmo::IsUsing())
+			Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
+			if (selectedEntity && m_GuizmoType != -1)
 			{
-				glm::vec3 position, rotation, scale;
-				Math::DecomposeTransform(transform, position, rotation, scale);
+				ImGuizmo::SetOrthographic(false);
+				ImGuizmo::SetDrawlist();
 
-				glm::vec3 deltaRotation = rotation - tc.Rotation;
-				tc.Position = position;
-				tc.Rotation += deltaRotation;
-				tc.Scale = scale;
+				float windowWidth = (float)ImGui::GetWindowWidth();
+				float windowHeight = (float)ImGui::GetWindowHeight();
+				ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
 
-				tc.CalculateTransform();
+				glm::mat4 cameraProjection = m_EditorCamera->GetProjection();
+				const glm::mat4& cameraView = m_EditorCamera->GetViewMatrix();
+				auto& tc = selectedEntity.GetComponent<TransformComponent>();
+				glm::mat4 transform = tc.Transform;
+
+				bool snap = Input::IsKeyDown(Key::LeftControl);
+				float snapValue = m_GuizmoType == ImGuizmo::OPERATION::ROTATE ? 45.0f : 0.5f;
+
+				float snapValues[3] = { snapValue, snapValue, snapValue };
+
+				ImGuizmo::Manipulate(glm::value_ptr(cameraView), glm::value_ptr(cameraProjection), (ImGuizmo::OPERATION)m_GuizmoType,
+					ImGuizmo::LOCAL, glm::value_ptr(transform), nullptr, snap ? snapValues : nullptr);
+
+				if (ImGuizmo::IsUsing())
+				{
+					glm::vec3 position, rotation, scale;
+					Math::DecomposeTransform(transform, position, rotation, scale);
+
+					glm::vec3 deltaRotation = rotation - tc.Rotation;
+					tc.Position = position;
+					tc.Rotation += deltaRotation;
+					tc.Scale = scale;
+
+					tc.CalculateTransform();
+				}
 			}
 		}
 

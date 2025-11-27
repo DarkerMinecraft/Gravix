@@ -30,7 +30,7 @@ namespace Gravix
 	class Instrumentor
 	{
 	private:
-		InstrumentationSession* m_CurrentSession;
+		Ref<InstrumentationSession> m_CurrentSession;
 		std::ofstream m_OutputStream;
 		int m_ProfileCount;
 
@@ -43,7 +43,7 @@ namespace Gravix
 
 	public:
 		Instrumentor()
-			: m_CurrentSession(nullptr), m_ProfileCount(0)
+			: m_ProfileCount(0)
 		{
 		}
 
@@ -57,15 +57,14 @@ namespace Gravix
 		{
 			m_OutputStream.open(filepath);
 			WriteHeader();
-			m_CurrentSession = new InstrumentationSession{ name };
+			m_CurrentSession = CreateRef<InstrumentationSession>(InstrumentationSession{ name });
 		}
 
 		void EndSession()
 		{
 			WriteFooter();
 			m_OutputStream.close();
-			delete m_CurrentSession;
-			m_CurrentSession = nullptr;
+			m_CurrentSession = nullptr; // Automatically cleaned up by Ref<>
 			m_ProfileCount = 0;
 		}
 

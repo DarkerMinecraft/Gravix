@@ -19,6 +19,6 @@ namespace Gravix
 		static bool IsValidAssetHandle(AssetHandle handle) { return Project::GetActive()->GetAssetManager()->IsAssetHandleValid(handle); }
 		static AssetType GetAssetType(AssetHandle handle) { return Project::GetActive()->GetAssetManager()->GetAssetType(handle); }
 
-		static void PushToCompletionQueue(AsyncLoadRequest* request) { Project::GetActive()->GetAssetManager()->PushToCompletionQueue(request); }
+		static void PushToCompletionQueue(Ref<AsyncLoadRequest> request) { Project::GetActive()->GetAssetManager()->PushToCompletionQueue(request); }
 	};
 }

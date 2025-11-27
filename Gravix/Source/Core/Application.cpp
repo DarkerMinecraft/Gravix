@@ -35,7 +35,7 @@ namespace Gravix
 		m_Scheduler = CreateScope<Scheduler>();
 		m_Scheduler->Init(4); // Initialize with 4 threads
 
-		m_ImGuiRender = new ImGuiRender();
+		m_ImGuiRender = CreateRef<ImGuiRender>();
 		ComponentRegistry::Get().RegisterAllComponents();
 
 		ScriptEngine::Initialize();
@@ -125,10 +125,7 @@ namespace Gravix
 			m_Window->GetDevice()->EndFrame();
 		}
 
-		{
-			GX_PROFILE_SCOPE("ImGuiCleanup");
-			delete m_ImGuiRender;
-		}
+		// ImGuiRender will be automatically cleaned up by Ref<>
 	}
 
 	void Application::Shutdown()

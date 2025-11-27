@@ -162,7 +162,7 @@ namespace Gravix
 		Scope<Window> m_Window;
 		Scope<Scheduler> m_Scheduler;
 
-		ImGuiRender* m_ImGuiRender = nullptr;
+		Ref<ImGuiRender> m_ImGuiRender;
 
 #ifdef ENGINE_DEBUG
 		Scope<ProfilerViewer> m_ProfilerViewer;

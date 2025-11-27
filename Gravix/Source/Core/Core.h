@@ -27,13 +27,6 @@
 
 namespace Gravix
 {
-	// Factory for Ref - creates custom RefCounted smart pointers
-	template<typename T, typename... Args>
-	inline Ref<T> CreateRef(Args&&... args)
-	{
-		return Ref<T>::Create(std::forward<Args>(args)...);
-	}
-
 	// Weak reference alias
 	template<typename T>
 	using Weak = WeakRef<T>;

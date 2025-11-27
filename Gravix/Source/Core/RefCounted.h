@@ -183,10 +183,239 @@ namespace Gravix
 		T* m_Instance;
 	};
 
-	// Ref<T> uses custom reference counting for all types
-	// All types used with Ref<> should inherit from RefCounted
+	// Smart pointer that automatically detects RefCounted vs non-RefCounted types
+	// For RefCounted types: uses custom reference counting
+	// For non-RefCounted types: uses std::shared_ptr internally
 	template<typename T>
-	using Ref = RefCountedPtr<T>;
+	class Ref
+	{
+	private:
+		T* m_Ptr = nullptr;
+		std::shared_ptr<T> m_SharedPtr; // Only used for non-RefCounted types
+
+		// Tag dispatch helpers
+		void IncRefImpl(T* ptr, std::true_type /* is RefCounted */)
+		{
+			if (ptr)
+				static_cast<RefCounted*>(ptr)->IncRefCount();
+		}
+
+		void IncRefImpl(T* ptr, std::false_type /* not RefCounted */)
+		{
+			if (ptr)
+				m_SharedPtr = std::shared_ptr<T>(ptr);
+		}
+
+		void DecRefImpl(std::true_type /* is RefCounted */)
+		{
+			if (m_Ptr)
+				static_cast<RefCounted*>(m_Ptr)->DecRefCount();
+		}
+
+		void DecRefImpl(std::false_type /* not RefCounted */)
+		{
+			m_SharedPtr = nullptr;
+		}
+
+		void CopyFromImpl(const Ref& other, std::true_type /* is RefCounted */)
+		{
+			if (m_Ptr)
+				static_cast<RefCounted*>(m_Ptr)->IncRefCount();
+		}
+
+		void CopyFromImpl(const Ref& other, std::false_type /* not RefCounted */)
+		{
+			m_SharedPtr = other.m_SharedPtr;
+		}
+
+		void MoveFromImpl(Ref& other, std::true_type /* is RefCounted */)
+		{
+			// Nothing special needed for RefCounted move
+		}
+
+		void MoveFromImpl(Ref& other, std::false_type /* not RefCounted */)
+		{
+			m_SharedPtr = std::move(other.m_SharedPtr);
+		}
+
+	public:
+		Ref() = default;
+		Ref(std::nullptr_t) : m_Ptr(nullptr) {}
+
+		// Constructor from raw pointer
+		Ref(T* ptr) : m_Ptr(ptr)
+		{
+			IncRefImpl(ptr, std::is_base_of<RefCounted, T>{});
+		}
+
+		// Copy constructor
+		Ref(const Ref& other) : m_Ptr(other.m_Ptr)
+		{
+			CopyFromImpl(other, std::is_base_of<RefCounted, T>{});
+		}
+
+		// Move constructor
+		Ref(Ref&& other) noexcept : m_Ptr(other.m_Ptr)
+		{
+			MoveFromImpl(other, std::is_base_of<RefCounted, T>{});
+			other.m_Ptr = nullptr;
+		}
+
+		// Template copy constructor for derived types
+		template<typename U>
+		Ref(const Ref<U>& other) : m_Ptr(static_cast<T*>(other.m_Ptr))
+		{
+			if constexpr (std::is_base_of_v<RefCounted, T>)
+			{
+				if (m_Ptr)
+					static_cast<RefCounted*>(m_Ptr)->IncRefCount();
+			}
+			else
+			{
+				m_SharedPtr = std::static_pointer_cast<T>(other.m_SharedPtr);
+			}
+		}
+
+		// Template move constructor for derived types
+		template<typename U>
+		Ref(Ref<U>&& other) noexcept : m_Ptr(static_cast<T*>(other.m_Ptr))
+		{
+			if constexpr (std::is_base_of_v<RefCounted, T>)
+			{
+				// Nothing special for RefCounted move
+			}
+			else
+			{
+				m_SharedPtr = std::static_pointer_cast<T>(std::move(other.m_SharedPtr));
+			}
+			other.m_Ptr = nullptr;
+		}
+
+		~Ref()
+		{
+			DecRefImpl(std::is_base_of<RefCounted, T>{});
+		}
+
+		// Copy assignment
+		Ref& operator=(const Ref& other)
+		{
+			if (this != &other)
+			{
+				DecRefImpl(std::is_base_of<RefCounted, T>{});
+				m_Ptr = other.m_Ptr;
+				CopyFromImpl(other, std::is_base_of<RefCounted, T>{});
+			}
+			return *this;
+		}
+
+		// Move assignment
+		Ref& operator=(Ref&& other) noexcept
+		{
+			if (this != &other)
+			{
+				DecRefImpl(std::is_base_of<RefCounted, T>{});
+				m_Ptr = other.m_Ptr;
+				MoveFromImpl(other, std::is_base_of<RefCounted, T>{});
+				other.m_Ptr = nullptr;
+			}
+			return *this;
+		}
+
+		// Nullptr assignment
+		Ref& operator=(std::nullptr_t)
+		{
+			DecRefImpl(std::is_base_of<RefCounted, T>{});
+			m_Ptr = nullptr;
+			return *this;
+		}
+
+		// Template copy assignment
+		template<typename U>
+		Ref& operator=(const Ref<U>& other)
+		{
+			DecRefImpl(std::is_base_of<RefCounted, T>{});
+			m_Ptr = static_cast<T*>(other.m_Ptr);
+			if constexpr (std::is_base_of_v<RefCounted, T>)
+			{
+				if (m_Ptr)
+					static_cast<RefCounted*>(m_Ptr)->IncRefCount();
+			}
+			else
+			{
+				m_SharedPtr = std::static_pointer_cast<T>(other.m_SharedPtr);
+			}
+			return *this;
+		}
+
+		// Template move assignment
+		template<typename U>
+		Ref& operator=(Ref<U>&& other) noexcept
+		{
+			DecRefImpl(std::is_base_of<RefCounted, T>{});
+			m_Ptr = static_cast<T*>(other.m_Ptr);
+			if constexpr (std::is_base_of_v<RefCounted, T>)
+			{
+				// Nothing special for RefCounted move
+			}
+			else
+			{
+				m_SharedPtr = std::static_pointer_cast<T>(std::move(other.m_SharedPtr));
+			}
+			other.m_Ptr = nullptr;
+			return *this;
+		}
+
+		// Operators
+		operator bool() const { return m_Ptr != nullptr; }
+		T* operator->() { return m_Ptr; }
+		const T* operator->() const { return m_Ptr; }
+		T& operator*() { return *m_Ptr; }
+		const T& operator*() const { return *m_Ptr; }
+
+		T* Raw() { return m_Ptr; }
+		const T* Raw() const { return m_Ptr; }
+		T* get() { return m_Ptr; }
+		const T* get() const { return m_Ptr; }
+
+		void Reset(T* ptr = nullptr)
+		{
+			DecRefImpl(std::is_base_of<RefCounted, T>{});
+			m_Ptr = ptr;
+			IncRefImpl(ptr, std::is_base_of<RefCounted, T>{});
+		}
+
+		template<typename U>
+		Ref<U> As() const
+		{
+			Ref<U> result;
+			result.m_Ptr = static_cast<U*>(m_Ptr);
+			if constexpr (std::is_base_of_v<RefCounted, U>)
+			{
+				if (result.m_Ptr)
+					static_cast<RefCounted*>(result.m_Ptr)->IncRefCount();
+			}
+			else
+			{
+				result.m_SharedPtr = std::static_pointer_cast<U>(m_SharedPtr);
+			}
+			return result;
+		}
+
+		bool operator==(const Ref& other) const { return m_Ptr == other.m_Ptr; }
+		bool operator!=(const Ref& other) const { return m_Ptr != other.m_Ptr; }
+		bool operator==(std::nullptr_t) const { return m_Ptr == nullptr; }
+		bool operator!=(std::nullptr_t) const { return m_Ptr != nullptr; }
+
+		template<typename U>
+		friend class Ref;
+	};
+
+	// Helper function to create Ref<T> for any type
+	template<typename T, typename... Args>
+	Ref<T> CreateRef(Args&&... args)
+	{
+		return Ref<T>(new T(std::forward<Args>(args)...));
+	}
 
 	// Weak reference for RefCounted objects
 	template<typename T>

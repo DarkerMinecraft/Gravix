@@ -38,13 +38,17 @@ namespace Gravix
 		{
 			GX_CORE_ERROR("Failed to load texture: {0} - {1}", path.string(), stbi_failure_reason());
 
-			*width = 4;
-			*height = 4;
+			*width = 16;
+			*height = 16;
 			*channels = 4;
+
+			// Allocate error texture using malloc to match Buffer::Release() which uses free()
+			const size_t pixelCount = 16 * 16;
+			uint32_t* pixels = (uint32_t*)malloc(sizeof(uint32_t) * pixelCount);
 
 			uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 1));
 			uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
-			uint32_t* pixels = new uint32_t[16 * 16];
+
 			for (int x = 0; x < 16; x++) {
 				for (int y = 0; y < 16; y++) {
 					pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
@@ -52,7 +56,7 @@ namespace Gravix
 			}
 
 			data.Data = reinterpret_cast<uint8_t*>(pixels);
-			data.Size = sizeof(uint32_t) * (16 * 16);
+			data.Size = sizeof(uint32_t) * pixelCount;
 		}
 		else { data.Size = *width * *height * *channels; }
 

@@ -71,11 +71,11 @@ namespace Gravix
 		uint32_t LineVertexCount = 0;
 	};
 
-	static Renderer2DData* s_Data;
+	static Ref<Renderer2DData> s_Data;
 
 	void Renderer2D::Init(Ref<Framebuffer> renderTarget)
 	{
-		s_Data = new Renderer2DData();
+		s_Data = CreateRef<Renderer2DData>();
 		// Create a 1x1 white texture
 		uint32_t whitePixel = 0xffffffff; // RGBA
 		Buffer buffer;
@@ -94,14 +94,14 @@ namespace Gravix
 
 		s_Data->QuadMaterial = Material::Create(matSpec);
 		s_Data->QuadPushConstants = s_Data->QuadMaterial->GetPushConstantStruct();
-		s_Data->QuadMesh = Mesh::Create(s_Data->QuadMaterial->GetVertexSize());
+		s_Data->QuadMesh = Mesh::Create(s_Data->QuadMaterial->GetVertexSize(), s_Data->MaxQuadVertices, s_Data->MaxQuadIndices);
 
 		matSpec.DebugName = "DefaultCircle";
 		matSpec.ShaderFilePath = "Assets/shaders/circle.slang";
 
 		s_Data->CircleMaterial = Material::Create(matSpec);
 		s_Data->CirclePushConstants = s_Data->CircleMaterial->GetPushConstantStruct();
-		s_Data->CircleMesh = Mesh::Create(s_Data->CircleMaterial->GetVertexSize());
+		s_Data->CircleMesh = Mesh::Create(s_Data->CircleMaterial->GetVertexSize(), s_Data->MaxCircleVertices, s_Data->MaxCircleIndices);
 
 		matSpec.DebugName = "DefaultLine";
 		matSpec.ShaderFilePath = "Assets/shaders/line.slang";
@@ -109,7 +109,7 @@ namespace Gravix
 		matSpec.LineWidth = s_Data->LineWidth;
 
 		s_Data->LineMaterial = Material::Create(matSpec);
-		s_Data->LineMesh = Mesh::Create(s_Data->LineMaterial->GetVertexSize());
+		s_Data->LineMesh = Mesh::Create(s_Data->LineMaterial->GetVertexSize(), s_Data->MaxLineVertices, 0);
 		s_Data->LinePushConstants = s_Data->LineMaterial->GetPushConstantStruct();
 
 		std::vector<uint32_t> quadIndices(s_Data->MaxQuadIndices);
@@ -151,6 +151,11 @@ namespace Gravix
 		s_Data->CircleMesh->SetIndices(circleIndices);
 
 		memset(s_Data->TextureSlots.data(), 0, s_Data->TextureSlots.size() * sizeof(uint32_t));
+
+		// Reserve capacity for vertex buffers to avoid reallocations
+		s_Data->QuadVertexBuffer.reserve(s_Data->MaxQuadVertices);
+		s_Data->CircleVertexBuffer.reserve(s_Data->MaxCircleVertices);
+		s_Data->LineVertexBuffer.reserve(s_Data->MaxLineVertices);
 	}
 
 	void Renderer2D::BeginScene(Command& cmd, Camera& camera, const glm::mat4& transformMatrix)
@@ -327,7 +332,7 @@ namespace Gravix
 			float theta0 = (i / (float)segments) * 2.0f * pi;
 			float theta1 = ((i + 1) / (float)segments) * 2.0f * pi;
 
-			// Local circle with radius 0.5 — scaling will come from transformMatrix
+			// Local circle with radius 0.5 ï¿½ scaling will come from transformMatrix
 			glm::vec4 localP0 = glm::vec4(cos(theta0) * 0.5f, sin(theta0) * 0.5f, 0.0f, 1.0f);
 			glm::vec4 localP1 = glm::vec4(cos(theta1) * 0.5f, sin(theta1) * 0.5f, 0.0f, 1.0f);
 
@@ -378,7 +383,7 @@ namespace Gravix
 
 	void Renderer2D::Destroy()
 	{
-		delete s_Data;
+		s_Data = nullptr; // Automatically cleaned up by Ref<>
 	}
 
 }

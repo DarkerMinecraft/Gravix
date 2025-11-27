@@ -112,23 +112,6 @@ endif()
 
 if(GRAVIX_BUILD_SCRIPTING)
     add_subdirectory(Gravix-ScriptCore)
-
-    # Add .csproj to solution for Visual Studio IntelliSense
-    if(MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
-        set(CSPROJ_PATH "${CMAKE_SOURCE_DIR}/Gravix-ScriptCore/Gravix-ScriptCore.csproj")
-        if(EXISTS "${CSPROJ_PATH}")
-            include_external_msproject(
-                Gravix-ScriptCore-IntelliSense
-                "${CSPROJ_PATH}"
-                TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
-            )
-            set_target_properties(Gravix-ScriptCore-IntelliSense PROPERTIES
-                FOLDER "Scripting"
-                EXCLUDE_FROM_ALL TRUE
-                EXCLUDE_FROM_DEFAULT_BUILD TRUE
-            )
-        endif()
-    endif()
 endif()
 
 add_subdirectory(Gravix)

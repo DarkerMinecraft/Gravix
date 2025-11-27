@@ -105,6 +105,26 @@ namespace Gravix
 		return b2StoreShapeId(shapeId);
 	}
 
+	void PhysicsWorld::ApplyLinearImpulse(uint64_t bodyId, const glm::vec2& impulse, const glm::vec2& point, bool wake)
+	{
+		b2Body_ApplyLinearImpulse(b2LoadBodyId(bodyId), b2Vec2{ impulse.x, impulse.y }, b2Vec2{ point.x, point.y }, wake);
+	}
+
+	void PhysicsWorld::ApplyLinearImpulseToCenter(uint64_t bodyId, const glm::vec2& impulse, bool wake)
+	{
+		b2Body_ApplyLinearImpulseToCenter(b2LoadBodyId(bodyId), b2Vec2{ impulse.x, impulse.y }, wake);
+	}
+
+	void PhysicsWorld::ApplyForce(uint64_t bodyID, const glm::vec2& force, const glm::vec2& point, bool wake)
+	{
+		b2Body_ApplyForce(b2LoadBodyId(bodyID), b2Vec2{ force.x, force.y }, b2Vec2{ point.x, point.y }, wake);
+	}
+
+	void PhysicsWorld::ApplyForceToCenter(uint64_t bodyID, const glm::vec2& force, bool wake)
+	{
+		b2Body_ApplyForceToCenter(b2LoadBodyId(bodyID), b2Vec2{ force.x, force.y }, wake);
+	}
+
 	glm::vec2 PhysicsWorld::GetBodyPosition(uint64_t bodyId)
 	{
 		b2Vec2 pos = b2Body_GetPosition(b2LoadBodyId(bodyId));

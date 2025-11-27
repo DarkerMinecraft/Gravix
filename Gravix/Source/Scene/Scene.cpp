@@ -11,6 +11,10 @@
 
 namespace Gravix
 {
+	// Constructor and destructor defined here where PhysicsWorld is complete
+	// This allows Ref<PhysicsWorld> to work with incomplete type in header
+	Scene::Scene() = default;
+	Scene::~Scene() = default;
 
 	Ref<Scene> Scene::Copy(Ref<Scene> other)
 	{
@@ -355,6 +359,11 @@ namespace Gravix
 	}
 
 
+	Ref<PhysicsWorld> Scene::GetPhysicsWorld2D()
+	{
+		return m_PhysicsWorld;
+	}
+
 	SceneCamera Scene::GetPrimaryCameraEntity(glm::mat4* transform)
 	{
 		for (auto entity : m_Registry.view<CameraComponent>())
@@ -376,7 +385,7 @@ namespace Gravix
 
 	void Scene::OnPhysics2DStart()
 	{
-		m_PhysicsWorld = new PhysicsWorld();
+		m_PhysicsWorld = CreateRef<PhysicsWorld>();
 
 		auto view = m_Registry.view<Rigidbody2DComponent>();
 		for (auto e : view)
@@ -433,8 +442,7 @@ namespace Gravix
 
 	void Scene::OnPhysics2DStop()
 	{
-		delete m_PhysicsWorld;
-		m_PhysicsWorld = nullptr;
+		m_PhysicsWorld = nullptr; // Automatically cleaned up by Ref<>
 	}
 
 }

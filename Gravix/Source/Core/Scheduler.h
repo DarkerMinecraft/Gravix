@@ -24,7 +24,7 @@ namespace Gravix
 
 	struct AsyncLoadTask : public enki::ITaskSet
 	{
-		std::vector<AsyncLoadRequest*> LoadRequests;
+		std::vector<Ref<AsyncLoadRequest>> LoadRequests;
 
 		AsyncLoadTask(size_t count)
 		{
@@ -35,14 +35,14 @@ namespace Gravix
 		{
 			for (uint32_t i = range_.start; i < range_.end; ++i)
 			{
-				AsyncLoadRequest* request = LoadRequests[i];
+				Ref<AsyncLoadRequest> request = LoadRequests[i];
 				LoadAsset(request);
 				AssetManager::PushToCompletionQueue(request);
 				request->State = AssetState::ReadyForGPU;
 			}
 		}
 
-		void LoadAsset(AsyncLoadRequest* request)
+		void LoadAsset(Ref<AsyncLoadRequest> request)
 		{
 			if (!Application::Get().IsRuntime()) 
 			{
@@ -54,7 +54,7 @@ namespace Gravix
 			}
 		}
 
-		void SetCPUDataEditor(AsyncLoadRequest* request, AssetMetadata metadata)
+		void SetCPUDataEditor(Ref<AsyncLoadRequest> request, AssetMetadata metadata)
 		{
 			if (metadata.Type == AssetType::Texture2D)
 			{

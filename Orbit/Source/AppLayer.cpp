@@ -73,6 +73,7 @@ namespace Gravix
 		m_EditorCamera = EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f);
 		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
 		m_ViewportPanel.SetAppLayer(this);
+		m_ViewportPanel.SetSceneManager(&m_SceneManager);
 
 		m_ContentBrowserPanel.emplace();
 		m_ContentBrowserPanel->SetAppLayer(this);

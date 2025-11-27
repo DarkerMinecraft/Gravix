@@ -20,7 +20,7 @@ namespace Gravix
 		virtual bool IsAssetHandleValid(AssetHandle handle) const override;
 		virtual AssetType GetAssetType(AssetHandle handle) const override;
 
-		virtual void PushToCompletionQueue(AsyncLoadRequest* request) override;
+		virtual void PushToCompletionQueue(Ref<AsyncLoadRequest> request) override;
 		virtual void ProcessAsyncLoads() override;
 
 		void ImportAsset(const std::filesystem::path& filePath);
@@ -38,8 +38,8 @@ namespace Gravix
 		AssetRegistry m_AssetRegistry;
 		AssetMap m_LoadedAssets;
 
-		std::unordered_map<AssetHandle, AsyncLoadRequest*> m_LoadingAssets;
-		std::queue<AsyncLoadRequest*> m_CompletionQueue;
+		std::unordered_map<AssetHandle, Ref<AsyncLoadRequest>> m_LoadingAssets;
+		std::queue<Ref<AsyncLoadRequest>> m_CompletionQueue;
 		std::mutex m_CompletionQueueMutex;
 	};
 }

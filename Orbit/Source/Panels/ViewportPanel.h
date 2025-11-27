@@ -12,6 +12,7 @@ namespace Gravix
 {
 
 	class AppLayer;
+	class SceneManager;
 
 	class ViewportPanel
 	{
@@ -29,6 +30,7 @@ namespace Gravix
 		void ResizeFramebuffer() { if(m_Framebuffer != nullptr) m_Framebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y); }
 
 		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
+		void SetSceneManager(SceneManager* sceneManager) { m_SceneManager = sceneManager; }
 
 		bool IsViewportValid() const { return m_ViewportSize.x > 0 && m_ViewportSize.y > 0; }
 		bool IsViewportHovered() const { return m_ViewportHovered; }
@@ -57,6 +59,7 @@ namespace Gravix
 		SceneHierarchyPanel* m_SceneHierarchyPanel;
 
 		AppLayer* m_AppLayer;
+		SceneManager* m_SceneManager = nullptr;
 
 		Entity m_HoveredEntity;
 		CursorMode m_CurrentCursorMode = CursorMode::Normal;

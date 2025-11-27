@@ -9,7 +9,7 @@ namespace Gravix
 	class VulkanMesh : public Mesh
 	{
 	public:
-		VulkanMesh(Device* device, size_t vertexSize);
+		VulkanMesh(Device* device, size_t vertexSize, size_t vertexCapacity = 1024, size_t indexCapacity = 1024);
 		~VulkanMesh() override;
 
 		virtual void SetVertices(const std::vector<DynamicStruct>& vertices) override;
@@ -39,8 +39,8 @@ namespace Gravix
 		size_t m_VertexSize;
 		uint32_t m_IndexCount; 
 
-		size_t m_VertexCapacity = 1024 * 1024;
-		size_t m_IndexCapacity = 1024 * 1024;
+		size_t m_VertexCapacity;
+		size_t m_IndexCapacity;
 
 		uint32_t m_VertexCount = 0;
 	};
