@@ -1,6 +1,9 @@
 #pragma once 
 
 #include <functional>
+#include <string>
+#include <cstdint> 
+
 namespace Gravix
 {
 
@@ -20,6 +23,8 @@ namespace Gravix
 
 		bool operator==(int other) const { return m_UUID == static_cast<uint64_t>(other); }
 		bool operator!=(int other) const { return !(m_UUID == static_cast<uint64_t>(other)); }
+
+		std::string ToString() const { return std::to_string(m_UUID); }
 	private:
 		uint64_t m_UUID;
 	};

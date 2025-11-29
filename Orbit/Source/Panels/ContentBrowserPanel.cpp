@@ -122,7 +122,20 @@ namespace Gravix
 			if (ImGui::BeginDragDropSource())
 			{
 				AssetHandle handle = m_TreeNodes[treeNodeIndex].Handle;
-				ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &handle, sizeof(AssetHandle));
+
+				// If it's an asset (has a handle), send AssetHandle
+				if (handle != 0)
+				{
+					ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &handle, sizeof(AssetHandle));
+				}
+				// For non-assets (like .cs files), send file path
+				else
+				{
+					std::string pathStr = fullPath.string();
+					ImGui::SetDragDropPayload("CONTENT_BROWSER_FILE", pathStr.c_str(), pathStr.size() + 1);
+				}
+
+				ImGui::Text("%s", item.filename().string().c_str());
 				ImGui::EndDragDropSource();
 			}
 
@@ -140,12 +153,35 @@ namespace Gravix
 						// Open C# script file with configured editor
 						OpenScriptFile(fullPath);
 					}
+					else if (fullPath.extension() == ".csproj")
+					{
+						// Open project file with configured editor
+						OpenSolutionFile(fullPath);
+					}
 				}
 			}
 
 			// Right-click context menu
 			if (ImGui::BeginPopupContextItem())
 			{
+				// Add "Open" option for .csproj files
+				if (!isDirectory && fullPath.extension() == ".csproj")
+				{
+					if (ImGui::MenuItem("Open"))
+					{
+						OpenSolutionFile(fullPath);
+					}
+				}
+
+				// Add "Open" option for .cs files
+				if (!isDirectory && fullPath.extension() == ".cs")
+				{
+					if (ImGui::MenuItem("Open"))
+					{
+						OpenScriptFile(fullPath);
+					}
+				}
+
 				if (ImGui::MenuItem("Rename"))
 				{
 					m_IsRenaming = true;
@@ -414,6 +450,11 @@ namespace Gravix
 				if (!entry.is_regular_file())
 					continue;
 
+				// Skip C# related files (they're not assets)
+				std::string extension = entry.path().extension().string();
+				if (extension == ".cs" || extension == ".csproj")
+					continue;
+
 				auto relativePath = std::filesystem::relative(entry.path(), m_AssetDirectory);
 
 				// Check if this file is already in the registry
@@ -605,6 +646,7 @@ namespace Gravix
 			std::ofstream scriptFile(newScriptPath);
 			if (scriptFile.is_open())
 			{
+				scriptFile << "using System;\n";
 				scriptFile << "using GravixEngine;\n";
 				scriptFile << "\n";
 				scriptFile << "public class " << className << " : Entity\n";
@@ -664,22 +706,9 @@ namespace Gravix
 		// Check if .csproj exists
 		if (std::filesystem::exists(csprojPath))
 		{
-			// For Visual Studio (devenv.exe), open the project and navigate to the file
-			std::string editorName = config.ScriptEditorPath.filename().string();
-			std::transform(editorName.begin(), editorName.end(), editorName.begin(), ::tolower);
-
-			if (editorName.find("devenv") != std::string::npos)
-			{
-				// Visual Studio: open project and navigate to file
-				command = "\"" + config.ScriptEditorPath.string() + "\" \"" + csprojPath.string() + "\" /Edit \"" + scriptPath.string() + "\"";
-			}
-			else
-			{
-				// Other editors: open project file
-				command = "\"" + config.ScriptEditorPath.string() + "\" \"" + csprojPath.string() + "\"";
-			}
-
-			GX_CORE_INFO("Opening project: {0} with file: {1}", csprojPath.filename().string(), scriptPath.filename().string());
+			// Open project file
+			command = "\"" + config.ScriptEditorPath.string() + "\" \"" + csprojPath.string() + "\"";
+			GX_CORE_INFO("Opening project: {0}", csprojPath.filename().string());
 		}
 		else
 		{
@@ -712,6 +741,66 @@ namespace Gravix
 		else
 		{
 			GX_CORE_ERROR("Failed to open script file with editor");
+		}
+#else
+		// For other platforms, use system()
+		system(command.c_str());
+#endif
+	}
+
+	void ContentBrowserPanel::OpenSolutionFile(const std::filesystem::path& projectPath)
+	{
+		auto& config = Project::GetActive()->GetConfig();
+
+		// Check if script editor is configured
+		if (config.ScriptEditorPath.empty())
+		{
+			GX_CORE_WARN("No external script editor configured. Please set one in Project Settings.");
+			return;
+		}
+
+		// Check if the configured editor exists
+		if (!std::filesystem::exists(config.ScriptEditorPath))
+		{
+			GX_CORE_ERROR("Script editor not found at: {0}", config.ScriptEditorPath.string());
+			return;
+		}
+
+		// Check if the project file exists
+		if (!std::filesystem::exists(projectPath))
+		{
+			GX_CORE_ERROR("Project file not found at: {0}", projectPath.string());
+			return;
+		}
+
+		// Build command to open project file
+		std::string command = "\"" + config.ScriptEditorPath.string() + "\" \"" + projectPath.string() + "\"";
+		GX_CORE_INFO("Opening project: {0}", projectPath.filename().string());
+
+		// Launch the process (Windows)
+#ifdef _WIN32
+		STARTUPINFOA si = { sizeof(si) };
+		PROCESS_INFORMATION pi;
+
+		if (CreateProcessA(
+			NULL,
+			const_cast<char*>(command.c_str()),
+			NULL,
+			NULL,
+			FALSE,
+			0,
+			NULL,
+			NULL,
+			&si,
+			&pi))
+		{
+			// Close handles as we don't need to wait for the process
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+		}
+		else
+		{
+			GX_CORE_ERROR("Failed to open project file with editor");
 		}
 #else
 		// For other platforms, use system()

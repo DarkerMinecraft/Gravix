@@ -39,7 +39,8 @@ namespace Gravix
 		static void Initialize();
 		static void Shutdown();
 
-		static void LoadAssembly(const std::filesystem::path& assemblyPath);
+		static void LoadCoreAssembly(const std::filesystem::path& coreAssemblyPath);
+		static void LoadAppAssembly(const std::filesystem::path& appAssemblyPath);
 
 		static void OnRuntimeStart(Scene* scene);
 		static void OnRuntimeStop();

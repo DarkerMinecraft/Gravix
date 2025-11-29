@@ -1,16 +1,15 @@
 #include "AppLayer.h"
 
-#include "Utils/PlatformUtils.h"
-#include "Serialization/Scene/SceneSerializer.h"
 #include "Events/KeyEvents.h"
 #include "Events/WindowEvents.h"
+
+#include "Scripting/ScriptEngine.h"
 
 #include "Asset/Importers/TextureImporter.h"
 #include "Debug/Instrumentor.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
-#include <glm/gtc/type_ptr.hpp>
 
 namespace Gravix
 {
@@ -88,6 +87,14 @@ namespace Gravix
 	{
 		GX_PROFILE_FUNCTION();
 
+		// Shutdown previous project's script engine if switching projects
+		if (m_ProjectInitialized)
+		{
+			ScriptEngine::Shutdown();
+		}
+
+		ScriptEngine::Initialize();
+
 		// Load the start scene
 		Ref<Scene> scene = m_SceneManager.LoadStartScene(m_ViewportPanel.GetViewportSize());
 
@@ -105,6 +112,11 @@ namespace Gravix
 	AppLayer::~AppLayer()
 	{
 		GX_PROFILE_FUNCTION();
+
+		if (m_ProjectInitialized)
+		{
+			ScriptEngine::Shutdown();
+		}
 
 		if (Project::HasActiveProject())
 		{

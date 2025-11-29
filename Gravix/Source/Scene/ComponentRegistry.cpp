@@ -100,24 +100,90 @@ namespace Gravix
 			},
 			[](ScriptComponent& c)
 			{
-				bool scriptClassExists = false;
-				if (ScriptEngine::IsEntityClassExists(c.Name))
-					scriptClassExists = true;
-
 				ImGuiHelpers::BeginPropertyRow("Class");
-				char buffer[256];
-				memset(buffer, 0, sizeof(buffer));
-				strcpy_s(buffer, c.Name.c_str());
-				if(!scriptClassExists)
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.3f, 1.0f));
 
-				if (ImGui::InputText("##Class", buffer, sizeof(buffer)))
+				// Get all available script classes
+				auto& entityClasses = ScriptEngine::GetEntityClasses();
+
+				// Create a vector of class names for the combo
+				std::vector<std::string> classNames;
+				classNames.push_back("None"); // First option is "None"
+				for (const auto& [className, scriptClass] : entityClasses)
 				{
-					c.Name = std::string(buffer);
+					classNames.push_back(className);
 				}
 
-				if (!scriptClassExists)
-					ImGui::PopStyleColor();
+				// Find current selection index
+				int currentIndex = 0;
+				if (!c.Name.empty())
+				{
+					for (int i = 0; i < classNames.size(); i++)
+					{
+						if (classNames[i] == c.Name)
+						{
+							currentIndex = i;
+							break;
+						}
+					}
+				}
+
+				// Use a static map to store search buffers per component instance
+				static std::unordered_map<void*, std::string> searchBuffers;
+				void* componentID = &c;
+
+				// Show combo box
+				if (ImGui::BeginCombo("##Class", currentIndex == 0 ? "None" : c.Name.c_str()))
+				{
+					// Add search input at the top of the combo
+					std::string& searchText = searchBuffers[componentID];
+					char searchBuffer[256] = "";
+					strncpy_s(searchBuffer, searchText.c_str(), sizeof(searchBuffer) - 1);
+
+					ImGui::SetNextItemWidth(-1);
+					if (ImGui::InputTextWithHint("##ScriptSearch", "Search...", searchBuffer, sizeof(searchBuffer)))
+					{
+						searchText = searchBuffer;
+					}
+
+					// Set keyboard focus to search input when combo opens
+					if (ImGui::IsWindowAppearing())
+						ImGui::SetKeyboardFocusHere(-1);
+
+					ImGui::Separator();
+
+					// Convert search to lowercase for case-insensitive matching
+					std::string searchLower = searchText;
+					std::transform(searchLower.begin(), searchLower.end(), searchLower.begin(), ::tolower);
+
+					for (int i = 0; i < classNames.size(); i++)
+					{
+						// Filter by search text if not empty
+						if (!searchText.empty())
+						{
+							std::string nameLower = classNames[i];
+							std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+
+							if (nameLower.find(searchLower) == std::string::npos)
+								continue; // Skip if doesn't match search
+						}
+
+						bool isSelected = (currentIndex == i);
+						if (ImGui::Selectable(classNames[i].c_str(), isSelected))
+						{
+							if (i == 0)
+								c.Name = ""; // None selected
+							else
+								c.Name = classNames[i];
+
+							// Clear search after selection
+							searchBuffers[componentID].clear();
+						}
+						if (isSelected)
+							ImGui::SetItemDefaultFocus();
+					}
+					ImGui::EndCombo();
+				}
+
 				ImGuiHelpers::EndPropertyRow();
 			}
 		);

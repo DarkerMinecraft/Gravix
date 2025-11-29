@@ -32,6 +32,33 @@ namespace Gravix
 			ImGui::Spacing();
 
 			DrawAddComponents(selectedEntity);
+
+			// Handle drag & drop of .cs files from content browser
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_FILE"))
+				{
+					const char* path = (const char*)payload->Data;
+					std::filesystem::path filePath(path);
+
+					// Check if it's a .cs file
+					if (filePath.extension() == ".cs")
+					{
+						// Extract class name from filename (without extension)
+						std::string className = filePath.stem().string();
+
+						// Add a ScriptComponent with this class name
+						auto& scriptComp = selectedEntity.AddComponentInstance<ScriptComponent>();
+						scriptComp.Name = className;
+
+						if (m_AppLayer)
+							m_AppLayer->MarkSceneDirty();
+
+						GX_CORE_INFO("Added script component: {}", className);
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
 		}
 		else
 		{
@@ -96,9 +123,16 @@ namespace Gravix
 						{
 							auto& instances = compIt->second;
 
+							// Track drag and drop for multi-instance components
+							int draggedInstanceIndex = -1;
+							int targetInstanceIndex = -1;
+
 							// Render each instance
 							for (size_t i = 0; i < instances.size(); i++)
 							{
+								// Push unique ID for each instance to avoid ImGui ID conflicts
+								ImGui::PushID((int)i);
+
 								void* component = instances[i].get();
 
 								// Store cursor position before rendering component
@@ -109,6 +143,31 @@ namespace Gravix
 
 								// Get the last item rect for drag and drop
 								ImVec2 cursorPosAfter = ImGui::GetCursorPos();
+
+								// Make the entire component area draggable
+								ImGui::SetCursorPos(cursorPosBefore);
+								ImGui::InvisibleButton("##instance_drag", ImVec2(ImGui::GetContentRegionAvail().x, cursorPosAfter.y - cursorPosBefore.y));
+								ImGui::SetCursorPos(cursorPosAfter);
+
+								// Drag and drop source
+								if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+								{
+									int instanceIndex = (int)i;
+									ImGui::SetDragDropPayload("SCRIPT_INSTANCE_REORDER", &instanceIndex, sizeof(int));
+									ImGui::Text("Reorder: %s #%d", info.Name.c_str(), (int)i + 1);
+									ImGui::EndDragDropSource();
+								}
+
+								// Drag and drop target
+								if (ImGui::BeginDragDropTarget())
+								{
+									if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCRIPT_INSTANCE_REORDER"))
+									{
+										draggedInstanceIndex = *(int*)payload->Data;
+										targetInstanceIndex = (int)i;
+									}
+									ImGui::EndDragDropTarget();
+								}
 
 								// Mark scene dirty if component was modified
 								if (userSettings.WasModified)
@@ -123,25 +182,39 @@ namespace Gravix
 									instances.erase(instances.begin() + i);
 									if (m_AppLayer)
 										m_AppLayer->MarkSceneDirty();
+									ImGui::PopID();
 									break; // Exit loop after removal to avoid iterator issues
 								}
+
+								ImGui::PopID();
 							}
 
-							// Add button to create new instances
-							ImGui::Spacing();
-							std::string addButtonLabel = "+ Add " + info.Name;
-							if (ImGui::Button(addButtonLabel.c_str()))
+							// Handle reordering
+							if (draggedInstanceIndex != -1 && targetInstanceIndex != -1 && draggedInstanceIndex != targetInstanceIndex)
 							{
-								// Add new instance using AddComponentInstance
-								// For ScriptComponent specifically
-								if (typeIndex == typeid(ScriptComponent))
+								// Move the instance from draggedIndex to targetIndex
+								auto temp = instances[draggedInstanceIndex];
+								if (draggedInstanceIndex < targetInstanceIndex)
 								{
-									entity.AddComponentInstance<ScriptComponent>();
-									if (m_AppLayer)
-										m_AppLayer->MarkSceneDirty();
+									// Moving down: shift elements up
+									for (int idx = draggedInstanceIndex; idx < targetInstanceIndex; idx++)
+									{
+										instances[idx] = instances[idx + 1];
+									}
 								}
+								else
+								{
+									// Moving up: shift elements down
+									for (int idx = draggedInstanceIndex; idx > targetInstanceIndex; idx--)
+									{
+										instances[idx] = instances[idx - 1];
+									}
+								}
+								instances[targetInstanceIndex] = temp;
+
+								if (m_AppLayer)
+									m_AppLayer->MarkSceneDirty();
 							}
-							ImGui::Spacing();
 						}
 					}
 				}

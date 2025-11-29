@@ -97,6 +97,31 @@ namespace Gravix
 			}
 		}
 
+	// Copy multi-instance components (like ScriptComponent)
+	for (const auto& [entityID, componentsMap] : other->m_MultiComponents)
+	{
+		for (const auto& [typeIndex, instances] : componentsMap)
+		{
+			const ComponentInfo* info = ComponentRegistry::Get().GetComponentInfo(typeIndex);
+			if (!info)
+				continue;
+
+			// Deep copy each instance
+			for (const auto& instancePtr : instances)
+			{
+				// Create a new shared_ptr with a copy of the component
+				if (typeIndex == typeid(ScriptComponent))
+				{
+					auto* oldScript = static_cast<ScriptComponent*>(instancePtr.get());
+					auto newScript = std::make_shared<ScriptComponent>();
+					newScript->Name = oldScript->Name;
+					newScene->m_MultiComponents[entityID][typeIndex].push_back(newScript);
+				}
+				// Add other multi-instance component types here as needed
+			}
+		}
+	}
+
 		return newScene;
 	}
 
@@ -162,16 +187,34 @@ namespace Gravix
 		OnPhysics2DStart();
 		{
 			ScriptEngine::OnRuntimeStart(this);
-			
-			auto view = m_Registry.view<ScriptComponent>();
-			for(auto entity : view)
+
+			GX_CORE_INFO("Scene::OnRuntimeStart - Checking for entities with scripts...");
+			GX_CORE_INFO("  Total entities in m_MultiComponents: {0}", m_MultiComponents.size());
+
+			// Iterate through all entities with script components in multi-component storage
+			for (const auto& [entityID, componentsMap] : m_MultiComponents)
 			{
-				Entity e = { entity, this };
-				auto& scriptComp = view.get<ScriptComponent>(entity);
-				const auto& entityClasses = ScriptEngine::GetEntityClasses();
-				if (ScriptEngine::IsEntityClassExists(scriptComp.Name))
-					ScriptEngine::OnCreateEntity(e);
+				auto it = componentsMap.find(typeid(ScriptComponent));
+				if (it != componentsMap.end() && !it->second.empty())
+				{
+					GX_CORE_INFO("  Found entity with {0} script component(s)", it->second.size());
+
+					// Find the entity by UUID
+					auto view = m_Registry.view<TagComponent>();
+					for (auto entity : view)
+					{
+						Entity e = { entity, this };
+						if (e.GetID() == entityID)
+						{
+							GX_CORE_INFO("  Calling OnCreateEntity for entity: {0}", e.GetName());
+							ScriptEngine::OnCreateEntity(e);
+							break;
+						}
+					}
+				}
 			}
+
+			GX_CORE_INFO("Scene::OnRuntimeStart - Finished initializing scripts");
 		}
 	}
 
@@ -188,14 +231,24 @@ namespace Gravix
 	void Scene::OnRuntimeUpdate(float ts)
 	{
 		{
-			auto view = m_Registry.view<ScriptComponent>();
-			for (auto entity : view)
+			// Iterate through all entities with script components in multi-component storage
+			for (const auto& [entityID, componentsMap] : m_MultiComponents)
 			{
-				Entity e = { entity, this };
-				auto& scriptComp = view.get<ScriptComponent>(entity);
-				const auto& entityClasses = ScriptEngine::GetEntityClasses();
-				if (ScriptEngine::IsEntityClassExists(scriptComp.Name))
-					ScriptEngine::OnUpdateEntity(e, ts);
+				auto it = componentsMap.find(typeid(ScriptComponent));
+				if (it != componentsMap.end() && !it->second.empty())
+				{
+					// Find the entity by UUID
+					auto view = m_Registry.view<TagComponent>();
+					for (auto entity : view)
+					{
+						Entity e = { entity, this };
+						if (e.GetID() == entityID)
+						{
+							ScriptEngine::OnUpdateEntity(e, ts);
+							break;
+						}
+					}
+				}
 			}
 		}
 		OnPhysics2DUpdate();

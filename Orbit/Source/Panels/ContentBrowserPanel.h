@@ -29,6 +29,7 @@ namespace Gravix
 		void CreateNewScene();
 		void CreateNewScript();
 		void OpenScriptFile(const std::filesystem::path& scriptPath);
+		void OpenSolutionFile(const std::filesystem::path& projectPath);
 	private:
 		AppLayer* m_AppLayer = nullptr;
 		std::filesystem::path m_AssetDirectory;

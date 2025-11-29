@@ -38,8 +38,6 @@ namespace Gravix
 		m_ImGuiRender = CreateRef<ImGuiRender>();
 		ComponentRegistry::Get().RegisterAllComponents();
 
-		ScriptEngine::Initialize();
-
 #ifdef ENGINE_DEBUG
 		// Initialize profiler viewer in debug builds
 		m_ProfilerViewer = CreateScope<ProfilerViewer>();
@@ -49,8 +47,6 @@ namespace Gravix
 	Application::~Application()
 	{
 		GX_PROFILE_FUNCTION();
-
-		//ScriptEngine::Shutdown();
 	}
 
 	void Application::Run()

@@ -35,6 +35,7 @@ namespace Gravix
 		ComponentSpecification Specification;
 		std::function<void(void*, Scene*)> OnCreateFunc;
 		std::function<void(YAML::Emitter&, void*)> SerializeFunc;
+		std::function<void(YAML::Emitter&, void*)> RawSerializeFunc; // For multi-instance components (no wrapper)
 		std::function<void(void*, const YAML::Node&)> DeserializeFunc;
 		std::function<void(void*, ComponentUserSettings*)> ImGuiRenderFunc;
 		std::function<void(void*, void*)> CopyFunc; // Copy from source to destination component
@@ -89,6 +90,11 @@ namespace Gravix
 						serialize(out, *reinterpret_cast<T*>(instance));
 						out << YAML::EndMap;
 					}
+				};
+			info.RawSerializeFunc = [serialize](YAML::Emitter& out, void* instance) -> void
+				{
+					if (serialize)
+						serialize(out, *reinterpret_cast<T*>(instance));
 				};
 			info.DeserializeFunc = [deserialize](void* instance, const YAML::Node& node) -> void
 				{

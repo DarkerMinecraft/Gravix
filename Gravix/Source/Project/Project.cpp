@@ -147,7 +147,7 @@ namespace Gravix
 			std::ofstream csprojFile(csprojPath);
 			if (csprojFile.is_open())
 			{
-				csprojFile << R"(<Project Sdk="Microsoft.NET.Sdk">
+				csprojFile << R"xml(<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!-- Build a DLL -->
     <OutputType>Library</OutputType>
@@ -164,7 +164,7 @@ namespace Gravix
     <LangVersion>7.3</LangVersion>
 
     <!-- Output paths -->
-    <AssemblyName>)" << m_Config.Name << R"(</AssemblyName>
+    <AssemblyName>OrbitPlayer</AssemblyName>
     <OutputPath>bin/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -190,32 +190,8 @@ namespace Gravix
     <Reference Include="System.Runtime" />
   </ItemGroup>
 
-  <!-- ILRepack to merge GravixScripting.dll into output -->
-  <ItemGroup>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.18.2" />
-  </ItemGroup>
-
-  <Target Name="ILRepack" AfterTargets="Build">
-    <PropertyGroup>
-      <WorkingDirectory>$(MSBuildThisFileDirectory)bin</WorkingDirectory>
-    </PropertyGroup>
-    <ItemGroup>
-      <InputAssemblies Include="$(OutputPath)GravixScripting.dll" />
-      <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
-    </ItemGroup>
-    <Message Text="Merging GravixScripting.dll + $(AssemblyName).dll into OrbitPlayer.dll..." Importance="High" />
-    <ILRepack
-      OutputType="Dll"
-      MainAssembly="$(OutputPath)GravixScripting.dll"
-      OutputAssembly="$(OutputPath)OrbitPlayer.dll"
-      InputAssemblies="@(InputAssemblies)"
-      WorkingDirectory="$(WorkingDirectory)"
-      Internalize="false"
-    />
-  </Target>
-
 </Project>
-)";
+)xml";
 				csprojFile.close();
 				GX_CORE_INFO("Created {}.csproj: {}", m_Config.Name, csprojPath.string());
 			}
@@ -258,14 +234,14 @@ namespace Gravix
 
 		if (buildResult == 0)
 		{
-			std::filesystem::path gameDllPath = scriptBinPath / "OrbitPlayer.dll";
-			if (std::filesystem::exists(gameDllPath))
+			std::filesystem::path outputDll = scriptBinPath / "OrbitPlayer.dll";
+			if (std::filesystem::exists(outputDll))
 			{
-				GX_CORE_INFO("Successfully built OrbitPlayer.dll (merged GravixScripting.dll + {}.dll)", m_Config.Name);
+				GX_CORE_INFO("Successfully built OrbitPlayer.dll (game scripts)");
 			}
 			else
 			{
-				GX_CORE_WARN("Build completed but OrbitPlayer.dll not found at expected location: {}", gameDllPath.string());
+				GX_CORE_WARN("Build completed but OrbitPlayer.dll not found at expected location: {}", outputDll.string());
 			}
 		}
 		else

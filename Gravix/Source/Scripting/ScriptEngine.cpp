@@ -3,6 +3,8 @@
 
 #include "ScriptGlue.h"
 
+#include "Project/Project.h"
+
 #include <fstream>
 #include <filesystem>
 
@@ -101,6 +103,9 @@ namespace Gravix
 		MonoAssembly* CoreAssembly = nullptr;
 		MonoImage* CoreAssemblyImage = nullptr;
 
+		MonoAssembly* AppAssembly = nullptr;
+		MonoImage* AppAssemblyImage = nullptr;
+
 		Scene* SceneContext = nullptr;
 
 		Ref<ScriptClass> EntityClass;
@@ -116,7 +121,9 @@ namespace Gravix
 		s_Data = CreateRef<ScriptEngineData>();
 
 		InitMono();
-		LoadAssembly("GravixScripting.dll");
+		LoadCoreAssembly(Project::GetScriptPath() / "bin/GravixScripting.dll");
+		ScriptGlue::RegisterFunctions();
+		LoadAppAssembly(Project::GetScriptPath() / "bin/OrbitPlayer.dll");
 	}
 
 	void ScriptEngine::Shutdown()
@@ -125,16 +132,20 @@ namespace Gravix
 		s_Data = nullptr; // Automatically cleaned up by Ref<>
 	}
 
-	void ScriptEngine::LoadAssembly(const std::filesystem::path& assemblyPath)
+	void ScriptEngine::LoadCoreAssembly(const std::filesystem::path& coreAssemblyPath)
 	{
-		s_Data->AppDomain = mono_domain_create_appdomain((char*)"GravixScriptRuntime", nullptr);
-		mono_domain_set(s_Data->AppDomain, true);
-
-		s_Data->CoreAssembly = Utils::LoadMonoAssembly(assemblyPath);
+		s_Data->CoreAssembly = Utils::LoadMonoAssembly(coreAssemblyPath);
 		s_Data->CoreAssemblyImage = mono_assembly_get_image(s_Data->CoreAssembly);
-		LoadAssemblyClasses(s_Data->CoreAssemblyImage);
-		ScriptGlue::RegisterFunctions();
+
 		s_Data->EntityClass = CreateRef<ScriptClass>("GravixEngine", "Entity");
+	}
+
+	void ScriptEngine::LoadAppAssembly(const std::filesystem::path& appAssemblyPath)
+	{
+		s_Data->AppAssembly = Utils::LoadMonoAssembly(appAssemblyPath);
+		s_Data->AppAssemblyImage = mono_assembly_get_image(s_Data->AppAssembly);
+
+		LoadAssemblyClasses(s_Data->AppAssemblyImage);
 	}
 
 	void ScriptEngine::OnRuntimeStart(Scene* scene)
@@ -155,13 +166,22 @@ namespace Gravix
 
 		// Get all script components (supports multiple)
 		auto scriptComponents = entity.GetComponents<ScriptComponent>();
+		GX_CORE_INFO("OnCreateEntity called for entity '{0}' with {1} script component(s)", entity.GetName(), scriptComponents.size());
+
 		for (auto* sc : scriptComponents)
 		{
+			GX_CORE_INFO("  Script component: {0}", sc->Name);
 			if (ScriptEngine::IsEntityClassExists(sc->Name))
 			{
+				GX_CORE_INFO("  Creating script instance for: {0}", sc->Name);
 				Ref<ScriptInstance> instance = CreateRef<ScriptInstance>(s_Data->EntityClasses[sc->Name], entity);
 				s_Data->EntityInstances[entityID].push_back(instance);
 				instance->InvokeOnCreate();
+				GX_CORE_INFO("  OnCreate invoked for: {0}", sc->Name);
+			}
+			else
+			{
+				GX_CORE_WARN("  Script class does not exist: {0}", sc->Name);
 			}
 		}
 	}
@@ -206,6 +226,9 @@ namespace Gravix
 		}
 
 		s_Data->RootDomain = domain;
+
+		s_Data->AppDomain = mono_domain_create_appdomain((char*)"GravixScriptRuntime", nullptr);
+		mono_domain_set(s_Data->AppDomain, true);
 	}
 
 	void ScriptEngine::ShudownMono()
@@ -213,7 +236,6 @@ namespace Gravix
 		s_Data->AppDomain = nullptr;
 		s_Data->RootDomain = nullptr;
 	}
-
 
 	void ScriptEngine::LoadAssemblyClasses(MonoImage* assemblyImage)
 	{
@@ -237,12 +259,25 @@ namespace Gravix
 
 
 			MonoClass* monoClass = mono_class_from_name(assemblyImage, nameSpace, name);
-			MonoClass* entityClass = mono_class_from_name(assemblyImage, "GravixEngine", "Entity");
+			MonoClass* entityClass = mono_class_from_name(s_Data->CoreAssemblyImage, "GravixEngine", "Entity");
+
+			if (monoClass == entityClass)
+				continue;
 
 			bool isEntity = mono_class_is_subclass_of(monoClass, entityClass, false);
-			if (isEntity) 
+			if (!isEntity)
+				continue;
+
+			s_Data->EntityClasses[fullName] = CreateRef<ScriptClass>(nameSpace, name);
+			
+			int fieldCount = mono_class_num_fields(monoClass);
+
+			GX_CORE_INFO("Loaded Script Entity Class: {0} with {1} fields", fullName, fieldCount);
+			void* iterator = nullptr;
+			while(MonoClassField* field = mono_class_get_fields(monoClass, &iterator))
 			{
-				s_Data->EntityClasses[fullName] = CreateRef<ScriptClass>(nameSpace, name);
+				const char* name = mono_field_get_name(field);
+				GX_CORE_INFO("    Field: {0}", name);
 			}
 		}
 	}
@@ -262,7 +297,10 @@ namespace Gravix
 	ScriptClass::ScriptClass(const std::string& classNamespace, const std::string& className)
 		: m_ClassNamespace(classNamespace), m_ClassName(className)
 	{
-		m_MonoClass = mono_class_from_name(s_Data->CoreAssemblyImage, classNamespace.c_str(), className.c_str());
+		if(m_ClassNamespace == "GravixEngine")
+			m_MonoClass = mono_class_from_name(s_Data->CoreAssemblyImage, classNamespace.c_str(), className.c_str());
+		else 
+			m_MonoClass = mono_class_from_name(s_Data->AppAssemblyImage, classNamespace.c_str(), className.c_str());
 	}
 
 	MonoObject* ScriptClass::Instantiate()

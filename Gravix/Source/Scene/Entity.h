@@ -238,6 +238,20 @@ namespace Gravix
 			if (info->OnCreateFunc)
 				info->OnCreateFunc(component, m_Scene);
 
+			// Track component order (skip for ComponentOrderComponent itself)
+			if (typeid(T) != typeid(ComponentOrderComponent))
+			{
+				if (HasComponent<ComponentOrderComponent>())
+				{
+					auto& orderComponent = GetComponent<ComponentOrderComponent>();
+					// Only add if this type isn't already in the order
+					if (std::find(orderComponent.ComponentOrder.begin(), orderComponent.ComponentOrder.end(), typeid(T)) == orderComponent.ComponentOrder.end())
+					{
+						orderComponent.ComponentOrder.push_back(typeid(T));
+					}
+				}
+			}
+
 			return *component;
 		}
 
