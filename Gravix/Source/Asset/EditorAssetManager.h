@@ -41,5 +41,8 @@ namespace Gravix
 		std::unordered_map<AssetHandle, Ref<AsyncLoadRequest>> m_LoadingAssets;
 		std::queue<Ref<AsyncLoadRequest>> m_CompletionQueue;
 		std::mutex m_CompletionQueueMutex;
+
+		// Reused vector to avoid allocations in ProcessAsyncLoads
+		std::vector<Ref<AsyncLoadRequest>> m_CompletedRequestsCache;
 	};
 }

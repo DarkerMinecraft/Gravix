@@ -5,7 +5,8 @@
 
 #include "Renderer/Vulkan/Utils/DescriptorWriter.h"
 #include "Renderer/Vulkan/Utils/VulkanUtils.h"
-#include "Core/Application.h"
+#include "Asset/EditorAssetManager.h"
+#include "Project/Project.h"
 
 namespace Gravix
 {
@@ -40,48 +41,99 @@ namespace Gravix
 		}
 	}
 
-	static VkShaderStageFlagBits ShaderStageToVulkanShaderStageBit(std::vector<ShaderStage> avaliableStages)
+	VulkanMaterial::VulkanMaterial(Device* device, AssetHandle shaderHandle, AssetHandle pipelineHandle)
+		: m_Device(static_cast<VulkanDevice*>(device))
 	{
-		VkShaderStageFlagBits flags = VkShaderStageFlagBits(0);
-		for (auto stage : avaliableStages)
+		// Handle null handles (for materials created from editor without assigned shader/pipeline)
+		if (shaderHandle == 0 || pipelineHandle == 0)
 		{
-			VkShaderStageFlagBits stageFlag = ShaderStageToVulkanShaderStage(stage);
-			flags = static_cast<VkShaderStageFlagBits>(flags | stageFlag);
+			GX_CORE_WARN("Created material with null shader or pipeline handle. Assign them before rendering.");
+			return;
 		}
-		return flags;
+
+		// Load Shader and Pipeline from AssetManager
+		auto assetManager = Project::GetActive()->GetEditorAssetManager();
+
+		m_Shader = assetManager->GetAsset(shaderHandle);
+		m_Pipeline = assetManager->GetAsset(pipelineHandle);
+
+		if (!m_Shader)
+		{
+			GX_CORE_ERROR("Failed to load shader for material!");
+			return;
+		}
+
+		if (!m_Pipeline)
+		{
+			GX_CORE_ERROR("Failed to load pipeline for material!");
+			return;
+		}
+
+		// Determine if this is a compute shader
+		m_IsCompute = (m_Shader->GetShaderType() == ShaderType::Compute);
+
+		// Create shader modules from SPIR-V
+		CreateShaderModules();
+
+		GX_CORE_INFO("Created VulkanMaterial (pipeline not yet built)");
 	}
 
-	static bool ShouldRegeneratePipelineCache(VkPhysicalDevice device, const std::vector<uint8_t>& cachedData) 
+	VulkanMaterial::VulkanMaterial(Device* device, Ref<Shader> shader, Ref<Pipeline> pipeline)
+		: m_Device(static_cast<VulkanDevice*>(device)), m_Shader(shader), m_Pipeline(pipeline)
 	{
-		if (cachedData.size() < sizeof(VkPipelineCacheHeaderVersionOne))
-			return true;
-		const auto* cacheHeader = reinterpret_cast<const VkPipelineCacheHeaderVersionOne*>(cachedData.data());
-		VkPhysicalDeviceProperties deviceProps;
-		vkGetPhysicalDeviceProperties(device, &deviceProps);
-		return (cacheHeader->headerVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE) ||
-			(cacheHeader->vendorID != deviceProps.vendorID) ||
-			(cacheHeader->deviceID != deviceProps.deviceID) ||
-			(memcmp(cacheHeader->pipelineCacheUUID, deviceProps.pipelineCacheUUID, VK_UUID_SIZE) != 0);
+		if (!m_Shader)
+		{
+			GX_CORE_WARN("Created material with null shader. Assign shader before rendering.");
+			return;
+		}
+
+		if (!m_Pipeline)
+		{
+			GX_CORE_WARN("Created material with null pipeline. Assign pipeline before rendering.");
+			return;
+		}
+
+		// Determine if this is a compute shader
+		m_IsCompute = (m_Shader->GetShaderType() == ShaderType::Compute);
+
+		// Create shader modules from SPIR-V
+		CreateShaderModules();
+
+		GX_CORE_INFO("Created VulkanMaterial from direct references (pipeline not yet built)");
 	}
 
-	VulkanMaterial::VulkanMaterial(Device* device, const MaterialSpecification& spec)
-		: m_Device(static_cast<VulkanDevice*>(device)), m_DebugName(spec.DebugName)
+	void VulkanMaterial::SetFramebuffer(Ref<Framebuffer> framebuffer)
 	{
-		std::filesystem::path materialCache = Project::GetLibraryDirectory() / (spec.DebugName + ".cache");	
-		GetShaderCache(spec.ShaderFilePath, materialCache);
-		CreateMaterial(spec);
-		SaveShaderCache(spec.ShaderFilePath, materialCache);
+		m_RenderTarget = framebuffer;
+		BuildPipeline();
 	}
 
-	VulkanMaterial::VulkanMaterial(Device* device, const std::string& debugName, const std::filesystem::path& shaderFilePath)
-		: m_Device(static_cast<VulkanDevice*>(device)), m_DebugName(debugName)
+	void VulkanMaterial::BuildPipeline()
 	{
-		std::filesystem::path materialCache = Project::GetLibraryDirectory() / (debugName + ".cache");
-		GetShaderCache(shaderFilePath, materialCache);
-		CreateMaterial(debugName, shaderFilePath);
-		SaveShaderCache(shaderFilePath, materialCache);
+		if (m_PipelineBuilt)
+		{
+			// Destroy old pipeline
+			if (m_VkPipeline != VK_NULL_HANDLE)
+				vkDestroyPipeline(m_Device->GetDevice(), m_VkPipeline, nullptr);
+			if (m_PipelineLayout != VK_NULL_HANDLE)
+				vkDestroyPipelineLayout(m_Device->GetDevice(), m_PipelineLayout, nullptr);
+		}
 
-		m_IsCompute = true;
+		// Create pipeline layout
+		CreatePipelineLayout();
+
+		// Create graphics or compute pipeline
+		if (m_IsCompute)
+		{
+			CreateComputePipeline();
+		}
+		else
+		{
+			CreateGraphicsPipeline();
+		}
+
+		m_PipelineBuilt = true;
+		GX_CORE_INFO("Built Vulkan pipeline for material");
 	}
 
 	VulkanMaterial::~VulkanMaterial()
@@ -91,423 +143,372 @@ namespace Gravix
 			vkDestroyShaderModule(m_Device->GetDevice(), shaderModule, nullptr);
 		}
 
-		vkDestroyPipelineCache(m_Device->GetDevice(), m_PipelineCache, nullptr);
-		vkDestroyPipelineLayout(m_Device->GetDevice(), m_PipelineLayout, nullptr);
-		vkDestroyPipeline(m_Device->GetDevice(), m_Pipeline, nullptr);
+		if (m_PipelineLayout != VK_NULL_HANDLE)
+			vkDestroyPipelineLayout(m_Device->GetDevice(), m_PipelineLayout, nullptr);
+
+		if (m_VkPipeline != VK_NULL_HANDLE)
+			vkDestroyPipeline(m_Device->GetDevice(), m_VkPipeline, nullptr);
+	}
+
+	DynamicStruct VulkanMaterial::GetPushConstantStruct()
+	{
+		return DynamicStruct(m_Shader->GetReflection().GetReflectedStruct("PushConstants"));
+	}
+
+	DynamicStruct VulkanMaterial::GetMaterialStruct()
+	{
+		return DynamicStruct(m_Shader->GetReflection().GetReflectedStruct("Material"));
+	}
+
+	DynamicStruct VulkanMaterial::GetVertexStruct()
+	{
+		return DynamicStruct(m_Shader->GetReflection().GetReflectedStruct("Vertex"));
+	}
+
+	size_t VulkanMaterial::GetVertexSize()
+	{
+		return m_Shader->GetReflection().GetReflectedStruct("Vertex").GetSize();
+	}
+
+	ReflectedStruct VulkanMaterial::GetReflectedStruct(const std::string& name)
+	{
+		return m_Shader->GetReflection().GetReflectedStruct(name);
 	}
 
 	void VulkanMaterial::Bind(VkCommandBuffer cmd, void* pushConstants)
 	{
-		if (m_Pipeline == VK_NULL_HANDLE)
-			return;
+		VkPipelineBindPoint bindPoint = m_IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-		vkCmdBindPipeline(cmd, m_IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
-		vkCmdBindDescriptorSets(cmd, m_IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout,
-			0, static_cast<uint32_t>(m_Device->GetGlobalDescriptorSetLayouts().size()), m_Device->GetGlobalDescriptorSets(), 0, nullptr);
-		if (m_PushConstantSize > 0 && pushConstants != nullptr)
-			vkCmdPushConstants(cmd, m_PipelineLayout, VK_SHADER_STAGE_ALL, 0, m_PushConstantSize, pushConstants);
+		vkCmdBindPipeline(cmd, bindPoint, m_VkPipeline);
 
+		// Bind all bindless descriptor sets (set 0: storage buffers, set 1: textures, set 2: storage images)
+		VkDescriptorSet* descriptorSets = m_Device->GetGlobalDescriptorSets();
+		uint32_t setCount = static_cast<uint32_t>(m_Device->GetGlobalDescriptorSetLayouts().size());
+		vkCmdBindDescriptorSets(cmd, bindPoint, m_PipelineLayout, 0, setCount, descriptorSets, 0, nullptr);
+
+		if (pushConstants && m_PushConstantSize > 0)
+		{
+			VkShaderStageFlags stages = m_IsCompute ? VK_SHADER_STAGE_COMPUTE_BIT : (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+			vkCmdPushConstants(cmd, m_PipelineLayout, stages, 0, m_PushConstantSize, pushConstants);
+		}
 	}
 
 	void VulkanMaterial::Dispatch(VkCommandBuffer cmd, uint32_t width, uint32_t height)
 	{
-		if (m_Pipeline == VK_NULL_HANDLE || !m_IsCompute)
+		if (!m_IsCompute)
+		{
+			GX_CORE_ERROR("Dispatch called on non-compute material!");
 			return;
+		}
 
-		auto& dispatchInfo = m_Reflection.GetComputeDispatch();
-		vkCmdDispatch(cmd, std::ceil(width / dispatchInfo.LocalSizeX), std::ceil(height / dispatchInfo.LocalSizeY), dispatchInfo.LocalSizeZ);
+		auto& computeInfo = m_Shader->GetReflection().GetComputeDispatch();
+		uint32_t groupsX = (width + computeInfo.LocalSizeX - 1) / computeInfo.LocalSizeX;
+		uint32_t groupsY = (height + computeInfo.LocalSizeY - 1) / computeInfo.LocalSizeY;
+		uint32_t groupsZ = 1;
+
+		vkCmdDispatch(cmd, groupsX, groupsY, groupsZ);
 	}
 
 	void VulkanMaterial::BindResource(VkCommandBuffer cmd, uint32_t binding, Framebuffer* buffer, uint32_t index, bool sampler)
 	{
-		VulkanFramebuffer* framebuffer = static_cast<VulkanFramebuffer*>(buffer);
-		if (!sampler)
+		VulkanFramebuffer* vulkanFramebuffer = static_cast<VulkanFramebuffer*>(buffer);
+		DescriptorWriter writer;
+
+		if (sampler)
 		{
-			framebuffer->TransitionToLayout(cmd, index, VK_IMAGE_LAYOUT_GENERAL);
-
-			DescriptorWriter writer(m_Device->GetGlobalDescriptorSetLayouts()[2], m_Device->GetGlobalDescriptorPool());
-			writer.WriteImage(binding, framebuffer->GetImage(index).ImageView, VK_IMAGE_LAYOUT_GENERAL);
-
-			writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(2));
+			// Combined image samplers use set 1
+			writer.WriteImage(binding, vulkanFramebuffer->GetAttachmentImageView(index),
+				m_Device->GetLinearSampler(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+			writer.UpdateSet(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
+		}
+		else
+		{
+			// Storage images use set 2
+			writer.WriteImage(binding, vulkanFramebuffer->GetAttachmentImageView(index),
+				VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+			writer.UpdateSet(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(2));
 		}
 	}
 
 	void VulkanMaterial::BindResource(VkCommandBuffer cmd, uint32_t binding, Texture2D* texture)
 	{
-		VulkanTexture2D* tex = static_cast<VulkanTexture2D*>(texture);
-		DescriptorWriter writer(m_Device->GetGlobalDescriptorSetLayouts()[1], m_Device->GetGlobalDescriptorPool());
+		VulkanTexture2D* vulkanTexture = static_cast<VulkanTexture2D*>(texture);
+		DescriptorWriter writer;
 
-		writer.WriteImage(binding, tex->GetVkImageView(), tex->GetVkSampler(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
+		// Combined image samplers use set 1
+		writer.WriteImage(binding, vulkanTexture->GetImageView(),
+			vulkanTexture->GetVkSampler(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+		writer.UpdateSet(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
 	}
 
 	void VulkanMaterial::BindResource(VkCommandBuffer cmd, uint32_t binding, uint32_t index, Texture2D* texture)
 	{
-		VulkanTexture2D* tex = static_cast<VulkanTexture2D*>(texture);
-		DescriptorWriter writer(m_Device->GetGlobalDescriptorSetLayouts()[1], m_Device->GetGlobalDescriptorPool());
+		VulkanTexture2D* vulkanTexture = static_cast<VulkanTexture2D*>(texture);
+		DescriptorWriter writer;
 
-		writer.WriteImage(binding, index, tex->GetVkImageView(), tex->GetVkSampler(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		writer.Overwrite(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
+		// Combined image samplers use set 1
+		writer.WriteImage(binding, vulkanTexture->GetImageView(),
+			vulkanTexture->GetVkSampler(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, index);
+
+		writer.UpdateSet(m_Device->GetDevice(), m_Device->GetGlobalDescriptorSet(1));
 	}
 
-	void VulkanMaterial::GetShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile)
+	void VulkanMaterial::CreateShaderModules()
 	{
-		if (std::filesystem::exists(materialCacheFile))
+		const auto& spirvCode = m_Shader->GetSPIRV();
+
+		for (const auto& spirv : spirvCode)
 		{
-			MaterialSerializer deserializer(&m_SerializedShaderData);
-			deserializer.Deserialize(shaderFilePath, materialCacheFile);
+			VkShaderModuleCreateInfo createInfo{};
+			createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			createInfo.codeSize = spirv.size() * sizeof(uint32_t);
+			createInfo.pCode = spirv.data();
 
-			m_ShouldRegenerateShaderCache = deserializer.IsModified();
-			m_ShouldRegeneratePipelineCache = ShouldRegeneratePipelineCache(m_Device->GetPhysicalDevice(), m_SerializedShaderData.PipelineCache);
-			if (m_ShouldRegenerateShaderCache)
-				m_ShouldRegeneratePipelineCache = true;
-		}
-		else
-		{
-			m_ShouldRegenerateShaderCache = true;
-			m_ShouldRegeneratePipelineCache = true;
-		}
-	}
+			VkShaderModule shaderModule;
+			VK_CHECK(vkCreateShaderModule(m_Device->GetDevice(), &createInfo, nullptr, &shaderModule));
 
-	void VulkanMaterial::CreateMaterial(const MaterialSpecification& spec)
-	{
-		SpinShader(spec.ShaderFilePath);
-		CreatePipelineLayout();
-		CreateGraphicsPipeline(spec);
-	}
-
-	void VulkanMaterial::CreateMaterial(const std::string& debugName, const std::filesystem::path& shaderFilePath)
-	{
-		SpinShader(shaderFilePath);
-		CreatePipelineLayout();
-		CreateComputePipeline();
-	}
-
-	void VulkanMaterial::SaveShaderCache(const std::filesystem::path& shaderFilePath, const std::filesystem::path& materialCacheFile)
-	{
-		if (m_ShouldRegeneratePipelineCache || m_ShouldRegenerateShaderCache)
-		{
-			m_SerializedShaderData.Reflection = m_Reflection;
-
-			MaterialSerializer serializer(&m_SerializedShaderData);
-			serializer.Serialize(shaderFilePath, materialCacheFile);
-		}
-	}
-
-	void VulkanMaterial::SpinShader(const std::filesystem::path& shaderFilePath)
-	{
-		std::vector<std::vector<uint32_t>> spirv;
-		if (m_ShouldRegenerateShaderCache)
-		{
-			if (m_Device->GetShaderCompiler().CompileShader(shaderFilePath, &spirv, &m_Reflection))
-			{
-				GX_CORE_INFO("Successfully compiled shader: {0}", shaderFilePath.string());
-				for (uint32_t i = 0; i < spirv.size(); i++)
-				{
-					VkShaderModuleCreateInfo createInfo{};
-					createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-					createInfo.codeSize = spirv[i].size() * sizeof(uint32_t);
-					createInfo.pCode = spirv[i].data();
-					VkShaderModule shaderModule;
-					if (vkCreateShaderModule(m_Device->GetDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-					{
-						GX_CORE_ERROR("Failed to create shader module for: {0}", shaderFilePath.string());
-						return;
-					}
-					m_ShaderModules.push_back(shaderModule);
-				}
-				m_SerializedShaderData.SpirvCode = spirv;
-				m_SerializedShaderData.Reflection = m_Reflection;
-			}
-			else
-			{
-				GX_CORE_ERROR("Failed to compile shader: {0}", shaderFilePath.string());
-			}
-		}
-		else 
-		{
-			for (uint32_t i = 0; i < m_SerializedShaderData.SpirvCode.size(); i++) 
-			{
-				VkShaderModuleCreateInfo createInfo{};
-				createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-				createInfo.codeSize = m_SerializedShaderData.SpirvCode[i].size() * sizeof(uint32_t);
-				createInfo.pCode = m_SerializedShaderData.SpirvCode[i].data();
-				VkShaderModule shaderModule;
-				if (vkCreateShaderModule(m_Device->GetDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-				{
-					GX_CORE_ERROR("Failed to create shader module for: {0}", shaderFilePath.string());
-					return;
-				}
-				m_ShaderModules.push_back(shaderModule);
-			}
-
-			m_Reflection = m_SerializedShaderData.Reflection;
+			m_ShaderModules.push_back(shaderModule);
 		}
 	}
 
 	void VulkanMaterial::CreatePipelineLayout()
 	{
-		auto& layouts = m_Device->GetGlobalDescriptorSetLayouts();
+		// Get push constant size from reflection
+		m_PushConstantSize = m_Shader->GetReflection().GetPushConstantSize();
 
-		VkPipelineLayoutCreateInfo info{};
-		info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		info.setLayoutCount = layouts.size();
-		info.pSetLayouts = layouts.data();
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = m_PushConstantSize;
+		pushConstantRange.stageFlags = m_IsCompute ? VK_SHADER_STAGE_COMPUTE_BIT : (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		auto reflectPushConstants = m_Reflection.GetPushConstantRanges();
-		std::vector<VkPushConstantRange> pushConstantRanges;
-		pushConstantRanges.reserve(reflectPushConstants.size());
+		// Use all bindless descriptor set layouts (storage buffers, combined image samplers, storage images)
+		auto& globalSetLayouts = m_Device->GetGlobalDescriptorSetLayouts();
 
-		for (uint32_t i = 0; i < reflectPushConstants.size(); i++)
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(globalSetLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = globalSetLayouts.data();
+
+		if (m_PushConstantSize > 0)
 		{
-			VkPushConstantRange pushConstantRange{};
-			pushConstantRange.offset = reflectPushConstants[i].Offset;
-			pushConstantRange.size = reflectPushConstants[i].Size;
-			pushConstantRange.stageFlags = VK_SHADER_STAGE_ALL;
-			pushConstantRanges.push_back(pushConstantRange);
-
-		}
-		m_PushConstantSize = m_Reflection.GetPushConstantSize();
-		if (!pushConstantRanges.empty())
-		{
-			info.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
-			info.pPushConstantRanges = pushConstantRanges.data();
-		}
-		else
-		{
-			info.pushConstantRangeCount = 0;
-			info.pPushConstantRanges = nullptr;
+			pipelineLayoutInfo.pushConstantRangeCount = 1;
+			pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 		}
 
-		if (vkCreatePipelineLayout(m_Device->GetDevice(), &info, nullptr, &m_PipelineLayout) != VK_SUCCESS)
-		{
-			GX_CORE_ERROR("Failed to create pipeline layout for material: {0}", m_DebugName);
-			return;
-		}
+		VK_CHECK(vkCreatePipelineLayout(m_Device->GetDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout));
 	}
 
-	void VulkanMaterial::CreateGraphicsPipeline(const MaterialSpecification& spec)
+	void VulkanMaterial::CreateGraphicsPipeline()
 	{
-		uint32_t stride;
-		std::vector<VkVertexInputAttributeDescription> vertexAttributes = GetVertexAttributes(&stride);
+		const auto& entryPoints = m_Shader->GetReflection().GetEntryPoints();
+		const auto& config = m_Pipeline->GetConfiguration();
 
+		// Create shader stage infos
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		for (uint32_t i = 0; i < m_ShaderModules.size(); i++)
+
+		for (size_t i = 0; i < entryPoints.size() && i < m_ShaderModules.size(); i++)
 		{
-			VkPipelineShaderStageCreateInfo stageInfo{};
-			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			stageInfo.stage = m_Reflection.GetEntryPoints()[i].Stage == ShaderStage::Vertex ? VK_SHADER_STAGE_VERTEX_BIT :
-				(m_Reflection.GetEntryPoints()[i].Stage == ShaderStage::Fragment ? VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_COMPUTE_BIT);
-			stageInfo.module = m_ShaderModules[i];
-			stageInfo.pName = m_Reflection.GetEntryPoints()[i].Name.c_str();
-			shaderStages.push_back(stageInfo);
+			VkPipelineShaderStageCreateInfo shaderStage{};
+			shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			shaderStage.stage = ShaderStageToVulkanShaderStage(entryPoints[i].Stage);
+			shaderStage.module = m_ShaderModules[i];
+			shaderStage.pName = entryPoints[i].Name.c_str();
+			shaderStages.push_back(shaderStage);
 		}
 
-		PipelineBuilder builder;
-		builder.SetShaders(shaderStages);
-		switch (spec.BlendingMode)
+		// Vertex input
+		uint32_t stride = 0;
+		auto vertexAttributes = GetVertexAttributes(&stride);
+
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = stride;
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 1;
+		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size());
+		vertexInputInfo.pVertexAttributeDescriptions = vertexAttributes.data();
+
+		// Input assembly
+		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssembly.topology = VulkanUtils::ToVkPrimitiveTopology(config.GraphicsTopology);
+		inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+		// Viewport and scissor (dynamic)
+		VkPipelineViewportStateCreateInfo viewportState{};
+		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportState.viewportCount = 1;
+		viewportState.scissorCount = 1;
+
+		// Rasterization
+		VkPipelineRasterizationStateCreateInfo rasterizer{};
+		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizer.depthClampEnable = VK_FALSE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.polygonMode = VulkanUtils::ToVkPolygonMode(config.FillMode);
+		rasterizer.lineWidth = config.LineWidth;
+		rasterizer.cullMode = VulkanUtils::ToVkCullMode(config.CullMode);
+		rasterizer.frontFace = VulkanUtils::ToVkFrontFace(config.FrontFaceWinding);
+		rasterizer.depthBiasEnable = VK_FALSE;
+
+		// Multisampling
+		VkPipelineMultisampleStateCreateInfo multisampling{};
+		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.rasterizationSamples = m_RenderTarget ? static_cast<VulkanFramebuffer*>(m_RenderTarget.get())->GetSampleCount() : VK_SAMPLE_COUNT_1_BIT;
+
+		// Depth stencil
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = config.EnableDepthTest ? VK_TRUE : VK_FALSE;
+		depthStencil.depthWriteEnable = config.EnableDepthWrite ? VK_TRUE : VK_FALSE;
+		depthStencil.depthCompareOp = VulkanUtils::ToVkCompareOp(config.DepthCompareOp);
+		depthStencil.depthBoundsTestEnable = VK_FALSE;
+		depthStencil.stencilTestEnable = VK_FALSE;
+
+		// Color blending - need one blend state per color attachment
+		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colorBlendAttachment.blendEnable = (config.BlendingMode != Blending::None) ? VK_TRUE : VK_FALSE;
+
+		if (config.BlendingMode == Blending::Alpha)
 		{
-		case Blending::Additive:
-			builder.EnableBlendingAdditive();
-			break;
-		case Blending::Alphablend:
-			builder.EnableBlendingAlphablend();
-			break;
-		case Blending::None:
-			builder.DisableBlending();
+			colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+			colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+			colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+			colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+		}
+		else if (config.BlendingMode == Blending::Additive)
+		{
+			colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+			colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+			colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+			colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+			colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 		}
 
-		switch (spec.GraphicsTopology)
+		// Create color blend attachments for all color attachments (will be calculated later from framebuffer)
+		uint32_t colorAttachmentCount = m_RenderTarget ? static_cast<VulkanFramebuffer*>(m_RenderTarget.get())->GetColorAttachmentFormats().size() : 1;
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(colorAttachmentCount, colorBlendAttachment);
+
+		// Disable blending for integer formats (like entity ID attachment)
+		if (m_RenderTarget)
 		{
-		case Topology::TriangleList:
-			builder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-			break;
-		case Topology::TriangleStrip:
-			builder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
-			break;
-		case Topology::LineList:
-			builder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-			break;
-		case Topology::LineStrip:
-			builder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
-			break;
-		case Topology::PointList:
-			builder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
-			break;
-		}
-
-		switch (spec.FillMode)
-		{
-		case Fill::Solid:
-			builder.SetPolygonMode(VK_POLYGON_MODE_FILL);
-			break;
-		case Fill::Wireframe:
-			builder.SetPolygonMode(VK_POLYGON_MODE_LINE);
-			break;
-		}
-
-
-		VkFrontFace frontFace = spec.FrontFaceWinding == FrontFace::Clockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		switch (spec.CullMode)
-		{
-		case Cull::Back:
-			builder.SetCullMode(VK_CULL_MODE_BACK_BIT, frontFace);
-			break;
-		case Cull::Front:
-			builder.SetCullMode(VK_CULL_MODE_FRONT_BIT, frontFace);
-			break;
-		case Cull::None:
-			builder.SetCullMode(VK_CULL_MODE_NONE, frontFace);
-			break;
-		}
-
-		if (stride != 0)
-			builder.SetVertexInputs(vertexAttributes, stride);
-
-		if (spec.RenderTarget != nullptr)
-		{
-			VulkanFramebuffer* fb = (VulkanFramebuffer*)spec.RenderTarget.get();
-			builder.SetMultiSampling(fb->IsUsingSamples());
-			builder.SetColorAttachments(fb->GetColorAttachmentFormats());
-
-			uint32_t depthImageIndex = fb->GetDepthAttachmentIndex();
-			if (depthImageIndex != -1)
+			const auto& formats = static_cast<VulkanFramebuffer*>(m_RenderTarget.get())->GetColorAttachmentFormats();
+			for (size_t i = 0; i < formats.size(); ++i)
 			{
-				builder.SetDepthFormat(fb->GetImage(depthImageIndex).ImageFormat);
-			}
-		}
-		else
-		{
-			// Drawing directly to swapchain
-			builder.SetMultiSampling(false);  // Swapchain typically doesn't use MSAA
-
-			// Get swapchain format for color attachment
-			VkFormat swapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
-			builder.SetColorAttachments({ swapchainFormat });
-		}
-
-		auto MapCompareOp = [](CompareOp op) -> VkCompareOp
-			{
-				switch (op)
+				VkFormat fmt = formats[i];
+				// Integer formats do not support blending
+				if (fmt == VK_FORMAT_R8_UINT || fmt == VK_FORMAT_R8_SINT ||
+					fmt == VK_FORMAT_R16_UINT || fmt == VK_FORMAT_R16_SINT ||
+					fmt == VK_FORMAT_R32_UINT || fmt == VK_FORMAT_R32_SINT ||
+					fmt == VK_FORMAT_R8G8B8A8_UINT || fmt == VK_FORMAT_R8G8B8A8_SINT ||
+					fmt == VK_FORMAT_R16G16B16A16_UINT || fmt == VK_FORMAT_R16G16B16A16_SINT ||
+					fmt == VK_FORMAT_R32G32B32A32_UINT || fmt == VK_FORMAT_R32G32B32A32_SINT)
 				{
-				case CompareOp::Never:
-					return VK_COMPARE_OP_NEVER;
-				case CompareOp::Less:
-					return VK_COMPARE_OP_LESS;
-				case CompareOp::Equal:
-					return VK_COMPARE_OP_EQUAL;
-				case CompareOp::LessOrEqual:
-					return VK_COMPARE_OP_LESS_OR_EQUAL;
-				case CompareOp::Greater:
-					return VK_COMPARE_OP_GREATER;
-				case CompareOp::NotEqual:
-					return VK_COMPARE_OP_NOT_EQUAL;
-				case CompareOp::GreaterOrEqual:
-					return VK_COMPARE_OP_GREATER_OR_EQUAL;
-				case CompareOp::Always:
-					return VK_COMPARE_OP_ALWAYS;
-				default:
-					return VK_COMPARE_OP_NEVER; // or some default
+					colorBlendAttachments[i].blendEnable = VK_FALSE;
 				}
-			};
-
-		if (spec.EnableDepthTest)
-			builder.EnableDepthTest(spec.EnableDepthWrite, MapCompareOp(spec.DepthCompareOp));
-		else
-			builder.DisableDepthTest();
-
-		builder.SetLineWidth(spec.LineWidth);
-
-		VkPipelineCacheCreateInfo pipelineCacheCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-		if (!m_ShouldRegeneratePipelineCache)
-		{
-			pipelineCacheCreateInfo.initialDataSize = m_SerializedShaderData.PipelineCache.size();
-			pipelineCacheCreateInfo.pInitialData = m_SerializedShaderData.PipelineCache.data();
-
-			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
-		}
-		else 
-		{
-			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
-
-			size_t cacheSize = 0;
-			vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, nullptr);
-			if (cacheSize > 0)
-			{
-				m_SerializedShaderData.PipelineCache.resize(cacheSize);
-				vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, m_SerializedShaderData.PipelineCache.data());
 			}
 		}
 
-		builder.Cache = m_PipelineCache;
-		builder.Layout = m_PipelineLayout;
-		m_Pipeline = builder.BuildPipeline(m_Device->GetDevice());
+		VkPipelineColorBlendStateCreateInfo colorBlending{};
+		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
+		colorBlending.pAttachments = colorBlendAttachments.data();
+
+		// Dynamic state
+		std::vector<VkDynamicState> dynamicStates = {
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_SCISSOR
+		};
+
+		VkPipelineDynamicStateCreateInfo dynamicState{};
+		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+		dynamicState.pDynamicStates = dynamicStates.data();
+
+		// Rendering info (dynamic rendering)
+		std::vector<VkFormat> colorFormats;
+		if (m_RenderTarget)
+		{
+			colorFormats = static_cast<VulkanFramebuffer*>(m_RenderTarget.get())->GetColorAttachmentFormats();
+		}
+		else
+		{
+			colorFormats = { VK_FORMAT_R8G8B8A8_UNORM };
+		}
+		VkFormat depthFormat = m_RenderTarget ? static_cast<VulkanFramebuffer*>(m_RenderTarget.get())->GetDepthFormat() : VK_FORMAT_D32_SFLOAT;
+
+		VkPipelineRenderingCreateInfo renderingInfo{};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		renderingInfo.colorAttachmentCount = static_cast<uint32_t>(colorFormats.size());
+		renderingInfo.pColorAttachmentFormats = colorFormats.data();
+		renderingInfo.depthAttachmentFormat = depthFormat;
+
+		// Create graphics pipeline
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.pNext = &renderingInfo;
+		pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+		pipelineInfo.pStages = shaderStages.data();
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssembly;
+		pipelineInfo.pViewportState = &viewportState;
+		pipelineInfo.pRasterizationState = &rasterizer;
+		pipelineInfo.pMultisampleState = &multisampling;
+		pipelineInfo.pDepthStencilState = &depthStencil;
+		pipelineInfo.pColorBlendState = &colorBlending;
+		pipelineInfo.pDynamicState = &dynamicState;
+		pipelineInfo.layout = m_PipelineLayout;
+		pipelineInfo.renderPass = VK_NULL_HANDLE;
+		pipelineInfo.subpass = 0;
+
+		VK_CHECK(vkCreateGraphicsPipelines(m_Device->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_VkPipeline));
 	}
 
 	void VulkanMaterial::CreateComputePipeline()
 	{
-		VkPipelineShaderStageCreateInfo stageInfo{};
-		stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-		stageInfo.module = m_ShaderModules[0];
-		stageInfo.pName = m_Reflection.GetEntryPoints()[0].Name.c_str();
+		const auto& entryPoints = m_Shader->GetReflection().GetEntryPoints();
 
-		VkPipelineCacheCreateInfo pipelineCacheCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-		if (!m_ShouldRegeneratePipelineCache)
-		{
-			pipelineCacheCreateInfo.initialDataSize = m_SerializedShaderData.PipelineCache.size();
-			pipelineCacheCreateInfo.pInitialData = m_SerializedShaderData.PipelineCache.data();
-
-			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
-		}
-		else
-		{
-			vkCreatePipelineCache(m_Device->GetDevice(), &pipelineCacheCreateInfo, nullptr, &m_PipelineCache);
-
-			size_t cacheSize = 0;
-			vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, nullptr);
-			if (cacheSize > 0)
-			{
-				m_SerializedShaderData.PipelineCache.resize(cacheSize);
-				vkGetPipelineCacheData(m_Device->GetDevice(), m_PipelineCache, &cacheSize, m_SerializedShaderData.PipelineCache.data());
-			}
-		}
+		VkPipelineShaderStageCreateInfo shaderStage{};
+		shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+		shaderStage.module = m_ShaderModules[0];
+		shaderStage.pName = entryPoints[0].Name.c_str();
 
 		VkComputePipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		pipelineInfo.stage = stageInfo;
+		pipelineInfo.stage = shaderStage;
 		pipelineInfo.layout = m_PipelineLayout;
 
-		if (vkCreateComputePipelines(m_Device->GetDevice(), m_PipelineCache, 1, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
-		{
-			GX_CORE_ERROR("Failed to create compute pipeline for material: {0}", m_DebugName);
-			return;
-		}
+		VK_CHECK(vkCreateComputePipelines(m_Device->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_VkPipeline));
 	}
 
 	std::vector<VkVertexInputAttributeDescription> VulkanMaterial::GetVertexAttributes(uint32_t* stride)
 	{
+		const auto& vertexAttributes = m_Shader->GetReflection().GetVertexAttributes();
 		std::vector<VkVertexInputAttributeDescription> attributes;
 
-		// Get vertex attributes from the first (vertex) entry point
-		const auto& vertexAttributes = m_Reflection.GetVertexAttributes();
-
-		for (const auto& attribute : vertexAttributes)
+		for (const auto& attrib : vertexAttributes)
 		{
-			VkVertexInputAttributeDescription vkAttribute{};
-			vkAttribute.location = attribute.Location;
-			vkAttribute.binding = 0; // Assuming single vertex buffer for now
-			vkAttribute.format = ShaderDataTypeToVulkanFormat(attribute.Type);
-			vkAttribute.offset = attribute.Offset;
-
-			attributes.push_back(vkAttribute);
-
-			GX_CORE_TRACE("Created Vulkan vertex attribute: location={}, format={}, offset={}",
-				vkAttribute.location, static_cast<int>(vkAttribute.format), vkAttribute.offset);
+			VkVertexInputAttributeDescription attribute{};
+			attribute.binding = 0;
+			attribute.location = attrib.Location;
+			attribute.format = ShaderDataTypeToVulkanFormat(attrib.Type);
+			attribute.offset = attrib.Offset;
+			attributes.push_back(attribute);
 		}
 
-		*stride = m_Reflection.GetVertexStride();
-
+		*stride = m_Shader->GetReflection().GetVertexStride();
 		return attributes;
 	}
 

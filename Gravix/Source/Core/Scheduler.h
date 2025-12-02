@@ -7,14 +7,18 @@
 #include "Asset/AssetManager.h"
 
 #include "Asset/AssetImporter.h"
+#ifdef GRAVIX_EDITOR_BUILD
 #include "Asset/Importers/TextureImporter.h"
 #include "Asset/Importers/SceneImporter.h"
+#endif
 
 #include "Project/Project.h"
 #include "Core/Application.h"
 
 #include <TaskScheduler.h>
+#ifdef GRAVIX_EDITOR_BUILD
 #include <yaml-cpp/yaml.h>
+#endif
 #include <filesystem>
 #include <vector>
 #include <unordered_set>
@@ -44,7 +48,8 @@ namespace Gravix
 
 		void LoadAsset(Ref<AsyncLoadRequest> request)
 		{
-			if (!Application::Get().IsRuntime()) 
+#ifdef GRAVIX_EDITOR_BUILD
+			if (!Application::Get().IsRuntime())
 			{
 				if (Project::GetActive()->GetEditorAssetManager()->IsAssetHandleValid(request->Handle))
 				{
@@ -52,8 +57,10 @@ namespace Gravix
 					SetCPUDataEditor(request, metadata);
 				}
 			}
+#endif
 		}
 
+#ifdef GRAVIX_EDITOR_BUILD
 		void SetCPUDataEditor(Ref<AsyncLoadRequest> request, AssetMetadata metadata)
 		{
 			if (metadata.Type == AssetType::Texture2D)
@@ -80,6 +87,7 @@ namespace Gravix
 				request->CPUData = sceneData;
 			}
 		}
+#endif
 	};
 
 	struct RunPinnedTaskLoop : public enki::IPinnedTask

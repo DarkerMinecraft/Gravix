@@ -1,43 +1,27 @@
 #pragma once
 
 #include "Core/RefCounted.h"
-#include "Renderer/Specification.h"
+#include "Asset/Asset.h"
+#include "Renderer/Generic/Types/Shader.h"
+#include "Renderer/Generic/Types/Pipeline.h"
 #include "Renderer/Generic/Types/Framebuffer.h"
 
 #include "Reflections/DynamicStruct.h"
 
 #include <string>
-#include <filesystem>
 
 namespace Gravix
 {
 
-	struct MaterialSpecification
-	{
-		std::string DebugName;
-		std::filesystem::path ShaderFilePath;
-
-		Blending BlendingMode = Blending::None;
-
-		bool EnableDepthTest = false;
-		bool EnableDepthWrite = false;
-		CompareOp DepthCompareOp = CompareOp::Less;
-
-		Cull CullMode = Cull::None;
-		FrontFace FrontFaceWinding = FrontFace::CounterClockwise;
-		Fill FillMode = Fill::Solid;
-
-		Topology GraphicsTopology = Topology::TriangleList;
-
-		float LineWidth = 1.0f;
-
-		Ref<Framebuffer> RenderTarget;
-	};
-
-	class Material : public RefCounted
+	// Material Asset - combines Shader + Pipeline configuration
+	// Stored as .orbmat YAML files
+	// Pipeline is built when SetFramebuffer() is called
+	class Material : public Asset
 	{
 	public:
 		virtual ~Material() = default;
+
+		virtual AssetType GetAssetType() const override { return AssetType::Material; }
 
 		virtual DynamicStruct GetPushConstantStruct() = 0;
 		virtual DynamicStruct GetMaterialStruct() = 0;
@@ -47,8 +31,20 @@ namespace Gravix
 
 		virtual ReflectedStruct GetReflectedStruct(const std::string& name) = 0;
 
-		static Ref<Material> Create(const MaterialSpecification& spec);
-		static Ref<Material> Create(const std::string& debugName, const std::filesystem::path& shaderFilePath);
+		virtual Ref<Shader> GetShader() const = 0;
+		virtual Ref<Pipeline> GetPipeline() const = 0;
+
+		// Set framebuffer and build the Vulkan pipeline
+		// Must be called before using the material for rendering
+		virtual void SetFramebuffer(Ref<Framebuffer> framebuffer) = 0;
+		virtual bool IsReady() const = 0;
+
+		// Create material from Shader and Pipeline assets
+		// Pipeline will be built when SetFramebuffer() is called
+		static Ref<Material> Create(AssetHandle shaderHandle, AssetHandle pipelineHandle);
+
+		// Create material directly from Shader and Pipeline references (for runtime-created materials)
+		static Ref<Material> Create(Ref<Shader> shader, Ref<Pipeline> pipeline);
 	};
 
 }

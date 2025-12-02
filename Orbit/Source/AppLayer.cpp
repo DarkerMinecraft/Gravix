@@ -4,8 +4,9 @@
 #include "Events/WindowEvents.h"
 
 #include "Scripting/ScriptEngine.h"
+#include "Scripting/ScriptFieldRegistry.h"
 
-#include "Asset/Importers/TextureImporter.h"
+#include "Utils/ShaderCompilerSystem.h"
 #include "Debug/Instrumentor.h"
 
 #include <imgui.h>
@@ -52,15 +53,17 @@ namespace Gravix
 		FramebufferSpecification fbSpec{};
 		fbSpec.Width = 1280;
 		fbSpec.Height = 720;
-		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedFloat, FramebufferTextureFormat::Depth };
+		fbSpec.Attachments = { FramebufferTextureFormat::RGBA8, FramebufferTextureFormat::RedInt, FramebufferTextureFormat::Depth };
 		fbSpec.Multisampled = true;
 
 		m_MSAAFramebuffer = Framebuffer::Create(fbSpec);
 		m_MSAAFramebuffer->SetClearColor(0, glm::vec4{ 0.1f, 0.1f, 0.1f, 1.0f });
-		m_MSAAFramebuffer->SetClearColor(1, glm::vec4{ -1.0f, 0.0f, 0.0f, 0.0f });
+		m_MSAAFramebuffer->SetClearColor(1, glm::ivec4{ -1, 0, 0, 0 });
 
 		fbSpec.Multisampled = false;
 		m_FinalFramebuffer = Framebuffer::Create(fbSpec);
+		m_FinalFramebuffer->SetClearColor(0, glm::vec4{ 0.1f, 0.1f, 0.1f, 1.0f });
+		m_FinalFramebuffer->SetClearColor(1, glm::ivec4{ -1, 0, 0, 0 });
 
 		m_SceneHierarchyPanel.SetContext(m_SceneManager.GetActiveScene());
 		m_SceneHierarchyPanel.SetAppLayer(this);
@@ -73,14 +76,27 @@ namespace Gravix
 		m_ViewportPanel.SetEditorCamera(&m_EditorCamera);
 		m_ViewportPanel.SetAppLayer(this);
 		m_ViewportPanel.SetSceneManager(&m_SceneManager);
+		m_ViewportPanel.LoadIcons();
 
 		m_ContentBrowserPanel.emplace();
 		m_ContentBrowserPanel->SetAppLayer(this);
 
-		Renderer2D::Init(m_MSAAFramebuffer);
+		// Setup UI components
+		m_MenuBar.SetProjectManager(&m_ProjectManager);
+		m_MenuBar.SetSceneManager(&m_SceneManager);
+		m_MenuBar.SetProjectSettingsPanel(&m_ProjectSettingsPanel);
+		m_MenuBar.SetOnProjectCreatedCallback([this]() { RefreshContentBrowser(); });
+		m_MenuBar.SetOnProjectOpenedCallback([this]() { RefreshContentBrowser(); });
 
-		m_IconPlay = TextureImporter::LoadTexture2D("EditorAssets/Icons/PlayButton.png");
-		m_IconStop = TextureImporter::LoadTexture2D("EditorAssets/Icons/StopButton.png");
+		m_Toolbar.SetSceneManager(&m_SceneManager);
+
+		m_ShortcutHandler.SetProjectManager(&m_ProjectManager);
+		m_ShortcutHandler.SetSceneManager(&m_SceneManager);
+		m_ShortcutHandler.SetSceneHierarchyPanel(&m_SceneHierarchyPanel);
+		m_ShortcutHandler.SetOnProjectCreatedCallback([this]() { RefreshContentBrowser(); });
+		m_ShortcutHandler.SetOnProjectOpenedCallback([this]() { RefreshContentBrowser(); });
+
+		Renderer2D::Init(m_MSAAFramebuffer);
 	}
 
 	void AppLayer::InitializeProject()
@@ -91,9 +107,21 @@ namespace Gravix
 		if (m_ProjectInitialized)
 		{
 			ScriptEngine::Shutdown();
+			// Clear script field registry when switching projects
+			ScriptEngine::GetFieldRegistry().Clear();
 		}
 
+		// Initialize global ShaderCompiler system (editor only)
+		ShaderCompilerSystem::Initialize();
 		ScriptEngine::Initialize();
+
+		// Load centralized script field registry
+		std::filesystem::path registryPath = Project::GetActive()->GetConfig().LibraryDirectory / "ScriptsRegistry.orbreg";
+		if (std::filesystem::exists(registryPath))
+		{
+			ScriptEngine::GetFieldRegistry().Deserialize(registryPath);
+			GX_CORE_INFO("Loaded script field registry from: {0}", registryPath.string());
+		}
 
 		// Load the start scene
 		Ref<Scene> scene = m_SceneManager.LoadStartScene(m_ViewportPanel.GetViewportSize());
@@ -107,6 +135,18 @@ namespace Gravix
 
 		// Update window title with scene name
 		UpdateWindowTitle();
+
+		// Update MenuBar with ContentBrowserPanel pointer
+		if (m_ContentBrowserPanel)
+			m_MenuBar.SetContentBrowserPanel(&(*m_ContentBrowserPanel));
+	}
+
+	void AppLayer::RefreshContentBrowser()
+	{
+		m_ContentBrowserPanel.emplace();
+		m_ContentBrowserPanel->SetAppLayer(this);
+		if (m_ContentBrowserPanel)
+			m_MenuBar.SetContentBrowserPanel(&(*m_ContentBrowserPanel));
 	}
 
 	AppLayer::~AppLayer()
@@ -291,62 +331,8 @@ namespace Gravix
 			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 		}
 
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("File"))
-			{
-				if (ImGui::MenuItem("New", "Ctrl+N"))
-				{
-					if (m_ProjectManager.CreateNewProject())
-					{
-						// Refresh content browser panel
-						m_ContentBrowserPanel.emplace();
-						m_ContentBrowserPanel->SetAppLayer(this);
-					}
-				}
-
-				if (ImGui::MenuItem("Open... ", "Ctrl+O"))
-				{
-					if (m_ProjectManager.OpenProject())
-					{
-						// Refresh content browser panel
-						m_ContentBrowserPanel.emplace();
-						m_ContentBrowserPanel->SetAppLayer(this);
-					}
-				}
-
-				if (m_ProjectInitialized && ImGui::MenuItem("Save", "Ctrl+S"))
-				{
-					m_SceneManager.SaveActiveScene();
-				}
-
-				if (m_ProjectInitialized && ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
-				{
-					//SaveSceneAs();
-				}
-
-				ImGui::Separator();
-
-#ifdef ENGINE_DEBUG
-				// Toggle profiler viewer
-				bool profilerVisible = Application::Get().GetProfiler().IsVisible();
-				if (ImGui::MenuItem("Profiler Viewer", nullptr, &profilerVisible))
-				{
-					Application::Get().GetProfiler().SetVisible(profilerVisible);
-				}
-
-				ImGui::Separator();
-#endif
-
-				if (m_ProjectInitialized && ImGui::MenuItem("Preferences..."))
-				{
-					m_ProjectSettingsPanel.Open();
-				}
-
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenuBar();
-		}
+		if (m_ProjectInitialized)
+			m_MenuBar.OnImGuiRender();
 
 		// Only render panels if project is initialized
 		if (m_ProjectInitialized)
@@ -356,46 +342,11 @@ namespace Gravix
 			m_InspectorPanel.OnImGuiRender();
 			if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnImGuiRender();
 			m_ProjectSettingsPanel.OnImGuiRender();
-			UIToolbar();
+			// Toolbar is now integrated into ViewportPanel
 			UISettings();
 		}
 		ImGui::End();
 	}
-
-	void AppLayer::UIToolbar()
-	{
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 2));
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-
-		auto& colors = ImGui::GetStyle().Colors;
-		auto& buttonHovered = colors[ImGuiCol_ButtonHovered];
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(buttonHovered.x, buttonHovered.y, buttonHovered.z, 0.5f));
-		auto& buttonActive = colors[ImGuiCol_ButtonActive];
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(buttonActive.x, buttonActive.y, buttonActive.z, 0.5f));
-
-		ImGui::Begin("##toolbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
-		float windowHeight = ImGui::GetWindowHeight();
-		float buttonSize = windowHeight * 0.8f; // 80% of window height for some breathing room
-
-		Ref<Texture2D> icon = (m_SceneManager.GetSceneState() == SceneState::Edit) ? m_IconPlay : m_IconStop;
-		ImGui::SetCursorPosX((ImGui::GetWindowContentRegionMax().x * 0.5f) - (buttonSize * 0.5f));
-		if (ImGui::ImageButton("SceneState", (ImTextureID)icon->GetImGuiAttachment(), ImVec2{ buttonSize, buttonSize }))
-		{
-			if (m_SceneManager.GetSceneState() == SceneState::Edit)
-				m_SceneManager.Play();
-			else if (m_SceneManager.GetSceneState() == SceneState::Play)
-				m_SceneManager.Stop();
-		}
-
-		ImGui::PopStyleVar(4);
-		ImGui::PopStyleColor(3);
-		ImGui::End();
-	}
-
 
 	void AppLayer::UISettings()
 	{
@@ -451,74 +402,7 @@ namespace Gravix
 
 	bool AppLayer::OnKeyPressed(KeyPressedEvent& e)
 	{
-		// Don't process shortcuts if ImGui wants keyboard input
-		ImGuiIO& io = ImGui::GetIO();
-		if (io.WantCaptureKeyboard && (io.WantTextInput || ImGui::IsAnyItemActive()))
-			return false;
-
-		bool ctrlDown = Input::IsKeyDown(Key::LeftControl) || Input::IsKeyDown(Key::RightControl);
-		bool shiftDown = Input::IsKeyDown(Key::LeftShift) || Input::IsKeyDown(Key::RightShift);
-
-		switch (e.GetKeyCode())
-		{
-		case Key::N:
-			if (ctrlDown)
-			{
-				if (m_ProjectManager.CreateNewProject())
-				{
-					// Refresh content browser panel
-					m_ContentBrowserPanel.emplace();
-					m_ContentBrowserPanel->SetAppLayer(this);
-				}
-				return true;
-			}
-			break;
-
-		case Key::O:
-			if (ctrlDown)
-			{
-				if (m_ProjectManager.OpenProject())
-				{
-					// Refresh content browser panel
-					m_ContentBrowserPanel.emplace();
-					m_ContentBrowserPanel->SetAppLayer(this);
-				}
-				return true;
-			}
-			break;
-
-		case Key::S:
-			if (ctrlDown)
-			{
-				if (shiftDown)
-				{
-					m_ProjectManager.SaveActiveProjectAs();
-				}
-				else
-				{
-					m_SceneManager.SaveActiveScene();
-				}
-				return true;
-			}
-			break;
-		case Key::D:
-			if (ctrlDown)
-			{
-				if (m_SceneManager.GetSceneState() != SceneState::Edit)
-					break;
-
-				Entity entity = m_SceneHierarchyPanel.GetSelectedEntity();
-				if (entity)
-				{
-					m_SceneManager.GetActiveScene()->DuplicateEntity(entity);
-					MarkSceneDirty();
-				}
-				return true;
-			}
-			break;
-		}
-
-		return false;
+		return m_ShortcutHandler.HandleKeyPress(e);
 	}
 
 	bool AppLayer::OnFileDrop(WindowFileDropEvent& e)

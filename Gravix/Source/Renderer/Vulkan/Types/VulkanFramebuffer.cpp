@@ -6,7 +6,9 @@
 
 #include "Core/Application.h"
 
+#ifdef GRAVIX_EDITOR_BUILD
 #include <backends/imgui_impl_vulkan.h>
+#endif
 
 namespace Gravix 
 {
@@ -60,8 +62,12 @@ namespace Gravix
 	void VulkanFramebuffer::StartFramebuffer(VkCommandBuffer cmd)
 	{
 		TransitionToLayout(cmd, VK_IMAGE_LAYOUT_GENERAL);
-		
-		m_ColorAttachments.clear();  // Clear and rebuild
+
+		// Clear and rebuild - reserve capacity to avoid reallocations
+		m_ColorAttachments.clear();
+		if (m_ColorAttachments.capacity() < m_Attachments.size())
+			m_ColorAttachments.reserve(m_Attachments.size());
+
 		for (uint32_t i = 0; i < m_Attachments.size(); ++i)
 		{
 			if (i == m_DepthAttachmentIndex)
@@ -70,7 +76,18 @@ namespace Gravix
 			VkClearValue* pClearValue = nullptr;
 			VkClearValue clearValue{};
 
-			if (m_ClearColors.contains(i))
+			// Check for integer clear color first
+			if (m_ClearColorsInt.contains(i))
+			{
+				glm::ivec4 color = m_ClearColorsInt[i];
+				clearValue.color.int32[0] = color.r;
+				clearValue.color.int32[1] = color.g;
+				clearValue.color.int32[2] = color.b;
+				clearValue.color.int32[3] = color.a;
+				pClearValue = &clearValue;
+			}
+			// Then check for float clear color
+			else if (m_ClearColors.contains(i))
 			{
 				glm::vec4 color = m_ClearColors[i];
 				clearValue.color = { {color.r, color.g, color.b, color.a} };
@@ -102,6 +119,11 @@ namespace Gravix
 	void VulkanFramebuffer::SetClearColor(uint32_t index, const glm::vec4 clearColor)
 	{
 		m_ClearColors[index] = clearColor;
+	}
+
+	void VulkanFramebuffer::SetClearColor(uint32_t index, const glm::ivec4 clearColor)
+	{
+		m_ClearColorsInt[index] = clearColor;
 	}
 
 	int VulkanFramebuffer::ReadPixel(uint32_t attachmentIndex, int mouseX, int mouseY)
@@ -206,19 +228,22 @@ namespace Gravix
 		// with in-flight command buffers
 		if (m_DescriptorSets[index] == VK_NULL_HANDLE)
 		{
-			m_DescriptorSets[index] = ImGui_ImplVulkan_AddTexture(
+	#ifdef GRAVIX_EDITOR_BUILD
+		m_DescriptorSets[index] = ImGui_ImplVulkan_AddTexture(
 				attachment.Sampler,
 				attachment.Image.ImageView,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 			);
+#endif
 		}
 
 		return (void*)m_DescriptorSets[index];
 	}
 
+#ifdef GRAVIX_EDITOR_BUILD
 	void VulkanFramebuffer::DestroyImGuiDescriptors()
 	{
-		for (uint32_t i = 0; i < m_DescriptorSets.size(); i++) 
+		for (uint32_t i = 0; i < m_DescriptorSets.size(); i++)
 		{
 			VkDescriptorSet set = m_DescriptorSets[i];
 			if(set == VK_NULL_HANDLE) continue;
@@ -227,6 +252,7 @@ namespace Gravix
 			m_DescriptorSets[i] = VK_NULL_HANDLE;
 		}
 	}
+#endif
 
 	void VulkanFramebuffer::TransitionToLayout(VkCommandBuffer cmd, VkImageLayout newLayout)
 	{
@@ -448,7 +474,9 @@ namespace Gravix
 		// Free the old ImGui descriptor set before destroying the image
 		if (m_DescriptorSets[index] != VK_NULL_HANDLE)
 		{
+#ifdef GRAVIX_EDITOR_BUILD
 			ImGui_ImplVulkan_RemoveTexture(m_DescriptorSets[index]);
+#endif
 			m_DescriptorSets[index] = VK_NULL_HANDLE;
 		}
 

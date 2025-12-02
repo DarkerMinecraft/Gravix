@@ -2,6 +2,14 @@
 
 #include "Scene.h"
 
+#ifdef GRAVIX_EDITOR_BUILD
+#include "Serialization/YAMLConverters.h"
+#include <yaml-cpp/yaml.h>
+#endif
+
+#include "Serialization/BinarySerializer.h"
+#include "Serialization/BinaryDeserializer.h"
+
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -9,9 +17,11 @@
 #include <typeindex>
 
 #include <entt/entt.hpp>
+
+#ifdef GRAVIX_EDITOR_BUILD
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <yaml-cpp/yaml.h>
+#endif
 
 namespace Gravix
 {
@@ -23,10 +33,13 @@ namespace Gravix
 		bool AllowMultiple = false;
 	};
 
+	class Entity;
+
 	struct ComponentUserSettings
 	{
 		bool RemoveComponent = false;
 		bool WasModified = false;
+		Entity* CurrentEntity = nullptr; // Set by InspectorPanel for component renderers
 	};
 
 	struct ComponentInfo
@@ -34,10 +47,18 @@ namespace Gravix
 		std::string Name;
 		ComponentSpecification Specification;
 		std::function<void(void*, Scene*)> OnCreateFunc;
+
+#ifdef GRAVIX_EDITOR_BUILD
 		std::function<void(YAML::Emitter&, void*)> SerializeFunc;
 		std::function<void(YAML::Emitter&, void*)> RawSerializeFunc; // For multi-instance components (no wrapper)
 		std::function<void(void*, const YAML::Node&)> DeserializeFunc;
 		std::function<void(void*, ComponentUserSettings*)> ImGuiRenderFunc;
+#endif
+
+		// Binary serialization (used in both editor and runtime)
+		std::function<void(BinarySerializer&, void*)> BinarySerializeFunc;
+		std::function<void(BinaryDeserializer&, void*)> BinaryDeserializeFunc;
+
 		std::function<void(void*, void*)> CopyFunc; // Copy from source to destination component
 
 		std::function<void* (entt::registry&, entt::entity)> GetComponentFunc;
@@ -52,12 +73,17 @@ namespace Gravix
 	{
 	public:
 		template<typename T>
-		void RegisterComponent(const std::string& name,
+		void RegisterComponent(
+			const std::string& name,
 			ComponentSpecification specification,
 			std::function<void(T&, Scene* scene)> onCreate,
+#ifdef GRAVIX_EDITOR_BUILD
 			std::function<void(YAML::Emitter&, T&)> serialize,
 			std::function<void(T&, const YAML::Node&)> deserialize,
-			std::function<void(T&)> imguiRender,
+			std::function<void(T&, ComponentUserSettings*)> imguiRender,
+#endif
+			std::function<void(BinarySerializer&, T&)> binarySerialize,
+			std::function<void(BinaryDeserializer&, T&)> binaryDeserialize,
 			std::function<void(T&, const T&)> copyComponent = nullptr
 		)
 		{
@@ -82,6 +108,8 @@ namespace Gravix
 						new (dstPtr) T(*srcPtr); // Copy construct in place
 					}
 				};
+
+#ifdef GRAVIX_EDITOR_BUILD
 			info.SerializeFunc = [serialize, name](YAML::Emitter& out, void* instance) -> void
 				{
 					if (serialize)
@@ -110,7 +138,7 @@ namespace Gravix
 
 					if (!specification.HasNodeTree)
 					{
-						imguiRender(*reinterpret_cast<T*>(instance));
+						imguiRender(*reinterpret_cast<T*>(instance), userSettings);
 					}
 					else
 					{
@@ -179,7 +207,7 @@ namespace Gravix
 						if (open)
 						{
 							ImGui::Spacing();
-							imguiRender(*reinterpret_cast<T*>(instance));
+							imguiRender(*reinterpret_cast<T*>(instance), userSettings);
 							ImGui::Spacing();
 							ImGui::TreePop();
 						}
@@ -196,6 +224,19 @@ namespace Gravix
 					{
 						userSettings->WasModified = true;
 					}
+				};
+#endif // GRAVIX_EDITOR_BUILD
+
+			// Binary serialization (both editor and runtime)
+			info.BinarySerializeFunc = [binarySerialize](BinarySerializer& serializer, void* instance) -> void
+				{
+					if (binarySerialize)
+						binarySerialize(serializer, *reinterpret_cast<T*>(instance));
+				};
+			info.BinaryDeserializeFunc = [binaryDeserialize](BinaryDeserializer& deserializer, void* instance) -> void
+				{
+					if (binaryDeserialize)
+						binaryDeserialize(deserializer, *reinterpret_cast<T*>(instance));
 				};
 
 			// Add the getter function to retrieve component at runtime

@@ -101,7 +101,7 @@ namespace Gravix
 		imageInfo.imageView = imageView;
 		imageInfo.imageLayout = imageLayout;
 
-		m_ImageInfos.push_back(imageInfo);  
+		m_ImageInfos.push_back(imageInfo);
 
 		VkWriteDescriptorSet write{};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -110,7 +110,53 @@ namespace Gravix
 		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		write.descriptorCount = 1;
 		write.pBufferInfo = nullptr;
-		write.pImageInfo = &m_ImageInfos.back();  
+		write.pImageInfo = &m_ImageInfos.back();
+		write.pTexelBufferView = nullptr;
+
+		m_Writes.push_back(write);
+		return *this;
+	}
+
+	DescriptorWriter& DescriptorWriter::WriteImage(uint32_t binding, VkImageView imageView, VkSampler sampler, VkImageLayout imageLayout, VkDescriptorType type, uint32_t arrayIndex)
+	{
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler = sampler;
+		imageInfo.imageView = imageView;
+		imageInfo.imageLayout = imageLayout;
+
+		m_ImageInfos.push_back(imageInfo);
+
+		VkWriteDescriptorSet write{};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstBinding = binding;
+		write.dstArrayElement = arrayIndex;
+		write.descriptorType = type;
+		write.descriptorCount = 1;
+		write.pBufferInfo = nullptr;
+		write.pImageInfo = &m_ImageInfos.back();
+		write.pTexelBufferView = nullptr;
+
+		m_Writes.push_back(write);
+		return *this;
+	}
+
+	DescriptorWriter& DescriptorWriter::WriteImage(uint32_t binding, VkImageView imageView, VkImageLayout imageLayout, VkDescriptorType type)
+	{
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler = VK_NULL_HANDLE;
+		imageInfo.imageView = imageView;
+		imageInfo.imageLayout = imageLayout;
+
+		m_ImageInfos.push_back(imageInfo);
+
+		VkWriteDescriptorSet write{};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstBinding = binding;
+		write.dstArrayElement = 0;
+		write.descriptorType = type;
+		write.descriptorCount = 1;
+		write.pBufferInfo = nullptr;
+		write.pImageInfo = &m_ImageInfos.back();
 		write.pTexelBufferView = nullptr;
 
 		m_Writes.push_back(write);
@@ -164,6 +210,13 @@ namespace Gravix
 		m_Writes.clear();
 		m_ImageInfos.clear();
 		m_BufferInfos.clear();
+
+		// Shrink vectors if they've grown beyond reasonable size to prevent unbounded memory growth
+		// Only shrink if capacity exceeds threshold to avoid thrashing
+		constexpr size_t SHRINK_THRESHOLD = 64;
+		if (m_Writes.capacity() > SHRINK_THRESHOLD) m_Writes.shrink_to_fit();
+		if (m_ImageInfos.capacity() > SHRINK_THRESHOLD) m_ImageInfos.shrink_to_fit();
+		if (m_BufferInfos.capacity() > SHRINK_THRESHOLD) m_BufferInfos.shrink_to_fit();
 	}
 
 }

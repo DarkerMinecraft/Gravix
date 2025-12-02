@@ -64,6 +64,30 @@
         "GRAVIX_BUILD_EDITOR": "ON",
         "GRAVIX_BUILD_SCRIPTING": "ON"
       }
+    },
+    {
+      "name": "x64-Runtime-Debug",
+      "displayName": "x64 Runtime Debug",
+      "description": "Runtime-only Debug build (no editor)",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GRAVIX_USE_VULKAN": "ON",
+        "GRAVIX_BUILD_EDITOR": "OFF",
+        "GRAVIX_BUILD_SCRIPTING": "ON"
+      }
+    },
+    {
+      "name": "x64-Runtime-Release",
+      "displayName": "x64 Runtime Release",
+      "description": "Runtime-only Release build (no editor, optimized for shipping)",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GRAVIX_USE_VULKAN": "ON",
+        "GRAVIX_BUILD_EDITOR": "OFF",
+        "GRAVIX_BUILD_SCRIPTING": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -84,6 +108,18 @@
       "displayName": "x64 RelWithDebInfo",
       "configurePreset": "x64-RelWithDebInfo",
       "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "x64-Runtime-Debug",
+      "displayName": "x64 Runtime Debug",
+      "configurePreset": "x64-Runtime-Debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "x64-Runtime-Release",
+      "displayName": "x64 Runtime Release",
+      "configurePreset": "x64-Runtime-Release",
+      "configuration": "Release"
     }
   ],
   "testPresets": [

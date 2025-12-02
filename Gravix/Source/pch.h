@@ -30,6 +30,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <filesystem>
 
 // Concurrency (if needed later)
 #include <thread>

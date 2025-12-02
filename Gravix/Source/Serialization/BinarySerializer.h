@@ -8,8 +8,13 @@
 #include <type_traits>
 #include <cstring>
 #include <iostream>
+
+#ifdef GRAVIX_EDITOR_BUILD
 #include <fstream>
 #include <filesystem>
+#endif
+
+#include <glm/glm.hpp>
 
 namespace Gravix
 {
@@ -75,6 +80,28 @@ namespace Gravix
 			m_Buffer.insert(m_Buffer.end(), str.begin(), str.end());
 		}
 
+		// glm types
+		void Write(const glm::vec2& vec)
+		{
+			Write(vec.x);
+			Write(vec.y);
+		}
+
+		void Write(const glm::vec3& vec)
+		{
+			Write(vec.x);
+			Write(vec.y);
+			Write(vec.z);
+		}
+
+		void Write(const glm::vec4& vec)
+		{
+			Write(vec.x);
+			Write(vec.y);
+			Write(vec.z);
+			Write(vec.w);
+		}
+
 		template<typename T, size_t N>
 		void Write(const std::array<T, N>& array)
 		{
@@ -103,6 +130,7 @@ namespace Gravix
 			}
 		}
 
+#ifdef GRAVIX_EDITOR_BUILD
 		void WriteToFile(const std::filesystem::path& filePath)
 		{
 			std::ofstream file(filePath, std::ios::binary | std::ios::out);
@@ -111,6 +139,17 @@ namespace Gravix
 
 			file.write(reinterpret_cast<const char*>(m_Buffer.data()), static_cast<std::streamsize>(m_Buffer.size()));
 			file.close();
+		}
+#endif
+
+		// Get the raw buffer (for runtime PaK writing or custom I/O)
+		const std::vector<uint8_t>& GetBuffer() const { return m_Buffer; }
+		std::vector<uint8_t>& GetBuffer() { return m_Buffer; }
+
+		void WriteBytes(const void* src, size_t numBytes)
+		{
+			const uint8_t* bytes = reinterpret_cast<const uint8_t*>(src);
+			m_Buffer.insert(m_Buffer.end(), bytes, bytes + numBytes);
 		}
 
 	private:

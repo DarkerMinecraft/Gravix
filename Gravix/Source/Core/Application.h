@@ -5,11 +5,14 @@
 #include "Layer.h"
 
 #include "Events/WindowEvents.h"
+
+#ifdef GRAVIX_EDITOR_BUILD
 #include "Renderer/ImGuiRender.h"
+#endif
 
 #include "Project/Project.h"
 
-#ifdef ENGINE_DEBUG
+#if defined(ENGINE_DEBUG) && defined(GRAVIX_EDITOR_BUILD)
 #include "Debug/ProfilerViewer.h"
 #endif
 
@@ -136,15 +139,17 @@ namespace Gravix
 		 */
 		Scheduler& GetScheduler() { return *m_Scheduler; }
 
+#ifdef GRAVIX_EDITOR_BUILD
 		/**
-		 * @brief Get the ImGui renderer
+		 * @brief Get the ImGui renderer (Editor only)
 		 * @return Reference to the ImGui rendering system
 		 */
 		ImGuiRender& GetImGui() { return *m_ImGuiRender; }
+#endif
 
-#ifdef ENGINE_DEBUG
+#if defined(ENGINE_DEBUG) && defined(GRAVIX_EDITOR_BUILD)
 		/**
-		 * @brief Get the profiler viewer (Debug builds only)
+		 * @brief Get the profiler viewer (Debug editor builds only)
 		 * @return Reference to the real-time profiler viewer
 		 */
 		ProfilerViewer& GetProfiler() { return *m_ProfilerViewer; }
@@ -162,9 +167,11 @@ namespace Gravix
 		Scope<Window> m_Window;
 		Scope<Scheduler> m_Scheduler;
 
+#ifdef GRAVIX_EDITOR_BUILD
 		Ref<ImGuiRender> m_ImGuiRender;
+#endif
 
-#ifdef ENGINE_DEBUG
+#if defined(ENGINE_DEBUG) && defined(GRAVIX_EDITOR_BUILD)
 		Scope<ProfilerViewer> m_ProfilerViewer;
 #endif
 

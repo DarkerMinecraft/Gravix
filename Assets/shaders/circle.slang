@@ -24,7 +24,7 @@ struct VSOutput
     float4 color;
     float thickness;
     float fade;
-    nointerpolation float entityID;
+    nointerpolation int entityID;
 };
 
 [shader("vertex")]
@@ -38,14 +38,14 @@ VSOutput mainVS(uint vertexID : SV_VertexID)
     output.color = v.color;
     output.thickness = v.thickness;
     output.fade = v.fade;
-    output.entityID = (float) v.entityID;
+    output.entityID = v.entityID;
     return output;
 }
 
 struct PSOutput
 {
     float4 outColor : SV_Target0;
-    float entityID : SV_Target1;
+    int entityID : SV_Target1;
 }
 
 [shader("pixel")]
@@ -65,6 +65,6 @@ PSOutput mainPS(VSOutput input)
     if(alphaColor > 0.0)
         output.entityID = input.entityID;
     else
-        output.entityID = -1.0;
+        output.entityID = -1;
     return output;
 }

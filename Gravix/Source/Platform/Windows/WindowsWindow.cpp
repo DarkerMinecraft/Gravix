@@ -12,14 +12,17 @@
 #include <windowsx.h>
 #include <shellapi.h>
 
+#ifdef GRAVIX_EDITOR_BUILD
 #include <imgui.h>
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif
 
 namespace Gravix
 {
 
 	LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+#ifdef GRAVIX_EDITOR_BUILD
 		// Handle non-keyboard events normally - let ImGui consume them if it wants
 		bool isKeyboardEvent = (msg == WM_KEYDOWN || msg == WM_KEYUP ||
 			msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_CHAR);
@@ -30,6 +33,7 @@ namespace Gravix
 			if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
 				return true;
 		}
+#endif
 
 		if (msg == WM_CREATE)
 		{
@@ -78,6 +82,7 @@ namespace Gravix
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		{
+#ifdef GRAVIX_EDITOR_BUILD
 			// CRITICAL FIX: Only block keyboard events if ImGui is ACTIVELY using them
 			ImGuiIO& io = ImGui::GetIO();
 
@@ -94,6 +99,7 @@ namespace Gravix
 
 			// Let ImGui see the event for navigation purposes
 			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+#endif
 
 			// ALWAYS generate our event for application shortcuts
 			int repeatCount = (lParam & 0x0000FFFF);
@@ -109,6 +115,7 @@ namespace Gravix
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
 		{
+#ifdef GRAVIX_EDITOR_BUILD
 			// Same logic as key down
 			ImGuiIO& io = ImGui::GetIO();
 
@@ -123,6 +130,7 @@ namespace Gravix
 
 			// Let ImGui see the event
 			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+#endif
 
 			// Generate our event
 			KeyReleasedEvent event(static_cast<int>(wParam));
@@ -132,8 +140,10 @@ namespace Gravix
 
 		case WM_CHAR:
 		{
+#ifdef GRAVIX_EDITOR_BUILD
 			// Let ImGui handle character input
 			ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+#endif
 
 			// Filter out control characters for our event system
 			if (wParam >= 32 && wParam < 127) {

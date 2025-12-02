@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef GRAVIX_EDITOR_BUILD
+
 #include <yaml-cpp/yaml.h>
 #include <glm/glm.hpp>
 
@@ -98,3 +100,5 @@ namespace Gravix
 		return out;
 	}
 }
+
+#endif // GRAVIX_EDITOR_BUILD

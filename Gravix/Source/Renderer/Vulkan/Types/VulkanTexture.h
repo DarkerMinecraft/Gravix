@@ -21,8 +21,10 @@ namespace Gravix
 		virtual uint32_t GetHeight() const override { return m_Height; }
 		virtual uint32_t GetMipLevels() const override { return m_MipLevels; }
 
+#ifdef GRAVIX_EDITOR_BUILD
 		virtual void* GetImGuiAttachment() override;
 		virtual void DestroyImGuiDescriptor() override;
+#endif
 
 		virtual UUID GetUUID() override { return m_UUID; }
 
@@ -38,6 +40,7 @@ namespace Gravix
 		// Vulkan-specific methods
 		VkImage GetVkImage() const { return m_Image.Image; }
 		VkImageView GetVkImageView() const { return m_Image.ImageView; }
+		VkImageView GetImageView() const { return GetVkImageView(); }  // Alias for compatibility
 		VkSampler GetVkSampler() const { return m_Sampler; }
 		AllocatedImage GetAllocatedImage() const { return m_Image; }
 

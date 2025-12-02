@@ -28,6 +28,8 @@ namespace Gravix
 		Texture2D,    ///< 2D texture asset (.png, .jpg, etc.)
 		Material,     ///< Material asset (.gmat file with shader and parameters)
 		Script,       ///< C# script asset (.cs file)
+		Shader,       ///< Shader asset (.slang file compiled to SPIR-V)
+		Pipeline,     ///< Pipeline asset (.pipeline YAML file with rendering configuration)
 	};
 
 	/**
@@ -110,6 +112,12 @@ namespace Gravix
 		 * Derived classes must implement this to return their specific type.
 		 */
 		virtual AssetType GetAssetType() const = 0;
+
+		/**
+		 * @brief Get the unique handle for this asset
+		 * @return Asset handle (UUID)
+		 */
+		AssetHandle Handle() const { return m_Handle; }
 
 	private:
 		AssetHandle m_Handle; ///< Unique identifier for this asset

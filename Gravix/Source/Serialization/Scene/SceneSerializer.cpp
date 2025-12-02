@@ -4,7 +4,11 @@
 #include "Scene/ComponentRegistry.h"
 #include "Scene/Entity.h"
 
-namespace Gravix 
+#ifdef GRAVIX_EDITOR_BUILD
+#include "Scripting/ScriptEngine.h"
+#endif
+
+namespace Gravix
 {
 
 	SceneSerializer::SceneSerializer(const Ref<Scene>& scene)
@@ -12,6 +16,8 @@ namespace Gravix
 	{
 
 	}
+
+#ifdef GRAVIX_EDITOR_BUILD
 
 	void SceneSerializer::SerializeEntity(YAML::Emitter& out, Entity entity)
 	{
@@ -110,11 +116,6 @@ namespace Gravix
 
 		std::ofstream fout(filepath);
 		fout << out.c_str();
-	}
-
-	void SceneSerializer::SerializeRuntime(const std::filesystem::path& filepath)
-	{
-
 	}
 
 	bool SceneSerializer::Deserialize(const std::filesystem::path& filepath)
@@ -429,9 +430,135 @@ namespace Gravix
 		return true;
 	}
 
-	bool SceneSerializer::DeserializeRuntime(const std::filesystem::path& filepath)
+#endif // GRAVIX_EDITOR_BUILD
+
+	// Runtime binary serialization
+	void SceneSerializer::SerializeRuntime(BinarySerializer& serializer)
 	{
-		return false;
+		// Collect all entities
+		std::vector<Entity> entities;
+		for (auto entityID : m_Scene->m_Registry.view<TagComponent>())
+		{
+			Entity entity{ entityID, m_Scene.get() };
+			if (entity)
+				entities.push_back(entity);
+		}
+
+		// Sort entities by CreationIndex to preserve creation order
+		std::sort(entities.begin(), entities.end(),
+			[](const Entity& a, const Entity& b)
+			{
+				return a.GetComponent<TagComponent>().CreationIndex < b.GetComponent<TagComponent>().CreationIndex;
+			});
+
+		// Write number of entities
+		serializer.Write(static_cast<uint32_t>(entities.size()));
+
+		// Serialize each entity
+		for (const auto& entity : entities)
+		{
+			// Write entity UUID
+			serializer.Write(static_cast<uint64_t>(entity.GetID()));
+
+			// Get component order
+			const auto& componentOrder = ComponentRegistry::Get().GetComponentOrder();
+
+			// Write number of components to serialize
+			uint32_t componentCount = 0;
+			for (auto typeIndex : componentOrder)
+			{
+				const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
+				if (info.BinarySerializeFunc && info.GetComponentFunc)
+				{
+					void* component = info.GetComponentFunc(m_Scene->m_Registry, entity);
+					if (component)
+						componentCount++;
+				}
+			}
+			serializer.Write(componentCount);
+
+			// Serialize each component using ComponentRegistry
+			for (auto typeIndex : componentOrder)
+			{
+				const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIndex);
+				if (info.BinarySerializeFunc && info.GetComponentFunc)
+				{
+					void* component = info.GetComponentFunc(m_Scene->m_Registry, entity);
+					if (component)
+					{
+						// Write component type hash for identification
+						serializer.Write(static_cast<uint64_t>(typeIndex.hash_code()));
+						// Serialize component data
+						info.BinarySerializeFunc(serializer, component);
+					}
+				}
+			}
+		}
+	}
+
+	bool SceneSerializer::DeserializeRuntime(BinaryDeserializer& deserializer)
+	{
+		uint32_t entityCount = deserializer.Read<uint32_t>();
+		uint32_t maxCreationIndex = 0;
+
+		// Build a map of type hash to type_index for fast lookup
+		std::unordered_map<uint64_t, std::type_index> typeHashMap;
+		for (const auto& [typeIndex, info] : ComponentRegistry::Get().GetAllComponents())
+		{
+			typeHashMap.emplace(typeIndex.hash_code(), typeIndex);
+		}
+
+		for (uint32_t i = 0; i < entityCount; ++i)
+		{
+			UUID uuid = (UUID)deserializer.Read<uint64_t>();
+
+			// Create entity with default name (will be overwritten by TagComponent deserialization)
+			Entity entity = m_Scene->CreateEntity("Entity", uuid, 0);
+
+			// Read number of components
+			uint32_t componentCount = deserializer.Read<uint32_t>();
+
+			for (uint32_t j = 0; j < componentCount; ++j)
+			{
+				// Read component type hash
+				uint64_t componentTypeHash = deserializer.Read<uint64_t>();
+
+				// Find the component info
+				auto typeIt = typeHashMap.find(componentTypeHash);
+				if (typeIt == typeHashMap.end())
+				{
+					GX_CORE_ERROR("Unknown component type hash: {}", componentTypeHash);
+					continue;
+				}
+
+				const auto& info = ComponentRegistry::Get().GetAllComponents().at(typeIt->second);
+
+				// Get or add component
+				void* component = info.GetComponentFunc(m_Scene->m_Registry, entity);
+				if (!component && info.AddComponentFunc)
+				{
+					info.AddComponentFunc(m_Scene->m_Registry, entity);
+					component = info.GetComponentFunc(m_Scene->m_Registry, entity);
+				}
+
+				// Deserialize component data
+				if (component && info.BinaryDeserializeFunc)
+				{
+					info.BinaryDeserializeFunc(deserializer, component);
+
+					// Track max creation index from TagComponent
+					if (typeIt->second == typeid(TagComponent))
+					{
+						auto* tag = static_cast<TagComponent*>(component);
+						if (tag->CreationIndex > maxCreationIndex)
+							maxCreationIndex = tag->CreationIndex;
+					}
+				}
+			}
+		}
+
+		m_Scene->m_NextCreationIndex = maxCreationIndex + 1;
+		return true;
 	}
 
 }

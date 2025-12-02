@@ -18,12 +18,19 @@ namespace Gravix
 		void SetAppLayer(AppLayer* appLayer) { m_AppLayer = appLayer; }
 
 		void OnImGuiRender();
+
+		// Static context for component renderers to access current entity
+		static Entity GetCurrentEntity() { return s_CurrentEntity; }
+
 	private:
 		void DrawComponents(Entity entity);
 		void DrawAddComponents(Entity entity);
+
 	private:
 		SceneHierarchyPanel* m_SceneHierarchyPanel;
 		AppLayer* m_AppLayer = nullptr;
+
+		static Entity s_CurrentEntity;
 	};
 
 }

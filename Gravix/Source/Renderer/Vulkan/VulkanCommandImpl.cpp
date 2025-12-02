@@ -8,7 +8,9 @@
 #include "Utils/VulkanInitializers.h"
 #include "Utils/VulkanUtils.h"
 
+#ifdef GRAVIX_EDITOR_BUILD
 #include <backends/imgui_impl_vulkan.h>
+#endif
 
 namespace Gravix
 {
@@ -134,6 +136,7 @@ namespace Gravix
 		vkCmdDrawIndexed(m_CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
+#ifdef GRAVIX_EDITOR_BUILD
 	void VulkanCommandImpl::DrawImGui()
 	{
 		ImGui::Render();
@@ -143,6 +146,7 @@ namespace Gravix
 			ImGui_ImplVulkan_RenderDrawData(drawData, m_CommandBuffer);
 		}
 	}
+#endif
 
 	void VulkanCommandImpl::EndRendering()
 	{

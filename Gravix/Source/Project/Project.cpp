@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "Project.h"
 
+#ifdef GRAVIX_EDITOR_BUILD
 #include "Serialization/Project/ProjectSerializer.h"
+#endif
 #include "Asset/EditorAssetManager.h"
 
 namespace Gravix 
@@ -76,6 +78,7 @@ namespace Gravix
 		return s_ActiveProject;
 	}
 
+#ifdef GRAVIX_EDITOR_BUILD
 	Ref<Project> Project::Load(const std::filesystem::path& path)
 	{
 		Ref<Project> project = CreateRef<Project>();
@@ -115,6 +118,7 @@ namespace Gravix
 		ProjectSerializer serializer(s_ActiveProject);
 		serializer.Serialize(path);
 	}
+#endif
 
 	void Project::SetupScriptingEnvironment()
 	{

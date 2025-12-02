@@ -1,14 +1,16 @@
 #pragma once
 
+#ifdef GRAVIX_EDITOR_BUILD
+
 #include "Asset/Asset.h"
 #include "Asset/AssetMetadata.h"
 
 #include "Renderer/Generic/Types/Texture.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
-	class TextureImporter 
+	class TextureImporter
 	{
 	public:
 		// AssetMetadata filepath is relative to asset directory
@@ -21,3 +23,5 @@ namespace Gravix
 	};
 
 }
+
+#endif // GRAVIX_EDITOR_BUILD

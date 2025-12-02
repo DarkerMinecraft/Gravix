@@ -170,32 +170,37 @@ namespace Gravix
 		uint32_t conservativeMultiplier;
 		uint32_t baseBindlessSize;
 
+		// NOTE: These values determine initial descriptor pool sizes and memory usage
+		// Reduced from previous values (NVIDIA: 100k -> 1k) to minimize memory footprint
+		// Can be increased if you need more simultaneous resources loaded
+		// Previous values: NVIDIA=100000, AMD=65536, Intel=32768
+
 		// Determine base bindless size based on GPU vendor/type
 		if (properties.vendorID == 0x10DE) // NVIDIA
 		{
-			baseBindlessSize = 100000; // NVIDIA handles large bindless arrays well
+			baseBindlessSize = 1000; // Start with 1000 descriptors (was 100000)
 			conservativeMultiplier = 90; // 90% of max
 		}
 		else if (properties.vendorID == 0x1002) // AMD
 		{
-			baseBindlessSize = 65536; // AMD works well with 64k
+			baseBindlessSize = 1000; // Start with 1000 descriptors (was 65536)
 			conservativeMultiplier = 85; // 85% of max
 		}
 		else if (properties.vendorID == 0x8086) // Intel
 		{
-			baseBindlessSize = 32768; // Intel may be more limited
+			baseBindlessSize = 1000; // Start with 1000 descriptors (was 32768)
 			conservativeMultiplier = 80; // 80% of max
 		}
 		else
 		{
-			baseBindlessSize = 32768; // Conservative default
+			baseBindlessSize = 1000; // Start with 1000 descriptors (was 32768)
 			conservativeMultiplier = 75; // 75% of max
 		}
 
 		// Mobile/integrated GPUs get lower limits
 		if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
 		{
-			baseBindlessSize = std::min(baseBindlessSize, 16384u);
+			baseBindlessSize = std::min(baseBindlessSize, 500u);
 			conservativeMultiplier = std::min(conservativeMultiplier, 70u);
 		}
 

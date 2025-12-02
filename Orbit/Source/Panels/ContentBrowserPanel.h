@@ -26,10 +26,6 @@ namespace Gravix
 		void RefreshAssetTree();
 		void ScanAndImportAssets();
 		void RenameAsset(const std::filesystem::path& oldPath, const std::string& newName);
-		void CreateNewScene();
-		void CreateNewScript();
-		void OpenScriptFile(const std::filesystem::path& scriptPath);
-		void OpenSolutionFile(const std::filesystem::path& projectPath);
 	private:
 		AppLayer* m_AppLayer = nullptr;
 		std::filesystem::path m_AssetDirectory;

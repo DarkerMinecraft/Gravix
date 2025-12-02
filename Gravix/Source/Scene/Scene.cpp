@@ -266,7 +266,7 @@ namespace Gravix
 			view.each([&](auto entity, auto& transform, auto& sprite)
 				{
 					Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
-					Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite, texture, sprite);
+					Renderer2D::DrawQuad(transform, (uint32_t)entity, sprite.Color, texture, sprite.TilingFactor);
 				});
 		}
 
@@ -275,7 +275,7 @@ namespace Gravix
 
 			view.each([&](auto entity, auto& transform, auto& circle)
 				{
-					Renderer2D::DrawCircle(transform, (uint64_t)(uint32_t)entity, circle.Color, circle.Thickness, circle.Fade);
+					Renderer2D::DrawCircle(transform, (uint32_t)entity, circle.Color, circle.Thickness, circle.Fade);
 				});
 		}
 
@@ -317,7 +317,7 @@ namespace Gravix
 			view.each([&](auto entity, auto& transform, auto& sprite)
 				{
 					Ref<Texture2D> texture = sprite.Texture == 0 ? nullptr : AssetManager::GetAsset<Texture2D>(sprite.Texture);
-					Renderer2D::DrawQuad(transform, (uint64_t)(uint32_t)entity, sprite, texture, sprite);
+					Renderer2D::DrawQuad(transform, (uint32_t)entity, sprite.Color, texture, sprite.TilingFactor);
 				});
 		}
 
@@ -326,7 +326,7 @@ namespace Gravix
 
 			view.each([&](auto entity, auto& transform, auto& circle)
 				{
-					Renderer2D::DrawCircle(transform, (uint64_t)(uint32_t)entity, circle.Color, circle.Thickness, circle.Fade);
+					Renderer2D::DrawCircle(transform, (uint32_t)entity, circle.Color, circle.Thickness, circle.Fade);
 				});
 		}
 		Renderer2D::EndScene(cmd);

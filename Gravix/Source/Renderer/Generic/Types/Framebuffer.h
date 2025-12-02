@@ -44,6 +44,7 @@ namespace Gravix
 		virtual uint32_t GetHeight() const = 0;
 
 		virtual void SetClearColor(uint32_t index, const glm::vec4 clearColor) = 0;
+		virtual void SetClearColor(uint32_t index, const glm::ivec4 clearColor) = 0;
 
 		virtual void* GetColorAttachmentID(uint32_t index) = 0;
 

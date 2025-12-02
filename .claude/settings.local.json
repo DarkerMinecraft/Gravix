@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(cmake --build:*)",
+      "Bash(find:*)",
+      "Bash(python analyze_profile.py:*)",
+      "Bash(python:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

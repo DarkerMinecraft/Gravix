@@ -35,11 +35,13 @@ namespace Gravix
 		m_Scheduler = CreateScope<Scheduler>();
 		m_Scheduler->Init(4); // Initialize with 4 threads
 
+#ifdef GRAVIX_EDITOR_BUILD
 		m_ImGuiRender = CreateRef<ImGuiRender>();
+#endif
 		ComponentRegistry::Get().RegisterAllComponents();
 
-#ifdef ENGINE_DEBUG
-		// Initialize profiler viewer in debug builds
+#if defined(ENGINE_DEBUG) && defined(GRAVIX_EDITOR_BUILD)
+		// Initialize profiler viewer in debug builds (editor only)
 		m_ProfilerViewer = CreateScope<ProfilerViewer>();
 #endif
 	}
@@ -96,6 +98,7 @@ namespace Gravix
 
 				if (!m_IsRuntime)
 				{
+#ifdef GRAVIX_EDITOR_BUILD
 					{
 						GX_PROFILE_SCOPE("ImGuiRender");
 						m_ImGuiRender->Begin();
@@ -109,6 +112,7 @@ namespace Gravix
 
 						m_ImGuiRender->End();
 					}
+#endif
 				}
 
 			}
@@ -138,7 +142,9 @@ namespace Gravix
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
 		dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(OnWindowResize));
 
+#ifdef GRAVIX_EDITOR_BUILD
 		m_ImGuiRender->OnEvent(event);
+#endif
 		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
 		{
 			if (event.Handled) break;

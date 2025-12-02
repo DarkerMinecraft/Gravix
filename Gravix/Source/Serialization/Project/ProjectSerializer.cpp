@@ -1,11 +1,14 @@
 #include "pch.h"
+
+#ifdef GRAVIX_EDITOR_BUILD
+
 #include "ProjectSerializer.h"
 #include "Serialization/YAMLConverters.h"
 
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	void ProjectSerializer::Serialize(const std::filesystem::path& path)
@@ -90,3 +93,5 @@ namespace Gravix
 	}
 
 }
+
+#endif // GRAVIX_EDITOR_BUILD

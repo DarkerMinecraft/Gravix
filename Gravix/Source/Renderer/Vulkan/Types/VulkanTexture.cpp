@@ -3,10 +3,9 @@
 
 #include "Renderer/Vulkan/Utils/VulkanUtils.h"
 
+#ifdef GRAVIX_EDITOR_BUILD
 #include <backends/imgui_impl_vulkan.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#endif
 
 namespace Gravix
 {
@@ -26,9 +25,10 @@ namespace Gravix
 		Cleanup();
 	}
 
+#ifdef GRAVIX_EDITOR_BUILD
 	void* VulkanTexture2D::GetImGuiAttachment()
 	{
-		if (m_DescriptorSet == VK_NULL_HANDLE) 
+		if (m_DescriptorSet == VK_NULL_HANDLE)
 			m_DescriptorSet = ImGui_ImplVulkan_AddTexture(m_Sampler, m_Image.ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		return (void*)m_DescriptorSet;
 	}
@@ -41,6 +41,7 @@ namespace Gravix
 			m_DescriptorSet = VK_NULL_HANDLE;
 		}
 	}
+#endif
 
 	void VulkanTexture2D::CreateFromData(Buffer data, uint32_t width, uint32_t height, uint32_t channels)
 	{

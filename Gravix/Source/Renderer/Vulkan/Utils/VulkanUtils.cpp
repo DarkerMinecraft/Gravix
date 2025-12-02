@@ -359,4 +359,66 @@ namespace Gravix
 		return pipeline;
 	}
 
+	VkPrimitiveTopology VulkanUtils::ToVkPrimitiveTopology(Topology topology)
+	{
+		switch (topology)
+		{
+		case Topology::PointList:     return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+		case Topology::LineList:      return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+		case Topology::LineStrip:     return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+		case Topology::TriangleList:  return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		case Topology::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		default:                      return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		}
+	}
+
+	VkPolygonMode VulkanUtils::ToVkPolygonMode(Fill fill)
+	{
+		switch (fill)
+		{
+		case Fill::Solid:      return VK_POLYGON_MODE_FILL;
+		case Fill::Wireframe:  return VK_POLYGON_MODE_LINE;
+		case Fill::Point:      return VK_POLYGON_MODE_POINT;
+		default:               return VK_POLYGON_MODE_FILL;
+		}
+	}
+
+	VkCullModeFlags VulkanUtils::ToVkCullMode(Cull cull)
+	{
+		switch (cull)
+		{
+		case Cull::None:       return VK_CULL_MODE_NONE;
+		case Cull::Front:      return VK_CULL_MODE_FRONT_BIT;
+		case Cull::Back:       return VK_CULL_MODE_BACK_BIT;
+		case Cull::FrontBack:  return VK_CULL_MODE_FRONT_AND_BACK;
+		default:               return VK_CULL_MODE_NONE;
+		}
+	}
+
+	VkFrontFace VulkanUtils::ToVkFrontFace(FrontFace frontFace)
+	{
+		switch (frontFace)
+		{
+		case FrontFace::Clockwise:        return VK_FRONT_FACE_CLOCKWISE;
+		case FrontFace::CounterClockwise: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		default:                          return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		}
+	}
+
+	VkCompareOp VulkanUtils::ToVkCompareOp(CompareOp compareOp)
+	{
+		switch (compareOp)
+		{
+		case CompareOp::Never:          return VK_COMPARE_OP_NEVER;
+		case CompareOp::Less:           return VK_COMPARE_OP_LESS;
+		case CompareOp::Equal:          return VK_COMPARE_OP_EQUAL;
+		case CompareOp::LessOrEqual:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+		case CompareOp::Greater:        return VK_COMPARE_OP_GREATER;
+		case CompareOp::NotEqual:       return VK_COMPARE_OP_NOT_EQUAL;
+		case CompareOp::GreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case CompareOp::Always:         return VK_COMPARE_OP_ALWAYS;
+		default:                        return VK_COMPARE_OP_LESS;
+		}
+	}
+
 }

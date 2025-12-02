@@ -11,6 +11,10 @@
 #include "ProjectManager.h"
 #include "SceneManager.h"
 
+#include "UI/EditorMenuBar.h"
+#include "UI/EditorToolbar.h"
+#include "Utils/KeyboardShortcutHandler.h"
+
 #include <glm/glm.hpp>
 #include <optional>
 
@@ -41,33 +45,34 @@ namespace Gravix
 		bool OnFileDrop(WindowFileDropEvent& e);
 
 		void InitializeProject();
+		void RefreshContentBrowser();
 
-		void UIToolbar();
 		void UISettings();
-
 		void OnOverlayRender(Command& cmd);
 	private:
 		Ref<Framebuffer> m_MSAAFramebuffer;
 		Ref<Framebuffer> m_FinalFramebuffer;
 
-		Ref<Texture2D> m_IconPlay;
-		Ref<Texture2D> m_IconStop;
-
 		EditorCamera m_EditorCamera;
 		glm::vec2 m_LastViewportSize = { 0.0f, 0.0f };
 
+		// Panels
 		SceneHierarchyPanel m_SceneHierarchyPanel;
 		InspectorPanel m_InspectorPanel;
 		ViewportPanel m_ViewportPanel;
 		std::optional<ContentBrowserPanel> m_ContentBrowserPanel;
 		ProjectSettingsPanel m_ProjectSettingsPanel;
 
-		bool m_ShowPhysicsColliders = false;
+		// UI Components
+		EditorMenuBar m_MenuBar;
+		EditorToolbar m_Toolbar;
 
 		// Managers
 		ProjectManager m_ProjectManager;
 		SceneManager m_SceneManager;
+		KeyboardShortcutHandler m_ShortcutHandler;
 
+		bool m_ShowPhysicsColliders = false;
 		bool m_ProjectInitialized = false;
 	};
 

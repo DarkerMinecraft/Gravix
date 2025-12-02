@@ -12,6 +12,8 @@
 namespace Gravix
 {
 
+	Entity InspectorPanel::s_CurrentEntity;
+
 	InspectorPanel::InspectorPanel(SceneHierarchyPanel* sceneHierarchyPanel)
 	{
 		SetSceneHierarchyPanel(sceneHierarchyPanel);
@@ -75,6 +77,9 @@ namespace Gravix
 
 	void InspectorPanel::DrawComponents(Entity entity)
 	{
+		// Set current entity for component renderers
+		s_CurrentEntity = entity;
+
 		// Use ComponentOrderComponent to determine rendering order if it exists
 		std::vector<std::type_index> componentOrder;
 		bool hasOrderComponent = false;
@@ -139,6 +144,7 @@ namespace Gravix
 								ImVec2 cursorPosBefore = ImGui::GetCursorPos();
 
 								ComponentUserSettings userSettings;
+								userSettings.CurrentEntity = &entity;
 								info.ImGuiRenderFunc(component, &userSettings);
 
 								// Get the last item rect for drag and drop
@@ -234,6 +240,7 @@ namespace Gravix
 						ImVec2 cursorPosBefore = ImGui::GetCursorPos();
 
 						ComponentUserSettings userSettings;
+						userSettings.CurrentEntity = &entity;
 						info.ImGuiRenderFunc(component, &userSettings);
 
 						// Get the last item rect for drag and drop

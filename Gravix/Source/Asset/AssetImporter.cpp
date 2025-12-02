@@ -5,13 +5,16 @@
 
 #include "Importers/TextureImporter.h"
 #include "Importers/SceneImporter.h"
+#include "Importers/ShaderImporter.h"
+#include "Importers/PipelineImporter.h"
+#include "Importers/MaterialImporter.h"
 
 #include "Asset/AssetManager.h"
 
-namespace Gravix 
+namespace Gravix
 {
 
-	static std::unordered_map<std::string, AssetType> s_ExtensionToAssetType = 
+	static std::unordered_map<std::string, AssetType> s_ExtensionToAssetType =
 	{
 		{ ".png", AssetType::Texture2D },
 		{ ".jpg", AssetType::Texture2D },
@@ -19,14 +22,20 @@ namespace Gravix
 		{ ".bmp", AssetType::Texture2D },
 		{ ".tga", AssetType::Texture2D },
 		{ ".orbscene", AssetType::Scene },
+		{ ".slang", AssetType::Shader },
+		{ ".pipeline", AssetType::Pipeline },
+		{ ".orbmat", AssetType::Material },
 	};
 
 	using AssetImportFunc = std::function<Ref<Asset>(AssetHandle, const AssetMetadata&)>;
 
-	static std::unordered_map<AssetType, AssetImportFunc> s_AssetImportFunc = 
+	static std::unordered_map<AssetType, AssetImportFunc> s_AssetImportFunc =
 	{
 		{ AssetType::Texture2D, &TextureImporter::ImportTexture2D },
 		{ AssetType::Scene, &SceneImporter::ImportScene },
+		{ AssetType::Shader, &ShaderImporter::ImportShader },
+		{ AssetType::Pipeline, &PipelineImporter::ImportPipeline },
+		{ AssetType::Material, &MaterialImporter::ImportMaterial },
 	};
 
 	Ref<Asset> AssetImporter::ImportAsset(AssetHandle handle, const AssetMetadata& metadata)

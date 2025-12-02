@@ -9,10 +9,10 @@ namespace Gravix
 	enum class Topology { TriangleList, TriangleStrip, LineList, LineStrip, PointList };
 	enum class DescriptorType { UniformBuffer, StorageBuffer, SampledImage, StorageImage };
 	enum class ShaderStage { Vertex, Fragment, Compute, Geometry, None, All };
-	enum class Cull { None, Front, Back };
-	enum class Fill { Solid, Wireframe };
+	enum class Cull { None, Front, Back, FrontBack };
+	enum class Fill { Solid, Wireframe, Point };
 	enum class CompareOp { Never, Less, Equal, LessOrEqual, Greater, NotEqual, GreaterOrEqual, Always };
-	enum class Blending { None, Alphablend, Additive };
+	enum class Blending { None, Alpha, Additive, Multiplicative };
 	enum class FrontFace { Clockwise, CounterClockwise };
 
 	enum class ShaderDataType

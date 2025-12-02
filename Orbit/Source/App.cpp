@@ -6,14 +6,10 @@
 #ifdef ENGINE_DEBUG
 
 #include "Core/Log.h"
-#include "Project/Project.h"
 #include "Debug/Instrumentor.h"
-#include <crtdbg.h>
 
 	int main()
 	{
-
-		//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF);
 
 		Gravix::Log::Init();
 

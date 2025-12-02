@@ -47,8 +47,10 @@ namespace Gravix
 		static AssetType GetStaticType() { return AssetType::Texture2D; }
 		virtual AssetType GetAssetType() const override { return GetStaticType(); }
 
+#ifdef GRAVIX_EDITOR_BUILD
 		virtual void* GetImGuiAttachment() = 0;
 		virtual void DestroyImGuiDescriptor() = 0;
+#endif
 
 		static Ref<Texture2D> Create(Buffer data, uint32_t width = 1, uint32_t height = 1, const TextureSpecification& specification = TextureSpecification());
 	};

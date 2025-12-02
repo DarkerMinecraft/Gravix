@@ -28,6 +28,20 @@ set(ORBIT_SOURCES
     Source/Panels/SceneHierarchyPanel.h
     Source/Panels/ViewportPanel.cpp
     Source/Panels/ViewportPanel.h
+
+    # UI Components
+    Source/UI/EditorMenuBar.cpp
+    Source/UI/EditorMenuBar.h
+    Source/UI/EditorToolbar.cpp
+    Source/UI/EditorToolbar.h
+
+    # Utils
+    Source/Utils/AssetFactory.cpp
+    Source/Utils/AssetFactory.h
+    Source/Utils/ExternalEditorLauncher.cpp
+    Source/Utils/ExternalEditorLauncher.h
+    Source/Utils/KeyboardShortcutHandler.cpp
+    Source/Utils/KeyboardShortcutHandler.h
 )
 
 # ============================================================================
@@ -40,6 +54,9 @@ add_executable(Orbit ${ORBIT_SOURCES})
 if(MSVC)
     target_compile_options(Orbit PRIVATE /utf-8)
 endif()
+
+# Define editor build flag
+target_compile_definitions(Orbit PRIVATE GRAVIX_EDITOR_BUILD)
 
 # ============================================================================
 # Include Directories

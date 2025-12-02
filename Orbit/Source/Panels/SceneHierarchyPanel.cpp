@@ -47,7 +47,8 @@ namespace Gravix
 		// Draw entities in sorted order
 		for (auto& entity : sortedEntities)
 		{
-			DrawEntityNode(entity);
+			if(entity)
+				DrawEntityNode(entity);
 		}
 
 		// Deselect when clicking empty space (using proper enum instead of magic number)

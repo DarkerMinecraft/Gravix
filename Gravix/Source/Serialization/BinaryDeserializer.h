@@ -7,8 +7,13 @@
 #include <type_traits>
 #include <cstring>
 #include <iostream>
+
+#ifdef GRAVIX_EDITOR_BUILD
 #include <fstream>
 #include <filesystem>
+#endif
+
+#include <glm/glm.hpp>
 
 namespace Gravix
 {
@@ -34,6 +39,8 @@ namespace Gravix
 	class BinaryDeserializer
 	{
 	public:
+#ifdef GRAVIX_EDITOR_BUILD
+		// Editor: Deserialize from file path
 		BinaryDeserializer(const std::filesystem::path& filePath, uint32_t expectedVersion)
 		{
 			std::ifstream file(filePath, std::ios::binary | std::ios::ate);
@@ -50,19 +57,29 @@ namespace Gravix
 			m_Data = m_Buffer.data();
 			m_Offset = 0;
 
-			const char expectedMagic[9] = "GRAVIXBN";
-			char magic[9] = {};
-			std::memcpy(magic, m_Data + m_Offset, 8);
-			m_Offset += 8;
+			ValidateHeader(expectedVersion);
+		}
+#endif
 
-			uint32_t version = Read<uint32_t>();
+		// Runtime: Deserialize from buffer (PaK data)
+		BinaryDeserializer(const uint8_t* buffer, size_t size, uint32_t expectedVersion)
+		{
+			m_Buffer.resize(size);
+			std::memcpy(m_Buffer.data(), buffer, size);
+			m_Data = m_Buffer.data();
+			m_Offset = 0;
 
-			bool validMagic = std::memcmp(magic, expectedMagic, 8) == 0;
-			bool validVersion = version == expectedVersion;
+			ValidateHeader(expectedVersion);
+		}
 
-			// Replace with your assert macro or exceptions
-			if (!validMagic) throw std::runtime_error("Invalid binary magic header!");
-			if (!validVersion) throw std::runtime_error("Binary version mismatch!");
+		// Runtime: Deserialize from vector buffer
+		BinaryDeserializer(const std::vector<uint8_t>& buffer, uint32_t expectedVersion)
+		{
+			m_Buffer = buffer;
+			m_Data = m_Buffer.data();
+			m_Offset = 0;
+
+			ValidateHeader(expectedVersion);
 		}
 
 		template<typename T>
@@ -71,6 +88,18 @@ namespace Gravix
 			if constexpr (std::is_same_v<T, std::string>)
 			{
 				return ReadString();
+			}
+			else if constexpr (std::is_same_v<T, glm::vec2>)
+			{
+				return ReadVec2();
+			}
+			else if constexpr (std::is_same_v<T, glm::vec3>)
+			{
+				return ReadVec3();
+			}
+			else if constexpr (std::is_same_v<T, glm::vec4>)
+			{
+				return ReadVec4();
 			}
 			else if constexpr (is_vector<T>::value)
 			{
@@ -110,6 +139,34 @@ namespace Gravix
 			return str;
 		}
 
+		// glm types
+		glm::vec2 ReadVec2()
+		{
+			glm::vec2 vec;
+			vec.x = Read<float>();
+			vec.y = Read<float>();
+			return vec;
+		}
+
+		glm::vec3 ReadVec3()
+		{
+			glm::vec3 vec;
+			vec.x = Read<float>();
+			vec.y = Read<float>();
+			vec.z = Read<float>();
+			return vec;
+		}
+
+		glm::vec4 ReadVec4()
+		{
+			glm::vec4 vec;
+			vec.x = Read<float>();
+			vec.y = Read<float>();
+			vec.z = Read<float>();
+			vec.w = Read<float>();
+			return vec;
+		}
+
 		template<typename T>
 		std::vector<T> ReadVector()
 		{
@@ -135,7 +192,29 @@ namespace Gravix
 			return result;
 		}
 
+		void ReadBytes(void* dest, size_t numBytes)
+		{
+			std::memcpy(dest, m_Data + m_Offset, numBytes);
+			m_Offset += static_cast<uint32_t>(numBytes);
+		}
+
 	private:
+		void ValidateHeader(uint32_t expectedVersion)
+		{
+			const char expectedMagic[9] = "GRAVIXBN";
+			char magic[9] = {};
+			std::memcpy(magic, m_Data + m_Offset, 8);
+			m_Offset += 8;
+
+			uint32_t version = Read<uint32_t>();
+
+			bool validMagic = std::memcmp(magic, expectedMagic, 8) == 0;
+			bool validVersion = version == expectedVersion;
+
+			if (!validMagic) throw std::runtime_error("Invalid binary magic header!");
+			if (!validVersion) throw std::runtime_error("Binary version mismatch!");
+		}
+
 		uint8_t* m_Data;
 		std::vector<uint8_t> m_Buffer;
 		uint32_t m_Offset = 0;

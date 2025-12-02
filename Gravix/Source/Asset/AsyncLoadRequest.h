@@ -4,7 +4,11 @@
 #include "Core/Buffer.h"
 
 #include "../../../ThirdParties/enkiTS/src/TaskScheduler.h"
+
+#ifdef GRAVIX_EDITOR_BUILD
 #include <yaml-cpp/yaml.h>
+#endif
+
 #include <filesystem>
 #include <vector>
 #include <variant>
@@ -35,7 +39,11 @@ namespace Gravix
 
 		struct SceneData
 		{
+#ifdef GRAVIX_EDITOR_BUILD
 			YAML::Node SceneNode;
+#else GRAVIX_RUNTIME_BUILD
+			Buffer SceneNode;
+#endif 
 			std::vector<AssetHandle> Dependencies;
 		};
 

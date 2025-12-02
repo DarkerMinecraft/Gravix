@@ -1,11 +1,22 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "Renderer/Specification.h"
+#include "Core/Log.h"
 
-namespace Gravix 
+// VK_CHECK macro for Vulkan error checking
+#define VK_CHECK(x) \
+	do { \
+		VkResult err = x; \
+		if (err != VK_SUCCESS) { \
+			GX_CORE_ERROR("Vulkan Error: {0}", static_cast<int>(err)); \
+		} \
+	} while (0)
+
+namespace Gravix
 {
 
-	class VulkanUtils 
+	class VulkanUtils
 	{
 	public:
 		static void TransitionImage(VkCommandBuffer cmd, VkImage image, VkFormat format, VkImageLayout currentLayout, VkImageLayout newLayout);
@@ -14,6 +25,13 @@ namespace Gravix
 
 		static bool IsDepthFormat(VkFormat format);
 		static bool IsStencilFormat(VkFormat format);
+
+		// Conversion functions from engine types to Vulkan types
+		static VkPrimitiveTopology ToVkPrimitiveTopology(Topology topology);
+		static VkPolygonMode ToVkPolygonMode(Fill fill);
+		static VkCullModeFlags ToVkCullMode(Cull cull);
+		static VkFrontFace ToVkFrontFace(FrontFace frontFace);
+		static VkCompareOp ToVkCompareOp(CompareOp compareOp);
 	};
 
 	struct PipelineBuilder

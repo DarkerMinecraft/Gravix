@@ -33,13 +33,13 @@ namespace Gravix
 	{
 		GX_PROFILE_FUNCTION();
 
-		std::vector<Ref<AsyncLoadRequest>> completedRequests;
+		m_CompletedRequestsCache.clear();
 		{
 			GX_PROFILE_SCOPE("GatherCompletedRequests");
 			std::lock_guard<std::mutex> lock(m_CompletionQueueMutex);
 			while (!m_CompletionQueue.empty())
 			{
-				completedRequests.push_back(m_CompletionQueue.front());
+				m_CompletedRequestsCache.push_back(m_CompletionQueue.front());
 				m_CompletionQueue.pop();
 			}
 		}
@@ -48,7 +48,7 @@ namespace Gravix
 
 		{
 			GX_PROFILE_SCOPE("ProcessCompletedRequests");
-			for(Ref<AsyncLoadRequest> request : completedRequests)
+			for(Ref<AsyncLoadRequest> request : m_CompletedRequestsCache)
 			{
 			if (request->State == AssetState::Failed)
 			{

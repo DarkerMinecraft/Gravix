@@ -14,8 +14,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ============================================================================
 
 option(GRAVIX_USE_VULKAN "Enable Vulkan renderer" ON)
-option(GRAVIX_BUILD_EDITOR "Build Orbit editor" ON)
+option(GRAVIX_BUILD_EDITOR "Build Orbit editor (mutually exclusive with RUNTIME)" ON)
 option(GRAVIX_BUILD_SCRIPTING "Build C# scripting support" ON)
+
+# Derive runtime build from editor option (mutually exclusive)
+if(GRAVIX_BUILD_EDITOR)
+    set(GRAVIX_BUILD_RUNTIME OFF)
+else()
+    set(GRAVIX_BUILD_RUNTIME ON)
+endif()
 
 # ============================================================================
 # Platform Detection
@@ -58,32 +65,38 @@ set(ENKITS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(ThirdParties/enkiTS)
 set_target_properties(enkiTS PROPERTIES FOLDER "Dependencies")
 
-# ImGui
-add_subdirectory(ThirdParties/ImGui)
-set_target_properties(ImGui PROPERTIES FOLDER "Dependencies")
+# ============================================================================
+# Editor-Only Dependencies
+# ============================================================================
 
-# Slang Shader Compiler
-set(SLANG_ENABLE_GFX OFF CACHE BOOL "" FORCE)
-set(SLANG_ENABLE_SLANGD OFF CACHE BOOL "" FORCE)
-set(SLANG_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
-set(SLANG_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SLANG_ENABLE_SLANGRT ON CACHE BOOL "" FORCE)
+if(GRAVIX_BUILD_EDITOR)
+    # ImGui
+    add_subdirectory(ThirdParties/ImGui)
+    set_target_properties(ImGui PROPERTIES FOLDER "Dependencies")
 
-add_subdirectory(ThirdParties/Slang)
-set_target_properties(slang slang-glslang slang-rt core slangc
-                       slang-common-objects compiler-core slangi
-                       PROPERTIES FOLDER "Dependencies/Slang")
+    # Slang Shader Compiler
+    set(SLANG_ENABLE_GFX OFF CACHE BOOL "" FORCE)
+    set(SLANG_ENABLE_SLANGD OFF CACHE BOOL "" FORCE)
+    set(SLANG_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+    set(SLANG_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(SLANG_ENABLE_SLANGRT ON CACHE BOOL "" FORCE)
 
-# YAML-CPP
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(YAML_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(ThirdParties/yaml)
-set_target_properties(yaml-cpp PROPERTIES FOLDER "Dependencies")
+    add_subdirectory(ThirdParties/Slang)
+    set_target_properties(slang slang-glslang slang-rt core slangc
+                           slang-common-objects compiler-core slangi
+                           PROPERTIES FOLDER "Dependencies/Slang")
 
-# ImGuizmo
-add_subdirectory(ThirdParties/ImGuizmo)
-set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
+    # YAML-CPP
+    set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(YAML_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    add_subdirectory(ThirdParties/yaml)
+    set_target_properties(yaml-cpp PROPERTIES FOLDER "Dependencies")
+
+    # ImGuizmo
+    add_subdirectory(ThirdParties/ImGuizmo)
+    set_target_properties(ImGuizmo PROPERTIES FOLDER "Dependencies")
+endif()
 
 # Box2D
 add_subdirectory(ThirdParties/Box2D)
@@ -119,6 +132,10 @@ add_subdirectory(Gravix)
 if(GRAVIX_BUILD_EDITOR)
     add_subdirectory(Orbit)
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Orbit)
+else()
+    # Build runtime when editor is not being built
+    add_subdirectory(Gravix-Runtime)
+    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Gravix-Runtime)
 endif()
 
 # ============================================================================
@@ -136,6 +153,7 @@ message(STATUS "")
 message(STATUS "Features:")
 message(STATUS "  Vulkan:         ${GRAVIX_USE_VULKAN}")
 message(STATUS "  Editor:         ${GRAVIX_BUILD_EDITOR}")
+message(STATUS "  Runtime:        ${GRAVIX_BUILD_RUNTIME}")
 message(STATUS "  Scripting:      ${GRAVIX_BUILD_SCRIPTING}")
 message(STATUS "  Streamline:     ${GRAVIX_HAS_STREAMLINE}")
 message(STATUS "========================================")

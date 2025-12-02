@@ -3,6 +3,8 @@
 #include "Project/Project.h"
 #include "Asset/AssetManager.h"
 #include "Serialization/Scene/SceneSerializer.h"
+#include "Scripting/ScriptEngine.h"
+#include "Scripting/ScriptFieldRegistry.h"
 #include "Core/Log.h"
 #include "Core/Application.h"
 
@@ -33,6 +35,11 @@ namespace Gravix
 		SceneSerializer serializer(m_ActiveScene);
 		serializer.Serialize(filePath);
 		GX_CORE_INFO("Saved scene to: {0}", filePath.string());
+
+		// Save script field registry to centralized location
+		std::filesystem::path registryPath = Project::GetActive()->GetConfig().LibraryDirectory / "ScriptsRegistry.orbreg";
+		ScriptEngine::GetFieldRegistry().Serialize(registryPath);
+		GX_CORE_INFO("Saved script field registry to: {0}", registryPath.string());
 
 		m_SceneDirty = false;
 

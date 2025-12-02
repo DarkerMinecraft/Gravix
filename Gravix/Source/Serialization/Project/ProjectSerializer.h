@@ -1,6 +1,9 @@
 #pragma once
 
+#ifdef GRAVIX_EDITOR_BUILD
+
 #include "Project/Project.h"
+#include <filesystem>
 
 namespace Gravix
 {
@@ -18,3 +21,5 @@ namespace Gravix
 	};
 
 }
+
+#endif // GRAVIX_EDITOR_BUILD

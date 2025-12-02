@@ -7,7 +7,9 @@
 #endif
 
 #include "Utils/VulkanTypes.h"
+#ifdef GRAVIX_EDITOR_BUILD
 #include "Utils/ShaderCompiler.h"
+#endif
 #include "VulkanSwapchain.h"
 
 #include <vulkan/vulkan.h>
@@ -23,6 +25,7 @@ namespace Gravix
 
 		VkFence RenderFence;
 		VkSemaphore SwapchainSemaphore;  // Per-frame: signaled by acquire, waited by submit
+		VkDescriptorSet GlobalDescriptor = VK_NULL_HANDLE;  // Global descriptor set for this frame
 	};
 
 
@@ -38,7 +41,9 @@ namespace Gravix
 		virtual void EndFrame() override;
 		virtual void WaitIdle() override;
 
+#ifdef GRAVIX_EDITOR_BUILD
 		ShaderCompiler& GetShaderCompiler() { return *m_ShaderCompiler; }
+#endif
 
 		AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool useSamples = false, bool mipmapped = false);
 		AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
@@ -57,6 +62,7 @@ namespace Gravix
 		VkDescriptorSet* GetGlobalDescriptorSets() { return m_BindlessDescriptorSets; }
 		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_BindlessDescriptorSets[index]; }
 		std::vector<VkDescriptorSetLayout>& GetGlobalDescriptorSetLayouts() { return m_BindlessSetLayouts; }
+		VkDescriptorSetLayout GetGlobalDescriptorSetLayout() const { return m_BindlessSetLayouts.empty() ? VK_NULL_HANDLE : m_BindlessSetLayouts[0]; }
 		VkDescriptorPool GetGlobalDescriptorPool() const { return m_DescriptorPool; }
 
 		VkDescriptorPool GetImGuiDescriptorPool() { return m_ImGuiDescriptorPool; }
@@ -70,17 +76,10 @@ namespace Gravix
 		VulkanSwapchain* GetSwapchain() { return m_Swapchain.get(); }
 
 		FrameData& GetCurrentFrameData() { return m_Frames[m_CurrentFrame % FRAME_OVERLAP]; }
+		FrameData& GetCurrentFrame() { return GetCurrentFrameData(); }  // Alias for compatibility
 		VmaAllocator& GetAllocator() { return m_Allocator; }
-	private:
-		void InitVulkan(const DeviceProperties& properties);
-	
 
-		void InitDescriptorPool();
-		void CreateBindlessDescriptorSets();
-		void CreateBindlessLayout(VkDescriptorType type, uint32_t count, VkShaderStageFlags stages, VkDescriptorSetLayout* layout);
-		void CreateImGuiPool();
-		void InitCommandBuffers();
-		void InitSyncStructures();
+		VkSampler GetLinearSampler() const { return VK_NULL_HANDLE; }  // TODO: Create and store sampler
 	private:
 		VkInstance m_Instance;
 		VkDebugUtilsMessengerEXT m_DebugMessenger;
@@ -90,7 +89,9 @@ namespace Gravix
 
 		VmaAllocator m_Allocator;
 
+#ifdef GRAVIX_EDITOR_BUILD
 		Ref<ShaderCompiler> m_ShaderCompiler;
+#endif
 
 		VkQueue m_GraphicsQueue;
 		uint32_t m_GraphicsQueueFamilyIndex;

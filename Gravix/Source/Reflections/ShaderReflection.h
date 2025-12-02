@@ -123,12 +123,18 @@ namespace Gravix
 		void SetReflectedStructs(const std::map<std::string, ReflectedStruct>& structs) { m_ReflectedStructs = structs; }
 
 		std::vector<EntryPointData>& GetEntryPoints() { return m_EntryPoints; }
+		const std::vector<EntryPointData>& GetEntryPoints() const { return m_EntryPoints; }
+
 		std::vector<VertexAttribute>& GetVertexAttributes() { return m_VertexAttributes; }
+		const std::vector<VertexAttribute>& GetVertexAttributes() const { return m_VertexAttributes; }
+
 		std::vector<PushConstantRange> GetPushConstantRanges() {
 			return m_PushConstantRanges | std::views::values | std::ranges::to<std::vector>();
 		}
-		
+
 		ReflectedStruct& GetReflectedStruct(const std::string& name) { return m_ReflectedStructs[name]; }
+		const ReflectedStruct& GetReflectedStruct(const std::string& name) const { return m_ReflectedStructs.at(name); }
+
 		bool HasReflectedStruct(const std::string& name) const { return m_ReflectedStructs.find(name) != m_ReflectedStructs.end(); }
 
 		bool HasPushConstantRange(const std::string& name) const { return m_PushConstantRanges.find(name) != m_PushConstantRanges.end(); }
@@ -152,8 +158,12 @@ namespace Gravix
 		}
 
 		std::string& GetName() { return m_Name; }
+		const std::string& GetName() const { return m_Name; }
+
 		uint32_t GetVertexStride() const { return m_Stride; }
+
 		ComputeDispatchInfo& GetComputeDispatch() { return m_ComputeDispatchInfo; }
+		const ComputeDispatchInfo& GetComputeDispatch() const { return m_ComputeDispatchInfo; }
 
 		void Serialize(BinarySerializer& serializer) 
 		{

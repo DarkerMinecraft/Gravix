@@ -85,8 +85,10 @@ namespace Gravix
 
 		static Ref<Project> New();
 		static Ref<Project> New(const std::filesystem::path& workingDirectory);
+#ifdef GRAVIX_EDITOR_BUILD
 		static Ref<Project> Load(const std::filesystem::path& path);
 		static void SaveActive(const std::filesystem::path& path);
+#endif
 	private:
 		void SetupScriptingEnvironment();
 

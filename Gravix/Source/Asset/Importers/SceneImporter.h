@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef GRAVIX_EDITOR_BUILD
+
 #include "Asset/Asset.h"
 #include "Asset/AssetMetadata.h"
 
@@ -17,3 +19,5 @@ namespace Gravix
 		static YAML::Node LoadSceneToYAML(const std::filesystem::path& path, std::vector<AssetHandle>* outDependencies = nullptr);
 	};
 }
+
+#endif // GRAVIX_EDITOR_BUILD

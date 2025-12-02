@@ -4,6 +4,7 @@
 #include "Core/Application.h"
 #include "AppLayer.h"
 #include "SceneManager.h"
+#include "Asset/Importers/TextureImporter.h"
 
 #include "Core/Input.h"
 
@@ -18,6 +19,18 @@ namespace Gravix
 	ViewportPanel::ViewportPanel(const Ref<Framebuffer>& framebuffer, uint32_t renderIndex)
 	{
 		SetFramebuffer(framebuffer, renderIndex);
+
+		// Load toolbar icons
+		m_IconPlay = TextureImporter::LoadTexture2D("EditorAssets/Icons/PlayButton.png");
+		m_IconStop = TextureImporter::LoadTexture2D("EditorAssets/Icons/StopButton.png");
+	}
+
+	void ViewportPanel::LoadIcons()
+	{
+		if (!m_IconPlay)
+			m_IconPlay = TextureImporter::LoadTexture2D("EditorAssets/Icons/PlayButton.png");
+		if (!m_IconStop)
+			m_IconStop = TextureImporter::LoadTexture2D("EditorAssets/Icons/StopButton.png");
 	}
 
 	void ViewportPanel::OnEvent(Event& e)
@@ -88,9 +101,9 @@ namespace Gravix
 		m_ViewportSize = { avail.x, avail.y };
 		ImGui::Image(m_Framebuffer->GetColorAttachmentID(m_RenderIndex), avail, ImVec2(0, 1), ImVec2(1, 0));
 
-		if (ImGui::BeginDragDropTarget()) 
+		if (ImGui::BeginDragDropTarget())
 		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) 
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
 			{
 				AssetHandle sceneHandle = *(AssetHandle*)payload->Data;
 				m_AppLayer->OpenScene(sceneHandle);
@@ -98,10 +111,24 @@ namespace Gravix
 			ImGui::EndDragDropTarget();
 		}
 
+		// Draw toolbar overlay at the top
+		DrawToolbarOverlay();
+
+		// Draw gizmo mode buttons in Edit mode
+		if (m_SceneManager && m_SceneManager->GetSceneState() == SceneState::Edit)
+		{
+			DrawGizmoModeButtons();
+		}
+
 		// Only show ImGuizmo in Edit mode
 		if (m_SceneManager && m_SceneManager->GetSceneState() == SceneState::Edit)
 		{
 			Entity selectedEntity = m_SceneHierarchyPanel->GetSelectedEntity();
+
+			// Auto-deselect gizmo when nothing is selected
+			if (!selectedEntity)
+				m_GuizmoType = -1;
+
 			if (selectedEntity && m_GuizmoType != -1)
 			{
 				ImGuizmo::SetOrthographic(false);
@@ -129,6 +156,11 @@ namespace Gravix
 					glm::vec3 position, rotation, scale;
 					Math::DecomposeTransform(transform, position, rotation, scale);
 
+					// Prevent scale from going to zero or negative (causes haywire behavior)
+					scale.x = glm::max(scale.x, 0.001f);
+					scale.y = glm::max(scale.y, 0.001f);
+					scale.z = glm::max(scale.z, 0.001f);
+
 					glm::vec3 deltaRotation = rotation - tc.Rotation;
 					tc.Position = position;
 					tc.Rotation += deltaRotation;
@@ -145,9 +177,27 @@ namespace Gravix
 
 	void ViewportPanel::UpdateViewport()
 	{
-		if (m_ViewportBounds.empty())
+		// Only perform picking if viewport is valid and hovered
+		if (!m_ViewportHovered || m_ViewportSize.x <= 0 || m_ViewportSize.y <= 0)
+		{
+			// Reset to normal cursor when not hovering
+			if (m_CurrentCursorMode != CursorMode::Normal)
+			{
+				m_CurrentCursorMode = CursorMode::Normal;
+				Application::Get().GetWindow().SetCursorMode(CursorMode::Normal);
+			}
+			m_HoveredEntity = Entity{ entt::null, m_SceneHierarchyPanel->GetContext().get() };
 			return;
+		}
 
+		// Skip mouse picking if using ImGuizmo to avoid interfering
+		if (ImGuizmo::IsOver() || ImGuizmo::IsUsing())
+		{
+			m_HoveredEntity = Entity{ entt::null, m_SceneHierarchyPanel->GetContext().get() };
+			return;
+		}
+
+		// Get mouse position relative to viewport
 		auto [mx, my] = ImGui::GetMousePos();
 		mx -= m_ViewportBounds[0].x;
 		my -= m_ViewportBounds[0].y;
@@ -156,8 +206,10 @@ namespace Gravix
 		int mouseX = (int)mx;
 		int mouseY = (int)my;
 
+		// Verify mouse is within viewport bounds
 		if (mouseX >= 0 && mouseY >= 0 && mouseX < (int)viewportSize.x && mouseY < (int)viewportSize.y)
 		{
+			// Read entity ID from framebuffer's second attachment (index 1)
 			int pixel = m_Framebuffer->ReadPixel(1, mouseX, mouseY);
 			m_HoveredEntity = pixel == -1 ? Entity{ entt::null, m_SceneHierarchyPanel->GetContext().get() } : Entity((entt::entity)(uint64_t)(uint32_t)pixel, m_SceneHierarchyPanel->GetContext().get());
 
@@ -179,6 +231,118 @@ namespace Gravix
 			}
 			m_HoveredEntity = Entity{ entt::null, m_SceneHierarchyPanel->GetContext().get() };
 		}
+	}
+
+	void ViewportPanel::DrawToolbarOverlay()
+	{
+		if (!m_SceneManager || !m_IconPlay || !m_IconStop)
+			return;
+
+		// Center the Play/Stop button at the top (match ImGuizmo button size)
+		float boxSize = 28.0f;
+		float padding = 3.0f;
+		float buttonSize = boxSize - padding * 2;
+		ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+		float centerX = (viewportSize.x - boxSize) * 0.5f;
+
+		ImGui::SetCursorPos(ImVec2(centerX, 8));
+
+		// Draw gray rounded background box
+		ImVec2 boxMin = ImGui::GetCursorScreenPos();
+		ImVec2 boxMax = ImVec2(boxMin.x + boxSize, boxMin.y + boxSize);
+		ImGui::GetWindowDrawList()->AddRectFilled(boxMin, boxMax, IM_COL32(60, 60, 60, 200), 4.0f);
+
+		// Position button inside the box
+		ImGui::SetCursorPos(ImVec2(centerX + padding, 8 + padding));
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		auto& colors = ImGui::GetStyle().Colors;
+		auto& buttonHovered = colors[ImGuiCol_ButtonHovered];
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(buttonHovered.x, buttonHovered.y, buttonHovered.z, 0.3f));
+		auto& buttonActive = colors[ImGuiCol_ButtonActive];
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(buttonActive.x, buttonActive.y, buttonActive.z, 0.5f));
+
+		Ref<Texture2D> icon = (m_SceneManager->GetSceneState() == SceneState::Edit) ? m_IconPlay : m_IconStop;
+
+		if (ImGui::ImageButton("##SceneState", (ImTextureID)icon->GetImGuiAttachment(), ImVec2{ buttonSize, buttonSize }))
+		{
+			if (m_SceneManager->GetSceneState() == SceneState::Edit)
+				m_SceneManager->Play();
+			else if (m_SceneManager->GetSceneState() == SceneState::Play)
+				m_SceneManager->Stop();
+		}
+
+		ImGui::PopStyleVar(1);
+		ImGui::PopStyleColor(3);
+	}
+
+	void ViewportPanel::DrawGizmoModeButtons()
+	{
+		// Position the gizmo buttons on the left side at the top
+		float buttonSize = 28.0f;
+		float spacing = 2.0f;
+
+		ImGui::SetCursorPos(ImVec2(8, 8));
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, spacing));
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.8f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.9f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+
+		// None/Select button (Q)
+		bool isNoneSelected = (m_GuizmoType == -1);
+		if (isNoneSelected)
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.5f, 0.6f, 0.9f));
+		if (ImGui::Button("Q", ImVec2(buttonSize, buttonSize)))
+			m_GuizmoType = -1;
+		if (isNoneSelected)
+			ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Select Mode (Q)");
+
+		ImGui::SameLine();
+
+		// Translate button (W)
+		bool isTranslateSelected = (m_GuizmoType == ImGuizmo::OPERATION::TRANSLATE);
+		if (isTranslateSelected)
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.5f, 0.6f, 0.9f));
+		if (ImGui::Button("W", ImVec2(buttonSize, buttonSize)))
+			m_GuizmoType = ImGuizmo::OPERATION::TRANSLATE;
+		if (isTranslateSelected)
+			ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Translate Mode (W)");
+
+		ImGui::SameLine();
+
+		// Rotate button (E)
+		bool isRotateSelected = (m_GuizmoType == ImGuizmo::OPERATION::ROTATE);
+		if (isRotateSelected)
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.5f, 0.6f, 0.9f));
+		if (ImGui::Button("E", ImVec2(buttonSize, buttonSize)))
+			m_GuizmoType = ImGuizmo::OPERATION::ROTATE;
+		if (isRotateSelected)
+			ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Rotate Mode (E)");
+
+		ImGui::SameLine();
+
+		// Scale button (R)
+		bool isScaleSelected = (m_GuizmoType == ImGuizmo::OPERATION::SCALE);
+		if (isScaleSelected)
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.5f, 0.6f, 0.9f));
+		if (ImGui::Button("R", ImVec2(buttonSize, buttonSize)))
+			m_GuizmoType = ImGuizmo::OPERATION::SCALE;
+		if (isScaleSelected)
+			ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Scale Mode (R)");
+
+		ImGui::PopStyleVar(2);
+		ImGui::PopStyleColor(3);
 	}
 
 }

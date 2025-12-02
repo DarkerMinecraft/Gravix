@@ -2,17 +2,12 @@
 #include "AppLayer.h"
 
 #include "Asset/Importers/TextureImporter.h"
-
-#include "Serialization/Scene/SceneSerializer.h"
-#include "Scene/Scene.h"
+#include "Utils/AssetFactory.h"
+#include "Utils/ExternalEditorLauncher.h"
 
 #include <filesystem>
 #include <imgui.h>
 #include <algorithm>
-
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 
 namespace Gravix 
 {
@@ -150,13 +145,11 @@ namespace Gravix
 					}
 					else if (fullPath.extension() == ".cs")
 					{
-						// Open C# script file with configured editor
-						OpenScriptFile(fullPath);
+						ExternalEditorLauncher::OpenScript(fullPath);
 					}
 					else if (fullPath.extension() == ".csproj")
 					{
-						// Open project file with configured editor
-						OpenSolutionFile(fullPath);
+						ExternalEditorLauncher::OpenProject(fullPath);
 					}
 				}
 			}
@@ -169,7 +162,7 @@ namespace Gravix
 				{
 					if (ImGui::MenuItem("Open"))
 					{
-						OpenSolutionFile(fullPath);
+						ExternalEditorLauncher::OpenProject(fullPath);
 					}
 				}
 
@@ -178,7 +171,7 @@ namespace Gravix
 				{
 					if (ImGui::MenuItem("Open"))
 					{
-						OpenScriptFile(fullPath);
+						ExternalEditorLauncher::OpenScript(fullPath);
 					}
 				}
 
@@ -232,34 +225,48 @@ namespace Gravix
 		{
 			if (ImGui::MenuItem("Scene"))
 			{
-				CreateNewScene();
+				if (AssetFactory::CreateScene(m_CurrentDirectory))
+					RefreshAssetTree();
 			}
 
 			if (ImGui::MenuItem("Script (C#)"))
 			{
-				CreateNewScript();
+				if (AssetFactory::CreateScript(m_CurrentDirectory))
+					RefreshAssetTree();
 			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Graphics Shader"))
+			{
+				if (AssetFactory::CreateGraphicsShader(m_CurrentDirectory))
+					RefreshAssetTree();
+			}
+
+			if (ImGui::MenuItem("Compute Shader"))
+			{
+				if (AssetFactory::CreateComputeShader(m_CurrentDirectory))
+					RefreshAssetTree();
+			}
+
+			if (ImGui::MenuItem("Pipeline"))
+			{
+				if (AssetFactory::CreatePipeline(m_CurrentDirectory))
+					RefreshAssetTree();
+			}
+
+			if (ImGui::MenuItem("Material"))
+			{
+				if (AssetFactory::CreateMaterial(m_CurrentDirectory))
+					RefreshAssetTree();
+			}
+
+			ImGui::Separator();
 
 			if (ImGui::MenuItem("Folder"))
 			{
-				// Create new folder in current directory
-				std::filesystem::path newFolderPath = m_CurrentDirectory / "New Folder";
-				int counter = 1;
-				while (std::filesystem::exists(newFolderPath))
-				{
-					newFolderPath = m_CurrentDirectory / ("New Folder " + std::to_string(counter++));
-				}
-
-				try
-				{
-					std::filesystem::create_directory(newFolderPath);
-					GX_CORE_INFO("Created folder: {0}", newFolderPath.filename().string());
+				if (AssetFactory::CreateFolder(m_CurrentDirectory))
 					RefreshAssetTree();
-				}
-				catch (const std::filesystem::filesystem_error& e)
-				{
-					GX_CORE_ERROR("Failed to create folder: {0}", e.what());
-				}
 			}
 
 			ImGui::EndPopup();
@@ -577,235 +584,6 @@ namespace Gravix
 		{
 			GX_CORE_ERROR("Failed to rename asset: {0}", e.what());
 		}
-	}
-
-	void ContentBrowserPanel::CreateNewScene()
-	{
-		// Generate a unique scene file name
-		std::filesystem::path newScenePath = m_CurrentDirectory / "NewScene.orbscene";
-		int counter = 1;
-		while (std::filesystem::exists(newScenePath))
-		{
-			newScenePath = m_CurrentDirectory / ("NewScene" + std::to_string(counter++) + ".orbscene");
-		}
-
-		try
-		{
-			// Ensure the parent directory exists
-			if (!std::filesystem::exists(m_CurrentDirectory))
-			{
-				std::filesystem::create_directories(m_CurrentDirectory);
-			}
-
-			// Create a new empty scene
-			Ref<Scene> newScene = CreateRef<Scene>();
-
-			// Serialize the scene to a file
-			SceneSerializer serializer(newScene);
-			serializer.Serialize(newScenePath);
-
-			// Import the scene into the asset manager
-			auto relativePath = std::filesystem::relative(newScenePath, m_AssetDirectory);
-			Ref<EditorAssetManager> assetManager = Project::GetActive()->GetEditorAssetManager();
-			assetManager->ImportAsset(relativePath);
-			assetManager->SerializeAssetRegistry();
-
-			// Refresh the asset tree to show the new scene
-			RefreshAssetTree();
-
-			GX_CORE_INFO("Created new scene: {0}", newScenePath.filename().string());
-		}
-		catch (const std::exception& e)
-		{
-			GX_CORE_ERROR("Failed to create new scene: {0}", e.what());
-		}
-	}
-
-	void ContentBrowserPanel::CreateNewScript()
-	{
-		// Generate a unique script file name
-		std::filesystem::path newScriptPath = m_CurrentDirectory / "NewScript.cs";
-		int counter = 1;
-		while (std::filesystem::exists(newScriptPath))
-		{
-			newScriptPath = m_CurrentDirectory / ("NewScript" + std::to_string(counter++) + ".cs");
-		}
-
-		try
-		{
-			// Ensure the parent directory exists
-			if (!std::filesystem::exists(m_CurrentDirectory))
-			{
-				std::filesystem::create_directories(m_CurrentDirectory);
-			}
-
-			// Get the class name from the filename
-			std::string className = newScriptPath.stem().string();
-
-			// Create the C# script with a basic template
-			std::ofstream scriptFile(newScriptPath);
-			if (scriptFile.is_open())
-			{
-				scriptFile << "using System;\n";
-				scriptFile << "using GravixEngine;\n";
-				scriptFile << "\n";
-				scriptFile << "public class " << className << " : Entity\n";
-				scriptFile << "{\n";
-				scriptFile << "    public void OnCreate()\n";
-				scriptFile << "    {\n";
-				scriptFile << "        \n";
-				scriptFile << "    }\n";
-				scriptFile << "\n";
-				scriptFile << "    public void OnUpdate(float deltaTime)\n";
-				scriptFile << "    {\n";
-				scriptFile << "        \n";
-				scriptFile << "    }\n";
-				scriptFile << "}\n";
-
-				scriptFile.close();
-
-				// Refresh the asset tree to show the new script
-				RefreshAssetTree();
-
-				GX_CORE_INFO("Created new script: {0}", newScriptPath.filename().string());
-			}
-			else
-			{
-				GX_CORE_ERROR("Failed to create script file: {0}", newScriptPath.string());
-			}
-		}
-		catch (const std::exception& e)
-		{
-			GX_CORE_ERROR("Failed to create new script: {0}", e.what());
-		}
-	}
-
-	void ContentBrowserPanel::OpenScriptFile(const std::filesystem::path& scriptPath)
-	{
-		auto& config = Project::GetActive()->GetConfig();
-
-		// Check if script editor is configured
-		if (config.ScriptEditorPath.empty())
-		{
-			GX_CORE_WARN("No external script editor configured. Please set one in Project Settings.");
-			return;
-		}
-
-		// Check if the configured editor exists
-		if (!std::filesystem::exists(config.ScriptEditorPath))
-		{
-			GX_CORE_ERROR("Script editor not found at: {0}", config.ScriptEditorPath.string());
-			return;
-		}
-
-		// Find the .csproj file in the Scripts directory
-		std::filesystem::path csprojPath = config.ScriptPath / (config.Name + ".csproj");
-
-		std::string command;
-
-		// Check if .csproj exists
-		if (std::filesystem::exists(csprojPath))
-		{
-			// Open project file
-			command = "\"" + config.ScriptEditorPath.string() + "\" \"" + csprojPath.string() + "\"";
-			GX_CORE_INFO("Opening project: {0}", csprojPath.filename().string());
-		}
-		else
-		{
-			// Fallback: just open the script file
-			command = "\"" + config.ScriptEditorPath.string() + "\" \"" + scriptPath.string() + "\"";
-			GX_CORE_WARN("Project file not found: {0}. Opening script file directly.", csprojPath.string());
-		}
-
-		// Launch the process (Windows)
-#ifdef _WIN32
-		STARTUPINFOA si = { sizeof(si) };
-		PROCESS_INFORMATION pi;
-
-		if (CreateProcessA(
-			NULL,
-			const_cast<char*>(command.c_str()),
-			NULL,
-			NULL,
-			FALSE,
-			0,
-			NULL,
-			NULL,
-			&si,
-			&pi))
-		{
-			// Close handles as we don't need to wait for the process
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-		}
-		else
-		{
-			GX_CORE_ERROR("Failed to open script file with editor");
-		}
-#else
-		// For other platforms, use system()
-		system(command.c_str());
-#endif
-	}
-
-	void ContentBrowserPanel::OpenSolutionFile(const std::filesystem::path& projectPath)
-	{
-		auto& config = Project::GetActive()->GetConfig();
-
-		// Check if script editor is configured
-		if (config.ScriptEditorPath.empty())
-		{
-			GX_CORE_WARN("No external script editor configured. Please set one in Project Settings.");
-			return;
-		}
-
-		// Check if the configured editor exists
-		if (!std::filesystem::exists(config.ScriptEditorPath))
-		{
-			GX_CORE_ERROR("Script editor not found at: {0}", config.ScriptEditorPath.string());
-			return;
-		}
-
-		// Check if the project file exists
-		if (!std::filesystem::exists(projectPath))
-		{
-			GX_CORE_ERROR("Project file not found at: {0}", projectPath.string());
-			return;
-		}
-
-		// Build command to open project file
-		std::string command = "\"" + config.ScriptEditorPath.string() + "\" \"" + projectPath.string() + "\"";
-		GX_CORE_INFO("Opening project: {0}", projectPath.filename().string());
-
-		// Launch the process (Windows)
-#ifdef _WIN32
-		STARTUPINFOA si = { sizeof(si) };
-		PROCESS_INFORMATION pi;
-
-		if (CreateProcessA(
-			NULL,
-			const_cast<char*>(command.c_str()),
-			NULL,
-			NULL,
-			FALSE,
-			0,
-			NULL,
-			NULL,
-			&si,
-			&pi))
-		{
-			// Close handles as we don't need to wait for the process
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-		}
-		else
-		{
-			GX_CORE_ERROR("Failed to open project file with editor");
-		}
-#else
-		// For other platforms, use system()
-		system(command.c_str());
-#endif
 	}
 
 }
