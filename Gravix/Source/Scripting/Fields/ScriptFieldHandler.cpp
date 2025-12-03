@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "ScriptFieldHandler.h"
+#include "Scripting/Core/ScriptEngine.h"
 
 #include <mono/metadata/class.h>
+#include <mono/metadata/appdomain.h>
+#include <mono/metadata/mono-debug.h>
 
 namespace Gravix
 {
@@ -193,7 +196,42 @@ namespace Gravix
 		case ScriptFieldType::Entity:
 		{
 			UUID val = value.GetValue<UUID>();
-			mono_field_set_value(instance, monoField, &val);
+
+			// Get the Entity class
+			MonoClass* entityClass = mono_class_from_name(ScriptEngine::GetCoreAssemblyImage(), "GravixEngine", "Entity");
+			if (!entityClass)
+			{
+				GX_CORE_ERROR("Failed to find Entity class in GravixEngine namespace");
+				break;
+			}
+
+			// Create new Entity instance using the constructor that takes a ulong
+			MonoObject* entityObj = mono_object_new(mono_domain_get(), entityClass);
+			if (!entityObj)
+			{
+				GX_CORE_ERROR("Failed to create Entity object instance");
+				break;
+			}
+
+			// Find and call the constructor Entity(ulong id)
+			MonoMethod* ctor = mono_class_get_method_from_name(entityClass, ".ctor", 1);
+			if (ctor)
+			{
+				void* args[1] = { &val };
+				mono_runtime_invoke(ctor, entityObj, args, nullptr);
+			}
+			else
+			{
+				// If we can't find the constructor, just set the ID field directly
+				MonoClassField* idField = mono_class_get_field_from_name(entityClass, "ID");
+				if (idField)
+				{
+					mono_field_set_value(entityObj, idField, &val);
+				}
+			}
+
+			// Set the Entity object to the field
+			mono_field_set_value(instance, monoField, entityObj);
 			break;
 		}
 		}

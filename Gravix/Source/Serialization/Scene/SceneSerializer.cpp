@@ -5,7 +5,7 @@
 #include "Scene/Entity.h"
 
 #ifdef GRAVIX_EDITOR_BUILD
-#include "Scripting/ScriptEngine.h"
+#include "Scripting/Core/ScriptEngine.h"
 #endif
 
 namespace Gravix

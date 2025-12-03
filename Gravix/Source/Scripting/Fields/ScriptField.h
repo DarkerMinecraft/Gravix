@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ScriptTypes.h"
+#include "Scripting/Core/ScriptTypes.h"
 #include "Core/UUID.h"
 
 #include <string>

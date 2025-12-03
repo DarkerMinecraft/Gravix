@@ -2,13 +2,24 @@ cmake_minimum_required(VERSION 3.20)
 project(Gravix-ScriptCore)
 
 # ----------------------------------------
-# Find Mono C# compiler
+# Find dotnet CLI (preferred) or fallback to Mono
 # ----------------------------------------
-find_program(MONO_CSHARP_COMPILER
-    NAMES csc.bat csc mcs
-    PATH_SUFFIXES bin
-    REQUIRED
+find_program(DOTNET_EXECUTABLE
+    NAMES dotnet
 )
+
+if(DOTNET_EXECUTABLE)
+    set(USE_DOTNET TRUE)
+    message(STATUS "Using dotnet CLI for C# build: ${DOTNET_EXECUTABLE}")
+else()
+    find_program(MONO_CSHARP_COMPILER
+        NAMES csc.bat csc mcs
+        PATH_SUFFIXES bin
+        REQUIRED
+    )
+    set(USE_DOTNET FALSE)
+    message(STATUS "Using Mono compiler for C# build: ${MONO_CSHARP_COMPILER}")
+endif()
 
 # Output path for the compiled DLL
 set(SCRIPTCORE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/Gravix-ScriptCore")
@@ -28,19 +39,35 @@ list(FILTER CS_FILES EXCLUDE REGEX "/obj/")
 set(OUTPUT_DLL "${SCRIPTCORE_OUTPUT_DIR}/GravixScripting.dll")
 
 # ----------------------------------------
-# Build DLL using Mono compiler
+# Build DLL using dotnet or Mono
 # ----------------------------------------
-add_custom_command(
-    OUTPUT "${OUTPUT_DLL}"
-    COMMAND "${MONO_CSHARP_COMPILER}"
-        -target:library
-        -out:${OUTPUT_DLL}
-        ${CS_FILES}
-    DEPENDS ${CS_FILES}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Building Gravix-ScriptCore C# project"
-    VERBATIM
-)
+if(USE_DOTNET)
+    # Use dotnet build (better VS integration)
+    add_custom_command(
+        OUTPUT "${OUTPUT_DLL}"
+        COMMAND "${DOTNET_EXECUTABLE}" build
+            "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
+            -c $<CONFIG>
+            -o "${SCRIPTCORE_OUTPUT_DIR}"
+        DEPENDS ${CS_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Building Gravix-ScriptCore using dotnet build"
+        VERBATIM
+    )
+else()
+    # Fallback to Mono compiler
+    add_custom_command(
+        OUTPUT "${OUTPUT_DLL}"
+        COMMAND "${MONO_CSHARP_COMPILER}"
+            -target:library
+            -out:${OUTPUT_DLL}
+            ${CS_FILES}
+        DEPENDS ${CS_FILES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Building Gravix-ScriptCore using Mono compiler"
+        VERBATIM
+    )
+endif()
 
 add_custom_target(Gravix-ScriptCore ALL
     DEPENDS "${OUTPUT_DLL}"

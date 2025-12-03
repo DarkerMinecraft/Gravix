@@ -25,6 +25,13 @@ namespace GravixEngine
             this.z = z;
         }
 
+        public Vector3(Vector2 xy, float z) 
+        {
+            this.x = xy.x;
+            this.y = xy.y;
+            this.z = z;
+        }
+
         public Vector2 XY
         {
             get 

@@ -6,7 +6,11 @@
       "Bash(find:*)",
       "Bash(python analyze_profile.py:*)",
       "Bash(python:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(dotnet --version:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet build:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

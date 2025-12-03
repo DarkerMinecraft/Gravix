@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "ScriptEngine.h"
-#include "EditorScriptEngine.h"
-#include "ScriptFieldRegistry.h"
+#include "Scripting/Editor/EditorScriptEngine.h"
+#include "Scripting/Fields/ScriptFieldRegistry.h"
 
 #include <mono/metadata/object.h>
 #include <mono/metadata/class.h>

@@ -5,7 +5,7 @@
 
 #include "Scene/ComponentRegistry.h"
 
-#include "Scripting/ScriptEngine.h"
+#include "Scripting/Core/ScriptEngine.h"
 
 #include "Asset/EditorAssetManager.h"
 #include "Debug/Instrumentor.h"

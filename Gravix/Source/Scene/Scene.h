@@ -110,6 +110,8 @@ namespace Gravix
 		 */
 		Entity CreateEntity(const std::string& name = std::string("Unnamed Entity"), UUID uuid = UUID(), uint32_t creationIndex = (uint32_t)-1);
 
+		Entity FindEntityByName(std::string_view name);
+
 		Entity GetEntityByUUID(UUID uuid);
 		/**
 		 * @brief Remove an entity and all its components from the scene

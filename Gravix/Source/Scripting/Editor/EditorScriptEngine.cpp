@@ -1,10 +1,10 @@
 #include "pch.h"
 #include "EditorScriptEngine.h"
-#include "ScriptGlue.h"
-#include "ScriptUtils.h"
-#include "ScriptTypes.h"
-#include "ScriptFieldRegistry.h"
-#include "ScriptFieldHandler.h"
+#include "Scripting/Interop/ScriptGlue.h"
+#include "Scripting/Interop/ScriptUtils.h"
+#include "Scripting/Core/ScriptTypes.h"
+#include "Scripting/Fields/ScriptFieldRegistry.h"
+#include "Scripting/Fields/ScriptFieldHandler.h"
 
 #include "Project/Project.h"
 

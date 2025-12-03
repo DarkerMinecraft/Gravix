@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui_internal.h>
+#include <string>
 
 namespace Gravix
 {
@@ -19,7 +20,41 @@ namespace Gravix
 		// Bold label on the left
 		ImGui::PushFont(io.Fonts->Fonts[1]);
 		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s", label);
+
+		// Calculate available width for text (with some padding)
+		float availableWidth = columnWidth - ImGui::GetStyle().ItemSpacing.x - 4.0f;
+		ImVec2 textSize = ImGui::CalcTextSize(label);
+
+		// If text is too long, truncate and show tooltip
+		if (textSize.x > availableWidth)
+		{
+			// Calculate how much text fits
+			std::string truncated = label;
+			const char* ellipsis = "...";
+			float ellipsisWidth = ImGui::CalcTextSize(ellipsis).x;
+			float targetWidth = availableWidth - ellipsisWidth;
+
+			// Binary search to find the right number of characters
+			size_t len = truncated.length();
+			while (len > 0 && ImGui::CalcTextSize(truncated.substr(0, len).c_str()).x > targetWidth)
+			{
+				len--;
+			}
+
+			truncated = truncated.substr(0, len) + ellipsis;
+			ImGui::Text("%s", truncated.c_str());
+
+			// Show full text on hover
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("%s", label);
+			}
+		}
+		else
+		{
+			ImGui::Text("%s", label);
+		}
+
 		ImGui::PopFont();
 
 		// Draw vertical separator line

@@ -16,84 +16,37 @@ include(VulkanConfig)
 set(GRAVIX_CORE_SOURCES
     # Core
     Source/Core/Application.cpp
-    Source/Core/Application.h
-    Source/Core/Buffer.h
-    Source/Core/Core.h
-    Source/Core/Gravix.h
-    Source/Core/Input.h
-    Source/Core/Layer.h
+    Source/Core/Console.cpp
     Source/Core/Log.cpp
-    Source/Core/Log.h
-    Source/Core/RefCounted.h
     Source/Core/Scheduler.cpp
-    Source/Core/Scheduler.h
     Source/Core/UUID.cpp
-    Source/Core/UUID.h
-    Source/Core/Window.h
 
     # Asset System (Core)
     Source/Asset/Asset.cpp
-    Source/Asset/Asset.h
-    Source/Asset/AssetManager.h
-    Source/Asset/AssetManagerBase.h
-    Source/Asset/AssetMetadata.h
-    Source/Asset/AsyncLoadRequest.h
     Source/Asset/RuntimeAssetManager.cpp
-    Source/Asset/RuntimeAssetManager.h
-
-    # Events
-    Source/Events/Event.h
-    Source/Events/KeyEvents.h
-    Source/Events/MouseEvents.h
-    Source/Events/WindowEvents.h
 
     # Platform
     Source/Platform/Windows/WindowsInput.cpp
     Source/Platform/Windows/WindowsPlatformUtils.cpp
     Source/Platform/Windows/WindowsWindow.cpp
-    Source/Platform/Windows/WindowsWindow.h
 
     # Project
     Source/Project/Project.cpp
-    Source/Project/Project.h
 
     # Renderer (Generic)
-    Source/Renderer/CommandImpl.h
-    Source/Renderer/Specification.h
-    Source/Renderer/Generic/Camera.h
     Source/Renderer/Generic/Command.cpp
-    Source/Renderer/Generic/Command.h
-    Source/Renderer/Generic/Device.h
     Source/Renderer/Generic/Renderer2D.cpp
-    Source/Renderer/Generic/Renderer2D.h
     Source/Renderer/Generic/Types/Framebuffer.cpp
-    Source/Renderer/Generic/Types/Framebuffer.h
     Source/Renderer/Generic/Types/Material.cpp
-    Source/Renderer/Generic/Types/Material.h
     Source/Renderer/Generic/Types/Mesh.cpp
-    Source/Renderer/Generic/Types/Mesh.h
     Source/Renderer/Generic/Types/Pipeline.cpp
-    Source/Renderer/Generic/Types/Pipeline.h
     Source/Renderer/Generic/Types/Shader.cpp
-    Source/Renderer/Generic/Types/Shader.h
     Source/Renderer/Generic/Types/Texture.cpp
-    Source/Renderer/Generic/Types/Texture.h
-
-    # Reflections
-    Source/Reflections/DynamicStruct.h
-    Source/Reflections/ReflectedStruct.h
-    Source/Reflections/ShaderReflection.h
 
     # Scene
     Source/Scene/ComponentRegistry.cpp
-    Source/Scene/ComponentRegistry.h
-    Source/Scene/Components.h
-    Source/Scene/Entity.h
     Source/Scene/Scene.cpp
-    Source/Scene/Scene.h
     Source/Scene/SceneCamera.cpp
-
-    Source/Scene/SceneCamera.h
 
     # Scene - Component Renderers
     Source/Scene/ComponentRenderers/TagComponentRenderer.cpp
@@ -107,45 +60,32 @@ set(GRAVIX_CORE_SOURCES
     Source/Scene/ComponentRenderers/CircleCollider2DComponentRenderer.cpp
     Source/Scene/ComponentRenderers/ComponentOrderComponentRenderer.cpp
 
-    # Scripting
-    Source/Scripting/ScriptEngine.h
-    Source/Scripting/ScriptEngine.cpp
-    Source/Scripting/EditorScriptEngine.h
-    Source/Scripting/EditorScriptEngine.cpp
-    Source/Scripting/RuntimeScriptEngine.h
-    Source/Scripting/RuntimeScriptEngine.cpp
-    Source/Scripting/ScriptGlue.h
-    Source/Scripting/ScriptGlue.cpp
-    Source/Scripting/ScriptTypes.h
-    Source/Scripting/ScriptTypes.cpp
-    Source/Scripting/ScriptUtils.h
-    Source/Scripting/ScriptUtils.cpp
-    Source/Scripting/ScriptField.h
-    Source/Scripting/ScriptFieldHandler.h
-    Source/Scripting/ScriptFieldHandler.cpp
-    Source/Scripting/ScriptFieldRegistry.h
-    Source/Scripting/ScriptFieldRegistry.cpp
+    # Scripting - Core
+    Source/Scripting/Core/ScriptEngine.cpp
+    Source/Scripting/Core/ScriptTypes.cpp
+
+    # Scripting - Editor
+    Source/Scripting/Editor/EditorScriptEngine.cpp
+
+    # Scripting - Runtime
+    Source/Scripting/Runtime/RuntimeScriptEngine.cpp
+
+    # Scripting - Fields
+    Source/Scripting/Fields/ScriptFieldHandler.cpp
+    Source/Scripting/Fields/ScriptFieldRegistry.cpp
+
+    # Scripting - Interop
+    Source/Scripting/Interop/ScriptGlue.cpp
+    Source/Scripting/Interop/ScriptUtils.cpp
 
     # Serialization (Core - used in both editor and runtime)
-    Source/Serialization/BinaryDeserializer.h
-    Source/Serialization/BinarySerializer.h
     Source/Serialization/Scene/SceneSerializer.cpp
-    Source/Serialization/Scene/SceneSerializer.h
 
     # Math
     Source/Maths/Maths.cpp
-    Source/Maths/Maths.h
-
-    # Utils (Core)
-    Source/Utils/PlatformUtils.h
-    Source/Utils/StringUtils.h
 
     # Physics
-    Source/Physics/PhysicsWorld.h
     Source/Physics/PhysicsWorld.cpp
-
-    # Debug
-    Source/Debug/Instrumentor.h
 )
 
 # ============================================================================
@@ -155,26 +95,19 @@ set(GRAVIX_CORE_SOURCES
 if(GRAVIX_BUILD_EDITOR)
     set(GRAVIX_EDITOR_SOURCES
         # Debug (Editor)
-        Source/Debug/ProfilerViewer.h
         Source/Debug/ProfilerViewer.cpp
 
         # Editor UI
         Source/Renderer/ImGuiBuild.cpp
         Source/Renderer/ImGuiRender.cpp
-        Source/Renderer/ImGuiRender.h
         Source/Scene/ImGuiHelpers.cpp
-        Source/Scene/ImGuiHelpers.h
 
         # Editor Camera
         Source/Scene/EditorCamera.cpp
-        Source/Scene/EditorCamera.h
 
         # Editor Asset System
         Source/Asset/EditorAssetManager.cpp
-        Source/Asset/EditorAssetManager.h
-        Source/Asset/AssetPack/PakBuilder.h
         Source/Asset/AssetImporter.cpp
-        Source/Asset/AssetImporter.h
         Source/Asset/Importers/SceneImporter.cpp
         Source/Asset/Importers/TextureImporter.cpp
         Source/Asset/Importers/ShaderImporter.cpp
@@ -186,13 +119,9 @@ if(GRAVIX_BUILD_EDITOR)
 
         # Shader Compilation (Editor only - runtime uses pre-compiled)
         Source/Utils/ShaderCompiler.cpp
-        Source/Utils/ShaderCompiler.h
         Source/Utils/ShaderCompilerSystem.cpp
-        Source/Utils/ShaderCompilerSystem.h
         Source/Utils/ShaderReflector.cpp
-        Source/Utils/ShaderReflector.h
         Source/Utils/SlangTypeUtils.cpp
-        Source/Utils/SlangTypeUtils.h
     )
 else()
     set(GRAVIX_EDITOR_SOURCES "")
@@ -206,40 +135,24 @@ if(GRAVIX_USE_VULKAN)
     set(GRAVIX_VULKAN_SOURCES
         # Vulkan Implementation
         Source/Renderer/Vulkan/VulkanCommandImpl.cpp
-        Source/Renderer/Vulkan/VulkanCommandImpl.h
         Source/Renderer/Vulkan/VulkanDevice.cpp
-        Source/Renderer/Vulkan/VulkanDevice.h
-        Source/Renderer/Vulkan/VulkanSwapchain.h
         Source/Renderer/Vulkan/VulkanSwapchain.cpp
         Source/Renderer/Vulkan/VulkanRenderCaps.cpp
-        Source/Renderer/Vulkan/VulkanRenderCaps.h
 
         # Vulkan Types
         Source/Renderer/Vulkan/Types/VulkanFramebuffer.cpp
-        Source/Renderer/Vulkan/Types/VulkanFramebuffer.h
         Source/Renderer/Vulkan/Types/VulkanMaterial.cpp
-        Source/Renderer/Vulkan/Types/VulkanMaterial.h
         Source/Renderer/Vulkan/Types/VulkanMesh.cpp
-        Source/Renderer/Vulkan/Types/VulkanMesh.h
         Source/Renderer/Vulkan/Types/VulkanShader.cpp
-        Source/Renderer/Vulkan/Types/VulkanShader.h
         Source/Renderer/Vulkan/Types/VulkanTexture.cpp
-        Source/Renderer/Vulkan/Types/VulkanTexture.h
 
         # Vulkan Utils
         Source/Renderer/Vulkan/Utils/DescriptorWriter.cpp
-        Source/Renderer/Vulkan/Utils/DescriptorWriter.h
         Source/Renderer/Vulkan/Utils/VulkanInitializers.cpp
-        Source/Renderer/Vulkan/Utils/VulkanInitializers.h
-        Source/Renderer/Vulkan/Utils/VulkanTypes.h
         Source/Renderer/Vulkan/Utils/VulkanUtils.cpp
-        Source/Renderer/Vulkan/Utils/VulkanUtils.h
         Source/Renderer/Vulkan/Utils/VulkanDeviceInit.cpp
-        Source/Renderer/Vulkan/Utils/VulkanDeviceInit.h
         Source/Renderer/Vulkan/Utils/VulkanDescriptorSetup.cpp
-        Source/Renderer/Vulkan/Utils/VulkanDescriptorSetup.h
         Source/Renderer/Vulkan/Utils/VulkanCommandSetup.cpp
-        Source/Renderer/Vulkan/Utils/VulkanCommandSetup.h
     )
 else()
     set(GRAVIX_VULKAN_SOURCES "")

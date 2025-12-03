@@ -7,6 +7,7 @@
 #include "Panels/ViewportPanel.h"
 #include "Panels/ContentBrowserPanel.h"
 #include "Panels/ProjectSettingsPanel.h"
+#include "Panels/ConsolePanel.h"
 
 #include "ProjectManager.h"
 #include "SceneManager.h"
@@ -62,6 +63,7 @@ namespace Gravix
 		ViewportPanel m_ViewportPanel;
 		std::optional<ContentBrowserPanel> m_ContentBrowserPanel;
 		ProjectSettingsPanel m_ProjectSettingsPanel;
+		ConsolePanel m_ConsolePanel;
 
 		// UI Components
 		EditorMenuBar m_MenuBar;

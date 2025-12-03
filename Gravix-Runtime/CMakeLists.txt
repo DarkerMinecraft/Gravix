@@ -9,7 +9,6 @@ set(RUNTIME_SOURCES
     # Application
     Source/App.cpp
     Source/AppLayer.cpp
-    Source/AppLayer.h
 )
 
 # ============================================================================

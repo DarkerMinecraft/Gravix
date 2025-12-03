@@ -15,13 +15,13 @@
     <LangVersion>7.3</LangVersion>
 
     <!-- Output paths -->
-    <AssemblyName>YourAssemblyName</AssemblyName>
+    <AssemblyName>GravixScripting</AssemblyName>
     <OutputPath>bin/</OutputPath>
   </PropertyGroup>
 
-  <!-- Recursive source include -->
+  <!-- Recursive source include (exclude obj and bin) -->
   <ItemGroup>
-    <Compile Include="**/*.cs" />
+    <Compile Include="**/*.cs" Exclude="obj/**;bin/**" />
   </ItemGroup>
 
   <!-- (Optional) Reference the Mono libraries -->

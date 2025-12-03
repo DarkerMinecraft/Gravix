@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ScriptEngine.h"
+#include "Scripting/Core/ScriptEngine.h"
 
 #include <filesystem>
 

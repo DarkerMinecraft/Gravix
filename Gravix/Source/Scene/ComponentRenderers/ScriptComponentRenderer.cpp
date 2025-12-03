@@ -3,8 +3,8 @@
 
 #ifdef GRAVIX_EDITOR_BUILD
 #include "Scene/ImGuiHelpers.h"
-#include "Scripting/ScriptEngine.h"
-#include "Scripting/ScriptFieldRegistry.h"
+#include "Scripting/Core/ScriptEngine.h"
+#include "Scripting/Fields/ScriptFieldRegistry.h"
 #include "Project/Project.h"
 #include "Utils/StringUtils.h"
 #include <imgui.h>
@@ -252,6 +252,42 @@ namespace Gravix
 							fieldValue.SetValue(value);
 							modified = true;
 						}
+						break;
+					}
+					case ScriptFieldType::Entity:
+					{
+						UUID entityRefID = fieldValue.GetValue<UUID>();
+						Entity referencedEntity = entityRefID != 0 ? userSettings->CurrentEntity->GetScene()->GetEntityByUUID(entityRefID) : Entity{};
+
+						// Display entity name or "None"
+						std::string entityName = referencedEntity ? referencedEntity.GetName() : "None";
+						ImGui::Button(entityName.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0));
+
+						// Drag-drop target for entities from Scene Hierarchy
+						if (ImGui::BeginDragDropTarget())
+						{
+							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_HIERARCHY_ENTITY"))
+							{
+								UUID droppedEntityID = *(UUID*)payload->Data;
+								fieldValue.SetValue(droppedEntityID);
+								modified = true;
+							}
+							ImGui::EndDragDropTarget();
+						}
+
+						// Right-click to clear
+						if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+						{
+							fieldValue.SetValue(UUID(0));
+							modified = true;
+						}
+
+						// Tooltip showing entity ID
+						if (referencedEntity && ImGui::IsItemHovered())
+						{
+							ImGui::SetTooltip("Entity: %s\nUUID: %llu", entityName.c_str(), (uint64_t)entityRefID);
+						}
+
 						break;
 					}
 					default:

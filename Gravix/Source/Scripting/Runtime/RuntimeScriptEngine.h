@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ScriptEngine.h"
-#include "ScriptFieldRegistry.h"
+#include "Scripting/Core/ScriptEngine.h"
+#include "Scripting/Fields/ScriptFieldRegistry.h"
 
 #include <filesystem>
 

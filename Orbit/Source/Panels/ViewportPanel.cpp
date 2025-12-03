@@ -95,7 +95,7 @@ namespace Gravix
 		// Track if the viewport is hovered and focused
 		m_ViewportHovered = ImGui::IsWindowHovered();
 		m_ViewportFocused = ImGui::IsWindowFocused();
-		Application::Get().GetImGui().BlockEvents(!m_ViewportFocused);
+		Application::Get().GetImGui().BlockEvents(!m_ViewportFocused || !m_ViewportHovered);
 
 		ImVec2 avail = ImGui::GetContentRegionAvail();
 		m_ViewportSize = { avail.x, avail.y };
@@ -143,7 +143,7 @@ namespace Gravix
 				auto& tc = selectedEntity.GetComponent<TransformComponent>();
 				glm::mat4 transform = tc.Transform;
 
-				bool snap = Input::IsKeyDown(Key::LeftControl);
+				bool snap = (m_ViewportHovered && m_ViewportFocused) && Input::IsKeyDown(Key::LeftControl);
 				float snapValue = m_GuizmoType == ImGuizmo::OPERATION::ROTATE ? 45.0f : 0.5f;
 
 				float snapValues[3] = { snapValue, snapValue, snapValue };

@@ -3,8 +3,8 @@
 #include "Events/KeyEvents.h"
 #include "Events/WindowEvents.h"
 
-#include "Scripting/ScriptEngine.h"
-#include "Scripting/ScriptFieldRegistry.h"
+#include "Scripting/Core/ScriptEngine.h"
+#include "Scripting/Fields/ScriptFieldRegistry.h"
 
 #include "Utils/ShaderCompilerSystem.h"
 #include "Debug/Instrumentor.h"
@@ -174,7 +174,7 @@ namespace Gravix
 		// Only forward events to panels if project is initialized
 		if (m_ProjectInitialized)
 		{
-			if (m_SceneManager.GetSceneState() == SceneState::Edit)
+			if (m_SceneManager.GetSceneState() == SceneState::Edit && m_ViewportPanel.IsViewportHovered() && m_ViewportPanel.IsViewportFocused())
 				m_EditorCamera.OnEvent(e);
 			m_ViewportPanel.OnEvent(e);
 		}
@@ -244,7 +244,7 @@ namespace Gravix
 		{
 			GX_PROFILE_SCOPE("EntitySelection");
 			// Entity selection on click (works in both Edit and Play modes)
-			if (m_ViewportPanel.IsViewportHovered() && Input::IsMouseDown(Mouse::LeftButton))
+			if (m_ViewportPanel.IsViewportHovered() && m_ViewportPanel.IsViewportFocused() && Input::IsMouseDown(Mouse::LeftButton))
 			{
 				// Don't select entities when using ImGuizmo
 				if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver())
@@ -342,6 +342,7 @@ namespace Gravix
 			m_InspectorPanel.OnImGuiRender();
 			if (m_ContentBrowserPanel) m_ContentBrowserPanel->OnImGuiRender();
 			m_ProjectSettingsPanel.OnImGuiRender();
+			m_ConsolePanel.OnImGuiRender();
 			// Toolbar is now integrated into ViewportPanel
 			UISettings();
 		}

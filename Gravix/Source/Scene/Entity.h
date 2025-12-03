@@ -286,13 +286,13 @@ namespace Gravix
 			return 0;
 		}
 
-		glm::mat4& GetTransform() { return GetComponent<TransformComponent>(); }
-		UUID& GetID() { return GetComponent<TagComponent>(); }
-		std::string& GetName() { return GetComponent<TagComponent>(); }
+		glm::mat4& GetTransform() { return GetComponent<TransformComponent>().Transform; }
+		UUID& GetID() { return GetComponent<TagComponent>().ID; }
+		std::string& GetName() { return GetComponent<TagComponent>().Name; }
 
-		const glm::mat4& GetTransform() const { return GetComponent<TransformComponent>(); }
-		const UUID& GetID() const { return GetComponent<TagComponent>(); }
-		const std::string& GetName() const { return GetComponent<TagComponent>(); }
+		const glm::mat4& GetTransform() const { return GetComponent<TransformComponent>().Transform; }
+		const UUID& GetID() const { return GetComponent<TagComponent>().ID; }
+		const std::string& GetName() const { return GetComponent<TagComponent>().Name; }
 
 		Scene* GetScene() const { return m_Scene; }
 

@@ -7,7 +7,7 @@
 #include "Renderer/Generic/Renderer2D.h"
 #include "Physics/PhysicsWorld.h"
 
-#include "Scripting/ScriptEngine.h"
+#include "Scripting/Core/ScriptEngine.h"
 
 namespace Gravix
 {
@@ -149,10 +149,27 @@ namespace Gravix
 	}
 
 
+	Entity Scene::FindEntityByName(std::string_view name)
+	{
+		for(auto entity : m_Registry.view<TagComponent>())
+		{
+			auto& tag = m_Registry.get<TagComponent>(entity);
+
+			if (tag.Name == name)
+			{
+				return Entity{ entity, this };
+			}
+		}
+
+		return Entity{ entt::null, this };
+	}
+
 	Entity Scene::GetEntityByUUID(UUID uuid)
 	{
-		GX_ASSERT(m_EntityMap.find(uuid) != m_EntityMap.end(), "Entity with UUID not found in scene!");
-		return Entity{ m_EntityMap[uuid], this };
+		auto it = m_EntityMap.find(uuid);
+		if (it != m_EntityMap.end())
+			return Entity{ it->second, this };
+		return Entity{ entt::null, this };
 	}
 
 	void Scene::DestroyEntity(Entity entity)

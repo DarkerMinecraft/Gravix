@@ -7,7 +7,7 @@
 #include "Core/RefCounted.h"
 #include "Scene/Scene.h"
 #include "Scene/Entity.h"
-#include "ScriptField.h"
+#include "Scripting/Fields/ScriptField.h"
 
 extern "C"
 {

@@ -32,7 +32,7 @@ namespace Gravix
 		return "using System;\n"
 			   "using GravixEngine;\n"
 			   "\n"
-			   "public class " + className + " : Entity\n"
+			   "public class " + className + " : MonoBehaviour\n"
 			   "{\n"
 			   "    public void OnCreate()\n"
 			   "    {\n"

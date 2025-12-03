@@ -23,6 +23,12 @@ namespace GravixEngine
         internal extern static void Entity_AddComponent(ulong entityID, Type componentType);
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         internal extern static void Entity_RemoveComponent(ulong entityID, Type componentType);
+
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal extern static ulong Entity_FindEntityByName(string name);
+
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal extern static object Entity_GetScriptInstance(ulong entityID, Type scriptInstance);
         #endregion
 
         #region TransformComponent
@@ -52,6 +58,17 @@ namespace GravixEngine
 
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         internal extern static void Rigidbody2DComponent_ApplyForceToCenter(ulong entityID, ref Vector2 force, bool wake);
+        #endregion
+
+        #region Debug
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal extern static void Debug_Log(string message);
+
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal extern static void Debug_LogWarning(string message);
+
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal extern static void Debug_LogError(string message);
         #endregion
     }
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "ScriptGlue.h"
-#include "ScriptEngine.h"
+#include "Scripting/Core/ScriptEngine.h"
 
 #include "Physics/PhysicsWorld.h"
 #include "Scene/Scene.h"
@@ -10,6 +10,7 @@
 
 #include "Core/UUID.h"
 #include "Core/Input.h"
+#include "Core/Console.h"
 
 #include <mono/metadata/loader.h>
 #include <mono/metadata/object.h>
@@ -73,6 +74,116 @@ namespace Gravix
 
 		entity.RemoveComponent(it->second);
 	}
+
+	static uint64_t Entity_FindEntityByName(MonoString* name)
+	{
+		if (!name)
+			return 0;
+
+		char* cName = mono_string_to_utf8(name);
+		if (!cName)
+			return 0;
+
+		std::string strName(cName);
+		mono_free(cName);
+
+		if (strName.empty())
+			return 0;
+
+		Scene* scene = ScriptEngine::GetSceneContext();
+		Entity entity = scene->FindEntityByName(strName);
+
+		if (!entity)
+			return 0;
+
+		return (uint64_t)entity.GetID();
+	}
+
+	static MonoObject* Entity_GetScriptInstance(UUID entityID, MonoReflectionType* scriptType)
+	{
+		if (!scriptType)
+			return nullptr;
+
+		MonoType* monoType = mono_reflection_type_get_type(scriptType);
+		if (!monoType)
+			return nullptr;
+
+		// Get the class name from the MonoType
+		MonoClass* klass = mono_type_get_class(monoType);
+		if (!klass)
+			return nullptr;
+
+		const char* className = mono_class_get_name(klass);
+		const char* namespaceName = mono_class_get_namespace(klass);
+
+		// Build full class name
+		std::string fullClassName = std::string(namespaceName) + "." + std::string(className);
+
+		// Get all script instances for this entity
+		auto* scriptInstances = ScriptEngine::GetEntityScriptInstances(entityID);
+		if (!scriptInstances)
+			return nullptr;
+
+		// Find the script instance that matches the requested type
+		for (auto& instance : *scriptInstances)
+		{
+			if (instance->GetScriptClass()->GetFullClassName() == fullClassName)
+			{
+				return instance->GetMonoObject();
+			}
+		}
+
+		return nullptr;
+	}
+	#pragma endregion
+
+	#pragma region Debug
+
+	static void Debug_Log(MonoString* message)
+	{
+		if (!message)
+			return;
+
+		char* cMessage = mono_string_to_utf8(message);
+		if (!cMessage)
+			return;
+
+		std::string strMessage(cMessage);
+		mono_free(cMessage);
+
+		Console::Log(strMessage);
+	}
+
+	static void Debug_LogWarning(MonoString* message)
+	{
+		if (!message)
+			return;
+
+		char* cMessage = mono_string_to_utf8(message);
+		if (!cMessage)
+			return;
+
+		std::string strMessage(cMessage);
+		mono_free(cMessage);
+
+		Console::LogWarning(strMessage);
+	}
+
+	static void Debug_LogError(MonoString* message)
+	{
+		if (!message)
+			return;
+
+		char* cMessage = mono_string_to_utf8(message);
+		if (!cMessage)
+			return;
+
+		std::string strMessage(cMessage);
+		mono_free(cMessage);
+
+		Console::LogError(strMessage);
+	}
+
 	#pragma endregion
 
 	#pragma region TransformComponent
@@ -213,6 +324,8 @@ namespace Gravix
 		GX_ADD_INTERNAL_CALL(Entity_HasComponent);
 		GX_ADD_INTERNAL_CALL(Entity_AddComponent);
 		GX_ADD_INTERNAL_CALL(Entity_RemoveComponent);
+		GX_ADD_INTERNAL_CALL(Entity_FindEntityByName);
+		GX_ADD_INTERNAL_CALL(Entity_GetScriptInstance);
 
 		GX_ADD_INTERNAL_CALL(TransformComponent_GetPosition);
 		GX_ADD_INTERNAL_CALL(TransformComponent_SetPosition);
@@ -228,5 +341,9 @@ namespace Gravix
 
 		GX_ADD_INTERNAL_CALL(Input_IsKeyDown);
 		GX_ADD_INTERNAL_CALL(Input_IsKeyPressed);
+
+		GX_ADD_INTERNAL_CALL(Debug_Log);
+		GX_ADD_INTERNAL_CALL(Debug_LogWarning);
+		GX_ADD_INTERNAL_CALL(Debug_LogError);
 	}
 }

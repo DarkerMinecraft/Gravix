@@ -120,7 +120,7 @@ namespace Gravix
 
 		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)entity, flags, name.c_str());
 
-		if(ImGui::IsItemClicked())
+		if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
 			m_SelectedEntity = entity;
 		}
@@ -128,8 +128,14 @@ namespace Gravix
 		// Drag and drop source
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 		{
+			// Set payload for entity reordering in hierarchy
 			ImGui::SetDragDropPayload("ENTITY_HIERARCHY", &entity, sizeof(Entity));
-			ImGui::Text("Move: %s", name.c_str());
+
+			// Also set payload with UUID for script entity fields
+			UUID entityID = entity.GetID();
+			ImGui::SetDragDropPayload("SCENE_HIERARCHY_ENTITY", &entityID, sizeof(UUID));
+
+			ImGui::Text("Entity: %s", name.c_str());
 			ImGui::EndDragDropSource();
 		}
 

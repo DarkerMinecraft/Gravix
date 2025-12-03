@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ScriptField.h"
+#include "Scripting/Fields/ScriptField.h"
 #include "Core/UUID.h"
 
 #include <filesystem>

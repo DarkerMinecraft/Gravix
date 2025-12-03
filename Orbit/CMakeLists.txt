@@ -9,39 +9,27 @@ set(ORBIT_SOURCES
     # Application
     Source/App.cpp
     Source/AppLayer.cpp
-    Source/AppLayer.h
 
     # Managers
     Source/ProjectManager.cpp
-    Source/ProjectManager.h
     Source/SceneManager.cpp
-    Source/SceneManager.h
 
     # Panels
+    Source/Panels/ConsolePanel.cpp
     Source/Panels/ContentBrowserPanel.cpp
-    Source/Panels/ContentBrowserPanel.h
     Source/Panels/InspectorPanel.cpp
-    Source/Panels/InspectorPanel.h
     Source/Panels/ProjectSettingsPanel.cpp
-    Source/Panels/ProjectSettingsPanel.h
     Source/Panels/SceneHierarchyPanel.cpp
-    Source/Panels/SceneHierarchyPanel.h
     Source/Panels/ViewportPanel.cpp
-    Source/Panels/ViewportPanel.h
 
     # UI Components
     Source/UI/EditorMenuBar.cpp
-    Source/UI/EditorMenuBar.h
     Source/UI/EditorToolbar.cpp
-    Source/UI/EditorToolbar.h
 
     # Utils
     Source/Utils/AssetFactory.cpp
-    Source/Utils/AssetFactory.h
     Source/Utils/ExternalEditorLauncher.cpp
-    Source/Utils/ExternalEditorLauncher.h
     Source/Utils/KeyboardShortcutHandler.cpp
-    Source/Utils/KeyboardShortcutHandler.h
 )
 
 # ============================================================================

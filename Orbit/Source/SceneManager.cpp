@@ -3,8 +3,8 @@
 #include "Project/Project.h"
 #include "Asset/AssetManager.h"
 #include "Serialization/Scene/SceneSerializer.h"
-#include "Scripting/ScriptEngine.h"
-#include "Scripting/ScriptFieldRegistry.h"
+#include "Scripting/Core/ScriptEngine.h"
+#include "Scripting/Fields/ScriptFieldRegistry.h"
 #include "Core/Log.h"
 #include "Core/Application.h"
 
