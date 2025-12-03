@@ -263,4 +263,121 @@ namespace Gravix
 		return nullptr;
 	}
 
+	// File Watching Implementation
+
+	void EditorAssetManager::StartWatchingAssets(const std::filesystem::path& assetPath)
+	{
+		if (!m_FileWatcher)
+			m_FileWatcher = CreateScope<AssetFileWatcher>();
+
+		m_FileWatcher->SetChangeCallback([this](const AssetChangeInfo& changeInfo) {
+			OnAssetChanged(changeInfo);
+		});
+
+		m_FileWatcher->StartWatching(assetPath);
+		GX_CORE_INFO("Asset file watcher started for: {0}", assetPath.string());
+	}
+
+	void EditorAssetManager::StopWatchingAssets()
+	{
+		if (m_FileWatcher)
+		{
+			m_FileWatcher->StopWatching();
+			m_FileWatcher.reset();
+		}
+	}
+
+	void EditorAssetManager::ProcessAssetChanges()
+	{
+		if (m_FileWatcher)
+		{
+			// Check for file changes (polling)
+			m_FileWatcher->CheckForChanges();
+			// Process pending changes
+			m_FileWatcher->ProcessChanges();
+		}
+	}
+
+	void EditorAssetManager::OnAssetChanged(const AssetChangeInfo& changeInfo)
+	{
+		// Find asset handle for this file path
+		AssetHandle changedHandle = 0;
+		for (const auto& [handle, metadata] : m_AssetRegistry)
+		{
+			if (metadata.FilePath == changeInfo.FilePath)
+			{
+				changedHandle = handle;
+				break;
+			}
+		}
+
+		switch (changeInfo.Event)
+		{
+		case AssetWatchEvent::Modified:
+		{
+			if (changedHandle != 0)
+			{
+				GX_CORE_INFO("Asset modified: {0}", changeInfo.FilePath.filename().string());
+				ReloadAsset(changedHandle);
+			}
+			break;
+		}
+		case AssetWatchEvent::Removed:
+		{
+			if (changedHandle != 0)
+			{
+				GX_CORE_INFO("Asset removed: {0}", changeInfo.FilePath.filename().string());
+				UnloadAsset(changedHandle);
+				m_AssetRegistry.erase(changedHandle);
+			}
+			break;
+		}
+		case AssetWatchEvent::Added:
+		{
+			GX_CORE_INFO("Asset added: {0}", changeInfo.FilePath.filename().string());
+			// Import the new asset
+			ImportAsset(changeInfo.FilePath);
+			break;
+		}
+		}
+	}
+
+	void EditorAssetManager::ReloadAsset(AssetHandle handle)
+	{
+		// Check if asset is loaded
+		auto it = m_LoadedAssets.find(handle);
+		if (it == m_LoadedAssets.end())
+		{
+			// Asset not loaded, nothing to reload
+			return;
+		}
+
+		// Get asset metadata
+		const auto& metadata = GetAssetMetadata(handle);
+
+		GX_CORE_INFO("Reloading asset: {0} ({1})", metadata.FilePath.filename().string(), AssetTypeToString(metadata.Type));
+
+		// Unload old asset (this will destroy Vulkan resources)
+		UnloadAsset(handle);
+
+		// Wait a bit for GPU operations to complete
+		// TODO: Better synchronization with rendering system
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		// Reload asset asynchronously
+		GetAsset(handle);
+	}
+
+	void EditorAssetManager::UnloadAsset(AssetHandle handle)
+	{
+		auto it = m_LoadedAssets.find(handle);
+		if (it != m_LoadedAssets.end())
+		{
+			// Asset destructor will clean up Vulkan resources
+			// (Texture, Material, Mesh all have proper destructors)
+			m_LoadedAssets.erase(it);
+			GX_CORE_INFO("Asset unloaded: {0}", (uint64_t)handle);
+		}
+	}
+
 }

@@ -5,3 +5,4 @@
 /libs/mono
 /Gravix-ScriptCore/.vs
 /Gravix-ScriptCore/obj
+*.pyc

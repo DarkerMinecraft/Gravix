@@ -108,14 +108,6 @@ if(GRAVIX_BUILD_SCRIPTING)
     add_dependencies(Orbit Gravix-ScriptCore)
 endif()
 
-# Slang DLL
-add_custom_command(TARGET Orbit POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:slang>"
-        "$<TARGET_FILE_DIR:Orbit>"
-    COMMENT "Copying Slang DLL..."
-)
-
 # Gravix-ScriptCore DLL and dependencies (if scripting is enabled)
 if(GRAVIX_BUILD_SCRIPTING)
     # Create a custom target that always copies the scripting DLL

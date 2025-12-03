@@ -4,7 +4,10 @@
 #include "Events/WindowEvents.h"
 
 #include "Scripting/Core/ScriptEngine.h"
+#include "Scripting/Editor/EditorScriptEngine.h"
 #include "Scripting/Fields/ScriptFieldRegistry.h"
+
+#include "Asset/EditorAssetManager.h"
 
 #include "Utils/ShaderCompilerSystem.h"
 #include "Debug/Instrumentor.h"
@@ -123,6 +126,50 @@ namespace Gravix
 			GX_CORE_INFO("Loaded script field registry from: {0}", registryPath.string());
 		}
 
+		// Start file watchers for hot reload
+		{
+			try
+			{
+				// Start watching scripts for hot reload (scripts are in Assets directory)
+				std::filesystem::path assetPath = Project::GetActive()->GetConfig().AssetDirectory;
+				if (std::filesystem::exists(assetPath))
+				{
+					EditorScriptEngine::StartWatchingScripts(assetPath);
+					GX_CORE_INFO("Watching for C# script changes in: {0}", assetPath.string());
+				}
+				else
+				{
+					GX_CORE_WARN("Asset directory does not exist: {0}", assetPath.string());
+				}
+			}
+			catch (const std::exception& e)
+			{
+				GX_CORE_ERROR("Failed to start script file watcher: {0}", e.what());
+			}
+
+			try
+			{
+				// Start watching assets for hot reload
+				std::filesystem::path assetPath = Project::GetActive()->GetConfig().AssetDirectory;
+				if (std::filesystem::exists(assetPath))
+				{
+					auto assetManager = Project::GetActive()->GetEditorAssetManager();
+					if (assetManager)
+					{
+						assetManager->StartWatchingAssets(assetPath);
+					}
+				}
+				else
+				{
+					GX_CORE_WARN("Asset path does not exist: {0}", assetPath.string());
+				}
+			}
+			catch (const std::exception& e)
+			{
+				GX_CORE_ERROR("Failed to start asset file watcher: {0}", e.what());
+			}
+		}
+
 		// Load the start scene
 		Ref<Scene> scene = m_SceneManager.LoadStartScene(m_ViewportPanel.GetViewportSize());
 
@@ -187,6 +234,35 @@ namespace Gravix
 		// Only update if project is initialized
 		if (!m_ProjectInitialized)
 			return;
+
+		// Process file watcher changes (hot reload)
+		{
+			GX_PROFILE_SCOPE("FileWatcherUpdate");
+
+			try
+			{
+				// Check for script changes and hot reload
+				EditorScriptEngine::CheckForScriptReload();
+			}
+			catch (const std::exception& e)
+			{
+				GX_CORE_ERROR("Error during script reload check: {0}", e.what());
+			}
+
+			try
+			{
+				// Process asset changes
+				auto assetManager = Project::GetActive()->GetEditorAssetManager();
+				if (assetManager)
+				{
+					assetManager->ProcessAssetChanges();
+				}
+			}
+			catch (const std::exception& e)
+			{
+				GX_CORE_ERROR("Error during asset change processing: {0}", e.what());
+			}
+		}
 
 		// Check if pending scene has finished loading
 		{

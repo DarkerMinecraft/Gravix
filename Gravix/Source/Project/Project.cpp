@@ -168,7 +168,7 @@ namespace Gravix
     <LangVersion>7.3</LangVersion>
 
     <!-- Output paths -->
-    <AssemblyName>OrbitPlayer</AssemblyName>
+    <AssemblyName>)xml" << m_Config.Name << R"xml(</AssemblyName>
     <OutputPath>bin/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -238,14 +238,14 @@ namespace Gravix
 
 		if (buildResult == 0)
 		{
-			std::filesystem::path outputDll = scriptBinPath / "OrbitPlayer.dll";
+			std::filesystem::path outputDll = scriptBinPath / (m_Config.Name + ".dll");
 			if (std::filesystem::exists(outputDll))
 			{
-				GX_CORE_INFO("Successfully built OrbitPlayer.dll (game scripts)");
+				GX_CORE_INFO("Successfully built {}.dll (game scripts)", m_Config.Name);
 			}
 			else
 			{
-				GX_CORE_WARN("Build completed but OrbitPlayer.dll not found at expected location: {}", outputDll.string());
+				GX_CORE_WARN("Build completed but {}.dll not found at expected location: {}", m_Config.Name, outputDll.string());
 			}
 		}
 		else

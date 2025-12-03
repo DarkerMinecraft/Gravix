@@ -35,16 +35,32 @@ The script will prompt for:
 - Generator (Ninja/Visual Studio 2022/2019)
 - Clean previous build (y/n)
 
-### Release Build & Packaging
+### Release Build & Packaging (Recommended)
 ```bash
-# Create release package
+# Create optimized release package with auto DLL collection
 Scripts\build_release.bat
 ```
-The release script:
-- Auto-detects and sets up Visual Studio environment
-- Builds Release configuration using Ninja
-- Collects executables, assets, and DLLs
-- Creates timestamped ZIP in `dist/` directory
+The modular Python release builder:
+- Configures CMake with full optimizations (O2, LTCG, inlining)
+- Builds only: Gravix-ScriptCore, Gravix, Orbit (skips unnecessary targets)
+- Auto-detects and collects required DLLs (Slang, Mono, etc.)
+- Creates versioned ZIP: `dist/Orbit_v{VERSION}_{TIMESTAMP}.zip`
+- Visual Studio-like build output showing file compilation progress
+- Uses VERSION file in root for package naming
+
+Advanced options:
+```bash
+# Skip CMake configuration (reuse existing)
+Scripts\build_release.bat --skip-configure
+
+# Control parallel jobs and verbosity
+Scripts\build_release.bat --jobs 16 --verbosity 2
+
+# Custom directories
+Scripts\build_release.bat --build-dir "C:/custom/build" --output-dir "C:/output"
+```
+
+See `Scripts/OrbitRelease/README.md` for detailed documentation.
 
 ### Manual CMake Configuration
 ```bash

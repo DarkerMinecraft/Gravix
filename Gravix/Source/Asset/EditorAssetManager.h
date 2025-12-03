@@ -2,11 +2,12 @@
 
 #include "AssetManagerBase.h"
 #include "AssetMetadata.h"
+#include "AssetFileWatcher.h"
 
 #include <mutex>
 #include <queue>
 
-namespace Gravix 
+namespace Gravix
 {
 
 	using AssetRegistry = std::map<AssetHandle, AssetMetadata>;
@@ -34,6 +35,16 @@ namespace Gravix
 
 		void SerializeAssetRegistry();
 		void DeserializeAssetRegistry();
+
+		// File watching
+		void StartWatchingAssets(const std::filesystem::path& assetPath);
+		void StopWatchingAssets();
+		void ProcessAssetChanges(); // Call from update loop
+	private:
+		void OnAssetChanged(const AssetChangeInfo& changeInfo);
+		void ReloadAsset(AssetHandle handle);
+		void UnloadAsset(AssetHandle handle);
+
 	private:
 		AssetRegistry m_AssetRegistry;
 		AssetMap m_LoadedAssets;
@@ -44,5 +55,8 @@ namespace Gravix
 
 		// Reused vector to avoid allocations in ProcessAsyncLoads
 		std::vector<Ref<AsyncLoadRequest>> m_CompletedRequestsCache;
+
+		// File watcher
+		Scope<AssetFileWatcher> m_FileWatcher;
 	};
 }

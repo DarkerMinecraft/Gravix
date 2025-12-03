@@ -17,12 +17,14 @@ set(GRAVIX_CORE_SOURCES
     # Core
     Source/Core/Application.cpp
     Source/Core/Console.cpp
+    Source/Core/FileWatcher.cpp
     Source/Core/Log.cpp
     Source/Core/Scheduler.cpp
     Source/Core/UUID.cpp
 
     # Asset System (Core)
     Source/Asset/Asset.cpp
+    Source/Asset/AssetFileWatcher.cpp
     Source/Asset/RuntimeAssetManager.cpp
 
     # Platform
@@ -66,6 +68,7 @@ set(GRAVIX_CORE_SOURCES
 
     # Scripting - Editor
     Source/Scripting/Editor/EditorScriptEngine.cpp
+    Source/Scripting/Editor/ScriptFileWatcher.cpp
 
     # Scripting - Runtime
     Source/Scripting/Runtime/RuntimeScriptEngine.cpp

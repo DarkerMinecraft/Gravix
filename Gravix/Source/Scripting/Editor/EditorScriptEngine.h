@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scripting/Core/ScriptEngine.h"
+#include "Scripting/Editor/ScriptFileWatcher.h"
 
 #include <filesystem>
 
@@ -17,6 +18,12 @@ namespace Gravix
 
 		static void LoadCoreAssembly(const std::filesystem::path& coreAssemblyPath);
 		static void LoadAppAssembly(const std::filesystem::path& appAssemblyPath);
+
+		// Hot reload
+		static void ReloadAppAssembly();
+		static void StartWatchingScripts(const std::filesystem::path& scriptPath);
+		static void StopWatchingScripts();
+		static void CheckForScriptReload(); // Call from update loop
 
 		static void OnRuntimeStart(Scene* scene);
 		static void OnRuntimeStop();

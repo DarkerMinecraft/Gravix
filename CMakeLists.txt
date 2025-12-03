@@ -80,6 +80,7 @@ if(GRAVIX_BUILD_EDITOR)
     set(SLANG_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
     set(SLANG_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(SLANG_ENABLE_SLANGRT ON CACHE BOOL "" FORCE)
+    set(SLANG_LIB_TYPE STATIC CACHE STRING "" FORCE)
 
     add_subdirectory(ThirdParties/Slang)
     set_target_properties(slang slang-glslang slang-rt core slangc

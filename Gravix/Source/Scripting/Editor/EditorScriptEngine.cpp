@@ -6,6 +6,7 @@
 #include "Scripting/Fields/ScriptFieldRegistry.h"
 #include "Scripting/Fields/ScriptFieldHandler.h"
 
+#include "Core/Console.h"
 #include "Project/Project.h"
 
 #include <mono/jit/jit.h>
@@ -50,7 +51,10 @@ namespace Gravix
 		InitMono();
 		LoadCoreAssembly(Project::GetScriptPath() / "bin/GravixScripting.dll");
 		ScriptGlue::RegisterFunctions();
-		LoadAppAssembly(Project::GetScriptPath() / "bin/OrbitPlayer.dll");
+
+		// Load app assembly with project name
+		std::string projectName = Project::GetActive()->GetConfig().Name;
+		LoadAppAssembly(Project::GetScriptPath() / ("bin/" + projectName + ".dll"));
 	}
 
 	void EditorScriptEngine::Shutdown()
@@ -61,27 +65,71 @@ namespace Gravix
 
 	void EditorScriptEngine::LoadCoreAssembly(const std::filesystem::path& coreAssemblyPath)
 	{
+		if (!std::filesystem::exists(coreAssemblyPath))
+		{
+			GX_CORE_ERROR("Core assembly not found at: {0}", coreAssemblyPath.string());
+			return;
+		}
+
+		GX_CORE_INFO("Loading core assembly from: {0}", coreAssemblyPath.string());
 		s_EditorData->CoreAssembly = ScriptUtils::LoadMonoAssembly(coreAssemblyPath);
+
+		if (!s_EditorData->CoreAssembly)
+		{
+			GX_CORE_ERROR("Failed to load core assembly: {0}", coreAssemblyPath.string());
+			return;
+		}
+
 		s_EditorData->CoreAssemblyImage = mono_assembly_get_image(s_EditorData->CoreAssembly);
 
+		if (!s_EditorData->CoreAssemblyImage)
+		{
+			GX_CORE_ERROR("Failed to get image from core assembly");
+			return;
+		}
+
 		s_EditorData->EntityClass = CreateRef<ScriptClass>("GravixEngine", "Entity");
+		GX_CORE_INFO("Core assembly loaded successfully");
 	}
 
 	void EditorScriptEngine::LoadAppAssembly(const std::filesystem::path& appAssemblyPath)
 	{
+		if (!std::filesystem::exists(appAssemblyPath))
+		{
+			GX_CORE_ERROR("App assembly not found at: {0}", appAssemblyPath.string());
+			return;
+		}
+
+		GX_CORE_INFO("Loading app assembly from: {0}", appAssemblyPath.string());
 		s_EditorData->AppAssembly = ScriptUtils::LoadMonoAssembly(appAssemblyPath);
+
+		if (!s_EditorData->AppAssembly)
+		{
+			GX_CORE_ERROR("Failed to load app assembly: {0}", appAssemblyPath.string());
+			return;
+		}
+
 		s_EditorData->AppAssemblyImage = mono_assembly_get_image(s_EditorData->AppAssembly);
 
+		if (!s_EditorData->AppAssemblyImage)
+		{
+			GX_CORE_ERROR("Failed to get image from app assembly");
+			return;
+		}
+
 		LoadAssemblyClasses(s_EditorData->AppAssemblyImage);
+		GX_CORE_INFO("App assembly loaded successfully");
 	}
 
 	void EditorScriptEngine::OnRuntimeStart(Scene* scene)
 	{
+		GX_CORE_INFO("EditorScriptEngine::OnRuntimeStart - Entering play mode");
 		s_EditorData->SceneContext = scene;
 	}
 
 	void EditorScriptEngine::OnRuntimeStop()
 	{
+		GX_CORE_INFO("EditorScriptEngine::OnRuntimeStop - Exiting play mode");
 		s_EditorData->EntityInstances.clear();
 		s_EditorData->SceneContext = nullptr;
 	}
@@ -353,6 +401,247 @@ namespace Gravix
 			return false;
 
 		return ScriptFieldHandler::SetField(instance, monoField, field.Type, value);
+	}
+
+	// Hot Reload Implementation
+	static Scope<ScriptFileWatcher> s_ScriptWatcher = nullptr;
+
+	void EditorScriptEngine::ReloadAppAssembly()
+	{
+		GX_CORE_INFO("=== Reloading App Assembly ===");
+
+		// Check if script engine is initialized
+		if (!s_EditorData)
+		{
+			GX_CORE_ERROR("Cannot reload assembly: Script engine not initialized");
+			return;
+		}
+
+		// Only reload when not in play mode
+		if (s_EditorData->SceneContext != nullptr)
+		{
+			GX_CORE_WARN("Cannot reload scripts during play mode");
+			return;
+		}
+
+		try
+		{
+			// Build C# project to detect syntax errors
+			GX_CORE_INFO("Building C# project...");
+
+			// Use project name for .csproj file
+			std::string projectName = Project::GetActive()->GetConfig().Name;
+			std::filesystem::path csprojPath = Project::GetScriptPath() / (projectName + ".csproj");
+
+			if (!std::filesystem::exists(csprojPath))
+			{
+				Console::LogError("C# project file not found: " + csprojPath.string());
+				GX_CORE_ERROR("C# project file not found: {0}", csprojPath.string());
+				return;
+			}
+
+			// Run dotnet build and capture output
+			std::string buildCommand = "dotnet build \"" + csprojPath.string() + "\" --nologo 2>&1";
+			FILE* pipe = _popen(buildCommand.c_str(), "r");
+
+			if (!pipe)
+			{
+				Console::LogError("Failed to run dotnet build. Is .NET SDK installed?");
+				GX_CORE_ERROR("Failed to run dotnet build");
+				return;
+			}
+
+			// Read build output
+			char buffer[256];
+			std::string buildOutput;
+			bool hasErrors = false;
+			int errorCount = 0;
+
+			while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+			{
+				std::string line(buffer);
+				buildOutput += line;
+
+				// Remove trailing newline
+				if (!line.empty() && line.back() == '\n')
+					line.pop_back();
+
+				// Check for actual C# compilation errors (format: "file.cs(line,col): error CSXXXX: message")
+				// Don't match summary lines like "Build failed with X error(s)"
+				if (line.find(": error CS") != std::string::npos)
+				{
+					hasErrors = true;
+					errorCount++;
+					Console::LogError(line);
+				}
+				// Check for warnings (format: "file.cs(line,col): warning CSXXXX: message")
+				else if (line.find(": warning CS") != std::string::npos)
+				{
+					Console::LogWarning(line);
+				}
+			}
+
+			int buildResult = _pclose(pipe);
+
+			if (buildResult != 0 || hasErrors)
+			{
+				std::string errorMsg = "C# build failed with " + std::to_string(errorCount) + " error(s). Fix errors to reload.";
+				Console::LogError(errorMsg);
+				GX_CORE_ERROR("Hot reload aborted: {0}", errorMsg);
+				// Early return - do NOT reload assembly when there are errors
+				return;
+			}
+
+			GX_CORE_INFO("C# build succeeded - proceeding with hot reload");
+
+			// Store field registry before reload
+			auto fieldRegistryCopy = s_EditorData->FieldRegistry;
+
+			// Unload app domain
+			if (s_EditorData->AppDomain)
+			{
+				GX_CORE_INFO("Unloading app domain...");
+				mono_domain_set(mono_get_root_domain(), false);
+				mono_domain_unload(s_EditorData->AppDomain);
+				s_EditorData->AppDomain = nullptr;
+			}
+
+			// Create new app domain
+			GX_CORE_INFO("Creating new app domain...");
+			s_EditorData->AppDomain = mono_domain_create_appdomain((char*)"GravixAppDomain", nullptr);
+
+			if (!s_EditorData->AppDomain)
+			{
+				GX_CORE_ERROR("Failed to create app domain");
+				return;
+			}
+
+			mono_domain_set(s_EditorData->AppDomain, false);
+			
+			std::filesystem::path coreAssemblyPath = Project::GetScriptPath() / ("bin/GravixScripting.dll");
+			if (!std::filesystem::exists(coreAssemblyPath))
+			{
+				GX_CORE_ERROR("Core assembly not found during hot reload: {0}", coreAssemblyPath.string());
+				return;
+			}
+			// Reload core assembly
+			GX_CORE_INFO("Reloading core assembly from: {0}", coreAssemblyPath.string());
+			s_EditorData->CoreAssembly = ScriptUtils::LoadMonoAssembly(coreAssemblyPath);
+			if (!s_EditorData->CoreAssembly)
+			{
+				GX_CORE_ERROR("Failed to reload core assembly");
+				return;
+			}
+			s_EditorData->CoreAssemblyImage = mono_assembly_get_image(s_EditorData->CoreAssembly);
+
+			// Reload app assembly
+			std::filesystem::path appAssemblyPath = Project::GetScriptPath() / ("bin/" + projectName + ".dll");
+
+			if (!std::filesystem::exists(appAssemblyPath))
+			{
+				GX_CORE_ERROR("App assembly not found: {0}", appAssemblyPath.string());
+				return;
+			}
+
+			GX_CORE_INFO("Loading app assembly from: {0}", appAssemblyPath.string());
+			s_EditorData->AppAssembly = ScriptUtils::LoadMonoAssembly(appAssemblyPath);
+
+			if (!s_EditorData->AppAssembly)
+			{
+				GX_CORE_ERROR("Failed to load app assembly");
+				return;
+			}
+
+			s_EditorData->AppAssemblyImage = mono_assembly_get_image(s_EditorData->AppAssembly);
+
+			// Reload classes
+			GX_CORE_INFO("Reloading classes...");
+			LoadAssemblyClasses(s_EditorData->AppAssemblyImage);
+
+			ScriptGlue::RegisterFunctions();
+
+			// Restore field registry
+			s_EditorData->FieldRegistry = fieldRegistryCopy;
+
+			GX_CORE_INFO("App assembly reloaded successfully! ({0} classes)", s_EditorData->EntityClasses.size());
+		}
+		catch (const std::exception& e)
+		{
+			Console::LogError("Hot reload failed: " + std::string(e.what()));
+			GX_CORE_ERROR("Exception during hot reload: {0}", e.what());
+		}
+		catch (...)
+		{
+			Console::LogError("Hot reload failed: Unknown exception");
+			GX_CORE_ERROR("Unknown exception during hot reload");
+		}
+	}
+
+	void EditorScriptEngine::StartWatchingScripts(const std::filesystem::path& scriptPath)
+	{
+		if (!s_ScriptWatcher)
+			s_ScriptWatcher = CreateScope<ScriptFileWatcher>();
+
+		s_ScriptWatcher->StartWatching(scriptPath);
+		GX_CORE_INFO("Script file watcher started");
+	}
+
+	void EditorScriptEngine::StopWatchingScripts()
+	{
+		if (s_ScriptWatcher)
+		{
+			s_ScriptWatcher->StopWatching();
+			s_ScriptWatcher.reset();
+		}
+	}
+
+	void EditorScriptEngine::CheckForScriptReload()
+	{
+		if (!s_ScriptWatcher || !s_EditorData)
+		{
+			GX_CORE_WARN("CheckForScriptReload: Watcher or EditorData is null");
+			return;
+		}
+
+		// Check for file changes (polling-based)
+		s_ScriptWatcher->CheckForChanges();
+
+		// Check if we're in play mode (SceneContext is set during runtime)
+		bool isInPlayMode = (s_EditorData->SceneContext != nullptr);
+
+		if (isInPlayMode)
+		{
+			// Hot reload is disabled during play mode to prevent crashes
+			// User needs to stop play mode before scripts can be reloaded
+			static bool hasWarned = false;
+			if (s_ScriptWatcher->ShouldReload() && !hasWarned)
+			{
+				GX_CORE_WARN("Script changes detected but hot reload is disabled during play mode. Stop play mode to reload.");
+				hasWarned = true;
+			}
+			return;
+		}
+
+		if (s_ScriptWatcher->ShouldReload())
+		{
+			// Check if enough time has passed since the last change (debounce)
+			// Wait for 500ms of "quiet time" with no changes before reloading
+			int64_t millisecondsSinceChange = s_ScriptWatcher->GetMillisecondsSinceLastChange();
+
+			GX_CORE_INFO("CheckForScriptReload: Reload pending, time since change: {}ms", millisecondsSinceChange);
+
+			if (millisecondsSinceChange >= 500)
+			{
+				s_ScriptWatcher->ClearReloadFlag();
+
+				GX_CORE_INFO("Script changes detected - triggering hot reload...");
+
+				// Give a small delay for file operations to complete
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+				ReloadAppAssembly();
+			}
+		}
 	}
 
 }
