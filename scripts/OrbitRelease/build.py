@@ -27,6 +27,7 @@ class OrbitReleaseBuilder:
 
         self.cmake_builder = CMakeBuilder(self.build_config, self.compiler_config)
         self.dll_collector = DLLCollector(self.build_config, self.dll_config)
+        self.orbit_exe_path = None  # Store the actual Orbit.exe location
 
     def build(self, skip_configure: bool = False, skip_build: bool = False) -> bool:
         """
@@ -83,12 +84,28 @@ class OrbitReleaseBuilder:
         print("Collecting Dependencies")
         print("=" * 80)
 
-        # Find the Orbit executable
-        orbit_exe = self.build_config.build_dir / "bin" / "Orbit.exe"
+        # Find the Orbit executable (Ninja puts it in different locations)
+        possible_locations = [
+            self.build_config.build_dir / "bin" / "Orbit.exe",
+            self.build_config.build_dir / "Orbit" / "Orbit.exe",
+            self.build_config.build_dir / self.build_config.build_type / "bin" / "Orbit.exe",
+        ]
 
-        if not orbit_exe.exists():
-            print(f"[ERROR] Orbit.exe not found at: {orbit_exe}")
+        orbit_exe = None
+        for location in possible_locations:
+            if location.exists():
+                orbit_exe = location
+                print(f"[DLL Collector] Found Orbit.exe at: {orbit_exe}")
+                break
+
+        if not orbit_exe:
+            print(f"[ERROR] Orbit.exe not found in any of the expected locations:")
+            for loc in possible_locations:
+                print(f"  - {loc}")
             return False
+
+        # Store the actual location for packaging
+        self.orbit_exe_path = orbit_exe
 
         # Collect DLLs
         self.dll_collector.collect_dlls(orbit_exe)
@@ -118,8 +135,7 @@ class OrbitReleaseBuilder:
         package_dir.mkdir(parents=True, exist_ok=True)
 
         # Copy executables
-        bin_dir = self.build_config.build_dir / "bin"
-        if not self._copy_executables(bin_dir, package_dir):
+        if not self._copy_executables(package_dir):
             return False
 
         # Copy DLLs
@@ -148,22 +164,17 @@ class OrbitReleaseBuilder:
 
         return True
 
-    def _copy_executables(self, bin_dir: Path, package_dir: Path) -> bool:
+    def _copy_executables(self, package_dir: Path) -> bool:
         """Copy executable files to package directory"""
-        print(f"\n[Packager] Copying executables from: {bin_dir}")
+        print(f"\n[Packager] Copying executables")
 
-        executables = ["Orbit.exe"]
+        if not self.orbit_exe_path or not self.orbit_exe_path.exists():
+            print(f"  [ERROR] Orbit.exe not found at: {self.orbit_exe_path}")
+            return False
 
-        for exe_name in executables:
-            src = bin_dir / exe_name
-            dst = package_dir / exe_name
-
-            if not src.exists():
-                print(f"  [ERROR] Executable not found: {src}")
-                return False
-
-            shutil.copy2(src, dst)
-            print(f"  Copied: {exe_name}")
+        dst = package_dir / "Orbit.exe"
+        shutil.copy2(self.orbit_exe_path, dst)
+        print(f"  Copied: Orbit.exe from {self.orbit_exe_path}")
 
         return True
 
@@ -171,25 +182,41 @@ class OrbitReleaseBuilder:
         """Copy asset directories to package"""
         print(f"\n[Packager] Copying assets")
 
+        # Copy Assets folder from project root
         assets_dir = self.build_config.project_root / "Assets"
         if assets_dir.exists():
             dst_assets = package_dir / "Assets"
             shutil.copytree(assets_dir, dst_assets)
             print(f"  Copied: Assets/")
+        else:
+            print(f"  [WARNING] Assets/ not found at: {assets_dir}")
+
+        # Copy EditorAssets from build directory (where Orbit.exe is)
+        # CMake copies Orbit/Assets to $<TARGET_FILE_DIR:Orbit>/EditorAssets
+        if self.orbit_exe_path:
+            editor_assets_dir = self.orbit_exe_path.parent / "EditorAssets"
+            if editor_assets_dir.exists():
+                dst_editor_assets = package_dir / "EditorAssets"
+                shutil.copytree(editor_assets_dir, dst_editor_assets)
+                print(f"  Copied: EditorAssets/")
+            else:
+                print(f"  [WARNING] EditorAssets/ not found at: {editor_assets_dir}")
+        else:
+            print(f"  [WARNING] Cannot find EditorAssets - Orbit.exe path not set")
 
     def _copy_script_core(self, package_dir: Path) -> None:
-        """Copy Gravix-ScriptCore DLL"""
-        print(f"\n[Packager] Copying Gravix-ScriptCore")
+        """Copy GravixScripting DLL"""
+        print(f"\n[Packager] Copying GravixScripting")
 
-        # Find Gravix-ScriptCore.dll in build directory
-        script_core_dll = self.build_config.build_dir / "Gravix-ScriptCore" / "Gravix-ScriptCore.dll"
+        # CMake outputs to: ${CMAKE_BINARY_DIR}/Gravix-ScriptCore/GravixScripting.dll
+        script_core_dll = self.build_config.build_dir / "Gravix-ScriptCore" / "GravixScripting.dll"
 
         if script_core_dll.exists():
-            dst = package_dir / "Gravix-ScriptCore.dll"
+            dst = package_dir / "GravixScripting.dll"
             shutil.copy2(script_core_dll, dst)
-            print(f"  Copied: Gravix-ScriptCore.dll")
+            print(f"  Copied: GravixScripting.dll from {script_core_dll}")
         else:
-            print(f"  [WARNING] Gravix-ScriptCore.dll not found at: {script_core_dll}")
+            print(f"  [WARNING] GravixScripting.dll not found at: {script_core_dll}")
 
     def _copy_imgui_config(self, package_dir: Path) -> None:
         """Copy ImGui configuration file"""
@@ -271,6 +298,12 @@ def main():
     )
 
     parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Clean and reconfigure (forces full rebuild)"
+    )
+
+    parser.add_argument(
         "--build-dir",
         type=str,
         help="Custom build directory (default: build/OrbitRelease)"
@@ -312,6 +345,14 @@ def main():
         config.parallel_jobs = args.jobs
 
     config.ninja_verbosity = args.verbosity
+
+    # Handle --clean flag
+    if args.clean:
+        import shutil
+        if config.build_dir.exists():
+            print(f"[Clean] Removing build directory: {config.build_dir}")
+            shutil.rmtree(config.build_dir)
+            print(f"[Clean] Build directory cleaned")
 
     # Create and run builder
     builder = OrbitReleaseBuilder(config)

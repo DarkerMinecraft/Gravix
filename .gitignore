@@ -6,3 +6,5 @@
 /Gravix-ScriptCore/.vs
 /Gravix-ScriptCore/obj
 *.pyc
+/dist
+nul

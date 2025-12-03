@@ -34,9 +34,16 @@ class CMakeBuilder:
         print("CMake Configuration")
         print("=" * 80)
 
-        # Clean build directory if it exists
+        # Check if already configured
+        cmake_cache = self.build_config.build_dir / "CMakeCache.txt"
+        if cmake_cache.exists():
+            print(f"[CMake] Build directory already configured: {self.build_config.build_dir}")
+            print(f"[CMake] Skipping configuration (use --clean to reconfigure)")
+            return True
+
+        # Clean build directory if it exists but not configured
         if self.build_config.build_dir.exists():
-            print(f"[CMake] Cleaning build directory: {self.build_config.build_dir}")
+            print(f"[CMake] Cleaning incomplete build directory: {self.build_config.build_dir}")
             import shutil
             shutil.rmtree(self.build_config.build_dir)
 
@@ -197,26 +204,12 @@ class CMakeBuilder:
             'linking': re.compile(r'\[(\d+)/(\d+)\]\s+Linking\s+(\w+)\s+(.+)'),
             'generating': re.compile(r'\[(\d+)/(\d+)\]\s+Generating\s+(.+)'),
             'percentage': re.compile(r'^\[\s*(\d+)%\]\s+(.+)'),
-            'msvc_compile': re.compile(r'\[(\d+)/(\d+)\]\s+.*?cl\.exe.*?(?:/TP|/TC)?\s+.*?([A-Za-z]:\\.*?\.(?:cpp|c|cc|cxx))\s'),
-            'ninja_compile': re.compile(r'\[(\d+)/(\d+)\]\s+.*?\\([^\\]+\.(?:cpp|c|cc|cxx|h|hpp))'),
+            # Match actual source file compilation (has the source path in the command)
+            'msvc_compile': re.compile(r'\[(\d+)/(\d+)\]\s+.*?\\([A-Za-z]+\.[a-z]{1,3})\s*$'),
         }
 
-        # Check for MSVC compilation (cl.exe with full path to source file)
+        # Check for MSVC compilation (ends with source filename)
         match = patterns['msvc_compile'].search(line)
-        if match:
-            current, total, source_path = match.groups()
-            # Extract just the filename from the full path
-            source_file = source_path.split('\\')[-1]
-            progress_num = int(current)
-            total_num = int(total)
-            percent = int((progress_num / total_num) * 100)
-
-            # Visual Studio-like output: single line with filename
-            print(f"  [{percent:3d}%] ({current}/{total}) {source_file:<60}", flush=True)
-            return
-
-        # Check for Ninja compilation (shorter format)
-        match = patterns['ninja_compile'].search(line)
         if match:
             current, total, source_file = match.groups()
             progress_num = int(current)
