@@ -45,6 +45,9 @@ namespace Gravix
 
 		virtual void SetTitle(const std::string& title) = 0;
 
+		virtual void Show() = 0;
+		virtual void Hide() = 0;
+
 		virtual Device* GetDevice() = 0;
 
 		virtual void* GetWindowHandle() = 0;

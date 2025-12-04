@@ -107,15 +107,7 @@ class CMakeBuilder:
         for key, value in self.build_config.cmake_options.items():
             cmd.append(f"-D{key}={value}")
 
-        # Add compiler-specific flags
-        if sys.platform == "win32":
-            # MSVC flags
-            cxx_flags = " ".join(self.compiler_config.msvc_flags)
-            cmd.append(f"-DCMAKE_CXX_FLAGS_RELEASE={cxx_flags}")
-
-            # Linker flags for whole program optimization
-            cmd.append("-DCMAKE_EXE_LINKER_FLAGS_RELEASE=/LTCG")
-            cmd.append("-DCMAKE_SHARED_LINKER_FLAGS_RELEASE=/LTCG")
+        # No custom compiler flags - use default Release settings (same as RelWithDebInfo)
 
         return cmd
 
@@ -177,8 +169,8 @@ class CMakeBuilder:
         # Add parallel jobs
         cmd.extend(["--parallel", str(self.build_config.parallel_jobs)])
 
-        # Ninja verbosity - use both methods to ensure output is shown
-        if self.build_config.ninja_verbosity >= 1:
+        # Only add verbose flags if verbosity is 2 or higher (shows full compiler commands)
+        if self.build_config.ninja_verbosity >= 2:
             cmd.append("--verbose")
             # Also pass -v to ninja directly
             cmd.extend(["--", "-v"])
@@ -187,7 +179,7 @@ class CMakeBuilder:
 
     def _process_ninja_output(self, line: str, target: str) -> None:
         """
-        Process and format Ninja output for Visual Studio-like display
+        Process and format Ninja output - shows clean Ninja progress format
 
         Args:
             line: Output line from Ninja
@@ -198,99 +190,27 @@ class CMakeBuilder:
         if not line:
             return
 
-        # Pattern matching for different output types
-        patterns = {
-            'building': re.compile(r'\[(\d+)/(\d+)\]\s+Building\s+(\w+)\s+object\s+(.+)'),
-            'linking': re.compile(r'\[(\d+)/(\d+)\]\s+Linking\s+(\w+)\s+(.+)'),
-            'generating': re.compile(r'\[(\d+)/(\d+)\]\s+Generating\s+(.+)'),
-            'percentage': re.compile(r'^\[\s*(\d+)%\]\s+(.+)'),
-            # Match actual source file compilation (has the source path in the command)
-            'msvc_compile': re.compile(r'\[(\d+)/(\d+)\]\s+.*?\\([A-Za-z]+\.[a-z]{1,3})\s*$'),
-        }
-
-        # Check for MSVC compilation (ends with source filename)
-        match = patterns['msvc_compile'].search(line)
-        if match:
-            current, total, source_file = match.groups()
-            progress_num = int(current)
-            total_num = int(total)
-            percent = int((progress_num / total_num) * 100)
-
-            # Visual Studio-like output: single line with filename
-            print(f"  [{percent:3d}%] ({current}/{total}) {source_file:<60}", flush=True)
+        # In verbose mode (level 2), show everything
+        if self.build_config.ninja_verbosity >= 2:
+            print(f"  {line}", flush=True)
             return
 
-        # Check for building source files (CMake's formatted output)
-        match = patterns['building'].search(line)
-        if match:
-            current, total, lang, obj_file = match.groups()
-            # Extract source filename from object path
-            source_file = self._extract_source_from_obj(obj_file)
-            progress_num = int(current)
-            total_num = int(total)
-            percent = int((progress_num / total_num) * 100)
+        # Default mode (level 0-1): Show clean Ninja progress
+        # Pattern matching for Ninja progress output
+        progress_pattern = re.compile(r'^\[(\d+)/(\d+)\]')
 
-            # Visual Studio-like output: single line with filename
-            print(f"  [{percent:3d}%] ({current}/{total}) {source_file:<60}", flush=True)
+        # Show Ninja progress lines: [28/669] Building CXX object ...
+        if progress_pattern.match(line):
+            print(f"  {line}", flush=True)
             return
 
-        # Check for linking
-        match = patterns['linking'].search(line)
-        if match:
-            current, total, link_type, output = match.groups()
-            progress_num = int(current)
-            total_num = int(total)
-            percent = int((progress_num / total_num) * 100)
-            print(f"  [{percent:3d}%] ({current}/{total}) Linking: {output}", flush=True)
-            return
-
-        # Check for generating
-        match = patterns['generating'].search(line)
-        if match:
-            current, total, output = match.groups()
-            progress_num = int(current)
-            total_num = int(total)
-            percent = int((progress_num / total_num) * 100)
-            print(f"  [{percent:3d}%] ({current}/{total}) Generating: {output}", flush=True)
-            return
-
-        # Check for percentage-based progress
-        match = patterns['percentage'].search(line)
-        if match:
-            percent, action = match.groups()
-            # Show percentage progress for other actions
-            print(f"  [{percent:3s}%] {action}", flush=True)
-            return
-
-        # Show errors and warnings always
+        # Always show errors and warnings
         if any(keyword in line.lower() for keyword in ['error', 'warning', 'failed']):
             print(f"  {line}", flush=True)
             return
 
-        # Filter out compiler command lines (they're handled above)
-        if 'cl.exe' in line or 'clang' in line or 'g++' in line or 'gcc' in line:
-            # These are compiler commands, skip them (already extracted filename above)
-            return
-
-        # Default: show other output only if verbosity >= 2
-        if self.build_config.ninja_verbosity >= 2:
-            print(f"  {line}", flush=True)
-
-    def _extract_source_from_obj(self, obj_path: str) -> str:
-        """Extract source filename from object file path"""
-        # Object file path format: Gravix/CMakeFiles/Gravix.dir/Source/Core/Application.cpp.obj
-        # We want: Application.cpp
-
-        path = Path(obj_path)
-        stem = path.stem
-
-        # Remove .obj/.o extension artifacts
-        if '.cpp' in stem:
-            return stem + '.cpp'
-        elif '.c' in stem:
-            return stem[stem.rfind('.c'):] + '.c'
-        else:
-            return path.name
+        # Filter out everything else (CMake messages, etc.) in default mode
+        # Only shown in verbosity level 2
 
     def _print_build_summary(self) -> None:
         """Print build summary statistics"""

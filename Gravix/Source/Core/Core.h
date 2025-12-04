@@ -16,7 +16,7 @@
 #else
 #define GX_ASSERT(x, ...)
 #define GX_DEBUGBREAK()
-#define GX_VERIFY() 
+#define GX_VERIFY(...) 
 #endif
 
 

@@ -51,6 +51,11 @@ namespace Gravix
 
 	std::filesystem::path FileDialogs::OpenFolder(const char* title)
 	{
+		return OpenFolderWithOwner((HWND)Application::Get().GetWindow().GetWindowHandle(), title);
+	}
+
+	std::filesystem::path FileDialogs::OpenFolderWithOwner(void* ownerHwnd, const char* title)
+	{
 		std::filesystem::path result;
 
 		IFileDialog* pFileDialog = nullptr;
@@ -68,7 +73,7 @@ namespace Gravix
 				pFileDialog->SetTitle(wtitle.c_str());
 			}
 
-			hr = pFileDialog->Show((HWND)Application::Get().GetWindow().GetWindowHandle());
+			hr = pFileDialog->Show((HWND)ownerHwnd);
 			if (SUCCEEDED(hr))
 			{
 				IShellItem* pItem = nullptr;

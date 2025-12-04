@@ -156,10 +156,10 @@ class CompilerConfig:
                 "/Ob2",         # Inline expansion
                 "/Oi",          # Enable intrinsic functions
                 "/Ot",          # Favor fast code
-                "/GL",          # Whole program optimization
+                # "/GL",        # Whole program optimization (DISABLED - causes issues with large static libraries like Slang)
                 "/GF",          # String pooling
                 "/Gy",          # Function-level linking
-                "/fp:fast",     # Fast floating point
+                # "/fp:fast",   # Fast floating point (DISABLED - can cause issues with FP comparisons)
             ]
 
         if self.clang_flags is None:

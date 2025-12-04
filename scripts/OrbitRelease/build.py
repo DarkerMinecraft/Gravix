@@ -150,17 +150,18 @@ class OrbitReleaseBuilder:
         # Copy ImGui configuration
         self._copy_imgui_config(package_dir)
 
-        # Generate manifest
-        manifest_path = package_dir / "dll_manifest.txt"
-        self.dll_collector.generate_dll_manifest(manifest_path)
+        # Copy lib folder
+        self._copy_lib_folder(package_dir)
 
         # Create ZIP archive
         zip_path = self.build_config.output_dir / f"{package_name}.zip"
         self._create_zip(package_dir, zip_path)
 
+        # Clean up temporary directory
+        shutil.rmtree(package_dir)
+
         print(f"\n[Packager] Package created successfully:")
-        print(f"  Directory: {package_dir}")
-        print(f"  Archive:   {zip_path}")
+        print(f"  Archive: {zip_path}")
 
         return True
 
@@ -233,6 +234,22 @@ class OrbitReleaseBuilder:
         else:
             print(f"  [WARNING] imgui.ini not found at: {imgui_ini}")
 
+    def _copy_lib_folder(self, package_dir: Path) -> None:
+        """Copy lib folder and all its directories to package"""
+        print(f"\n[Packager] Copying lib folder")
+
+        # Lib folder is typically next to Orbit.exe
+        if self.orbit_exe_path:
+            lib_dir = self.orbit_exe_path.parent / "lib"
+            if lib_dir.exists():
+                dst_lib = package_dir / "lib"
+                shutil.copytree(lib_dir, dst_lib)
+                print(f"  Copied: lib/ from {lib_dir}")
+            else:
+                print(f"  [WARNING] lib/ not found at: {lib_dir}")
+        else:
+            print(f"  [WARNING] Cannot find lib folder - Orbit.exe path not set")
+
     def _create_zip(self, source_dir: Path, zip_path: Path) -> None:
         """Create a ZIP archive of the package"""
         print(f"\n[Packager] Creating ZIP archive")
@@ -240,7 +257,8 @@ class OrbitReleaseBuilder:
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file_path in source_dir.rglob('*'):
                 if file_path.is_file():
-                    arcname = file_path.relative_to(source_dir.parent)
+                    # Put files directly in ZIP root (not in a subfolder)
+                    arcname = file_path.relative_to(source_dir)
                     zipf.write(file_path, arcname)
 
         # Get file size

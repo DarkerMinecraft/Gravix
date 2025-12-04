@@ -34,6 +34,9 @@ namespace Gravix
 
 		virtual void SetTitle(const std::string& title) override;
 
+		virtual void Show() override;
+		virtual void Hide() override;
+
 		virtual void* GetWindowHandle() override { return m_Window; }
 
 		virtual Device* GetDevice() override { return m_Device.get(); }

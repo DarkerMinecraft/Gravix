@@ -5,6 +5,14 @@
 #include "Serialization/Project/ProjectSerializer.h"
 #endif
 #include "Asset/EditorAssetManager.h"
+#include "Core/Console.h"
+
+#ifdef ENGINE_PLATFORM_WINDOWS
+#include <windows.h>
+#endif
+
+#include <sstream>
+#include <fstream>
 
 namespace Gravix 
 {
@@ -229,14 +237,101 @@ namespace Gravix
 			GX_CORE_ERROR("GravixScripting.dll not found at: {} - Cannot setup scripting environment!", sourceDllPath.string());
 		}
 
-		// Build the game scripts DLL using dotnet build
+		// Build the game scripts DLL using dotnet build silently
 		GX_CORE_INFO("Building game scripts...");
 
-		// Use dotnet build (uses Roslyn compiler internally)
-		std::string buildCommand = "dotnet build \"" + csprojPath.string() + "\" -c Release --nologo -v quiet";
-		int buildResult = std::system(buildCommand.c_str());
+		std::string buildCommand = "dotnet build \"" + csprojPath.string() + "\" -c Release --nologo";
+		std::string buildOutput;
+		int buildResult = 0;
+		bool hasErrors = false;
+		int errorCount = 0;
 
-		if (buildResult == 0)
+#ifdef ENGINE_PLATFORM_WINDOWS
+		// Create temporary file for output
+		char tempPath[MAX_PATH];
+		GetTempPathA(MAX_PATH, tempPath);
+		std::string outputFile = std::string(tempPath) + "gravix_build_output.txt";
+
+		// Use PowerShell to run dotnet build silently (no console window)
+		std::string psCommand = "powershell.exe -WindowStyle Hidden -NoProfile -Command \"" +
+								buildCommand + " 2>&1 | Out-File -FilePath '" + outputFile + "' -Encoding UTF8\"";
+
+		STARTUPINFOA si = {};
+		si.cb = sizeof(STARTUPINFOA);
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_HIDE;
+
+		PROCESS_INFORMATION pi = {};
+
+		// CREATE_NO_WINDOW prevents console window
+		if (!CreateProcessA(NULL, (LPSTR)psCommand.c_str(), NULL, NULL, FALSE,
+			CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+		{
+			Console::LogError("Failed to run dotnet build. Is .NET SDK installed?");
+			GX_CORE_ERROR("Failed to run dotnet build");
+			return;
+		}
+
+		// Wait for process to finish
+		WaitForSingleObject(pi.hProcess, INFINITE);
+
+		DWORD exitCode;
+		GetExitCodeProcess(pi.hProcess, &exitCode);
+		buildResult = (int)exitCode;
+
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+
+		// Read output from temp file
+		std::ifstream outFile(outputFile);
+		if (outFile.is_open())
+		{
+			buildOutput.assign((std::istreambuf_iterator<char>(outFile)),
+							   std::istreambuf_iterator<char>());
+			outFile.close();
+			DeleteFileA(outputFile.c_str());
+		}
+#else
+		// Fallback for non-Windows platforms
+		FILE* pipe = popen(buildCommand.c_str(), "r");
+		if (!pipe)
+		{
+			Console::LogError("Failed to run dotnet build. Is .NET SDK installed?");
+			GX_CORE_ERROR("Failed to run dotnet build");
+			return;
+		}
+
+		char buffer[256];
+		while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+		{
+			buildOutput += buffer;
+		}
+
+		buildResult = pclose(pipe);
+#endif
+
+		// Parse build output for errors and warnings
+		std::istringstream outputStream(buildOutput);
+		std::string line;
+		while (std::getline(outputStream, line))
+		{
+			// Check for actual C# compilation errors
+			if (line.find(": error CS") != std::string::npos)
+			{
+				hasErrors = true;
+				errorCount++;
+				Console::LogError(line);
+				GX_CORE_ERROR("{}", line);
+			}
+			// Check for warnings
+			else if (line.find(": warning CS") != std::string::npos)
+			{
+				Console::LogWarning(line);
+				GX_CORE_WARN("{}", line);
+			}
+		}
+
+		if (buildResult == 0 && !hasErrors)
 		{
 			std::filesystem::path outputDll = scriptBinPath / (m_Config.Name + ".dll");
 			if (std::filesystem::exists(outputDll))
@@ -250,7 +345,9 @@ namespace Gravix
 		}
 		else
 		{
-			GX_CORE_ERROR("Failed to build game scripts. dotnet build returned error code: {}", buildResult);
+			std::string errorMsg = "Failed to build game scripts with " + std::to_string(errorCount) + " error(s)";
+			Console::LogError(errorMsg);
+			GX_CORE_ERROR("{}", errorMsg);
 		}
 	}
 

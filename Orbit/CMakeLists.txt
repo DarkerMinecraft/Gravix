@@ -9,6 +9,7 @@ set(ORBIT_SOURCES
     # Application
     Source/App.cpp
     Source/AppLayer.cpp
+    Source/SplashScreen.cpp
 
     # Managers
     Source/ProjectManager.cpp

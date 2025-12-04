@@ -17,6 +17,12 @@
 #include <mono/metadata/attrdefs.h>
 
 #include <glm/glm.hpp>
+#include <sstream>
+#include <fstream>
+
+#ifdef ENGINE_PLATFORM_WINDOWS
+#include <windows.h>
+#endif
 
 namespace Gravix
 {
@@ -440,10 +446,61 @@ namespace Gravix
 				return;
 			}
 
-			// Run dotnet build and capture output
-			std::string buildCommand = "dotnet build \"" + csprojPath.string() + "\" --nologo 2>&1";
-			FILE* pipe = _popen(buildCommand.c_str(), "r");
+			// Build C# project silently without showing console window
+			std::string buildCommand = "dotnet build \"" + csprojPath.string() + "\" --nologo";
+			std::string buildOutput;
+			int buildResult = 0;
+			bool hasErrors = false;
+			int errorCount = 0;
 
+#ifdef ENGINE_PLATFORM_WINDOWS
+			// Create temporary file for output
+			char tempPath[MAX_PATH];
+			GetTempPathA(MAX_PATH, tempPath);
+			std::string outputFile = std::string(tempPath) + "gravix_build_output.txt";
+
+			// Use PowerShell to run dotnet build silently (no console window)
+			std::string psCommand = "powershell.exe -WindowStyle Hidden -NoProfile -Command \"" +
+									buildCommand + " 2>&1 | Out-File -FilePath '" + outputFile + "' -Encoding UTF8\"";
+
+			STARTUPINFOA si = {};
+			si.cb = sizeof(STARTUPINFOA);
+			si.dwFlags = STARTF_USESHOWWINDOW;
+			si.wShowWindow = SW_HIDE;
+
+			PROCESS_INFORMATION pi = {};
+
+			// CREATE_NO_WINDOW prevents console window
+			if (!CreateProcessA(NULL, (LPSTR)psCommand.c_str(), NULL, NULL, FALSE,
+				CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+			{
+				Console::LogError("Failed to run dotnet build. Is .NET SDK installed?");
+				GX_CORE_ERROR("Failed to run dotnet build");
+				return;
+			}
+
+			// Wait for process to finish
+			WaitForSingleObject(pi.hProcess, INFINITE);
+
+			DWORD exitCode;
+			GetExitCodeProcess(pi.hProcess, &exitCode);
+			buildResult = (int)exitCode;
+
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+
+			// Read output from temp file
+			std::ifstream outFile(outputFile);
+			if (outFile.is_open())
+			{
+				buildOutput.assign((std::istreambuf_iterator<char>(outFile)),
+								   std::istreambuf_iterator<char>());
+				outFile.close();
+				DeleteFileA(outputFile.c_str());
+			}
+#else
+			// Fallback for non-Windows platforms
+			FILE* pipe = popen(buildCommand.c_str(), "r");
 			if (!pipe)
 			{
 				Console::LogError("Failed to run dotnet build. Is .NET SDK installed?");
@@ -451,23 +508,21 @@ namespace Gravix
 				return;
 			}
 
-			// Read build output
 			char buffer[256];
-			std::string buildOutput;
-			bool hasErrors = false;
-			int errorCount = 0;
-
 			while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
 			{
-				std::string line(buffer);
-				buildOutput += line;
+				buildOutput += buffer;
+			}
 
-				// Remove trailing newline
-				if (!line.empty() && line.back() == '\n')
-					line.pop_back();
+			buildResult = pclose(pipe);
+#endif
 
+			// Parse build output for errors and warnings
+			std::istringstream outputStream(buildOutput);
+			std::string line;
+			while (std::getline(outputStream, line))
+			{
 				// Check for actual C# compilation errors (format: "file.cs(line,col): error CSXXXX: message")
-				// Don't match summary lines like "Build failed with X error(s)"
 				if (line.find(": error CS") != std::string::npos)
 				{
 					hasErrors = true;
@@ -480,8 +535,6 @@ namespace Gravix
 					Console::LogWarning(line);
 				}
 			}
-
-			int buildResult = _pclose(pipe);
 
 			if (buildResult != 0 || hasErrors)
 			{

@@ -42,18 +42,35 @@ set(OUTPUT_DLL "${SCRIPTCORE_OUTPUT_DIR}/GravixScripting.dll")
 # Build DLL using dotnet or Mono
 # ----------------------------------------
 if(USE_DOTNET)
-    # Use dotnet build (better VS integration)
-    add_custom_command(
-        OUTPUT "${OUTPUT_DLL}"
-        COMMAND "${DOTNET_EXECUTABLE}" build
-            "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
-            -c $<CONFIG>
-            -o "${SCRIPTCORE_OUTPUT_DIR}"
-        DEPENDS ${CS_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Building Gravix-ScriptCore using dotnet build"
-        VERBATIM
-    )
+    # Use dotnet build with flags to prevent console windows and background processes
+    # Redirect output to suppress console window in release builds
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_custom_command(
+            OUTPUT "${OUTPUT_DLL}"
+            COMMAND cmd /c "${DOTNET_EXECUTABLE}" build "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj" -c $<CONFIG> -o "${SCRIPTCORE_OUTPUT_DIR}" --nologo --verbosity quiet /p:UseSharedCompilation=false /p:BuildInParallel=false /nodeReuse:false > nul 2>&1
+            DEPENDS ${CS_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Building Gravix-ScriptCore (Release)"
+            VERBATIM
+        )
+    else()
+        add_custom_command(
+            OUTPUT "${OUTPUT_DLL}"
+            COMMAND "${DOTNET_EXECUTABLE}" build
+                "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
+                -c $<CONFIG>
+                -o "${SCRIPTCORE_OUTPUT_DIR}"
+                --nologo
+                --verbosity quiet
+                /p:UseSharedCompilation=false
+                /p:BuildInParallel=false
+                /nodeReuse:false
+            DEPENDS ${CS_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/Gravix-ScriptCore.csproj"
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Building Gravix-ScriptCore"
+            VERBATIM
+        )
+    endif()
 else()
     # Fallback to Mono compiler
     add_custom_command(

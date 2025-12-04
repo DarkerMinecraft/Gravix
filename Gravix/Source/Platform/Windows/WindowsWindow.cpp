@@ -61,8 +61,33 @@ namespace Gravix
 
 		case WM_SIZE:
 		{
+			// wParam indicates the type of resizing:
+			// SIZE_MINIMIZED, SIZE_MAXIMIZED, SIZE_RESTORED, SIZE_MAXSHOW, SIZE_MAXHIDE
+
+			if (wParam == SIZE_MINIMIZED)
+			{
+				// Window is being minimized - send 0,0 to indicate minimized state
+				WindowResizeEvent event(0, 0);
+				if (pData.EventCallback)
+					pData.EventCallback(event);
+				return 0;
+			}
+
+			// Only process SIZE_RESTORED and SIZE_MAXIMIZED events
+			// Ignore SIZE_MAXSHOW and SIZE_MAXHIDE (sent when other windows change state)
+			if (wParam != SIZE_RESTORED && wParam != SIZE_MAXIMIZED)
+			{
+				return 0; // Ignore other size events
+			}
+
 			uint32_t width = LOWORD(lParam);
 			uint32_t height = HIWORD(lParam);
+
+			// Ignore invalid dimensions (can happen during window creation)
+			if (width == 0 || height == 0)
+			{
+				return 0;
+			}
 
 			WindowResizeEvent event(width, height);
 			if (pData.EventCallback)
@@ -260,6 +285,49 @@ namespace Gravix
 			WindowFileDropEvent event(paths);
 			pData.EventCallback(event);
 			return 0;
+		}
+
+		case WM_SHOWWINDOW:
+		{
+			// Prevent window from being hidden after we've shown it
+			// This can happen when TOPMOST windows are closed
+			if (wParam == FALSE) // Window is being hidden
+			{
+				// Check if this is a user-initiated hide (from our Hide() method)
+				// If not, ignore the hide request
+				// We identify user-initiated hides by checking if it's a SW_PARENTCLOSING or SW_OTHERZOOM
+				if (lParam == SW_PARENTCLOSING || lParam == SW_OTHERZOOM || lParam == SW_OTHERUNZOOM)
+				{
+					// These are automatic hides from Windows - ignore them
+					return 0;
+				}
+			}
+			break;
+		}
+
+		case WM_SYSCOMMAND:
+		{
+			// Handle window restore from taskbar
+			if ((wParam & 0xFFF0) == SC_RESTORE)
+			{
+				// Ensure window is properly restored and not minimized
+				ShowWindow(hwnd, SW_RESTORE);
+				SetForegroundWindow(hwnd);
+				SetFocus(hwnd);
+
+				// Send a resize event to update the application state
+				RECT rect;
+				GetClientRect(hwnd, &rect);
+				uint32_t width = rect.right - rect.left;
+				uint32_t height = rect.bottom - rect.top;
+
+				WindowResizeEvent event(width, height);
+				if (pData.EventCallback)
+					pData.EventCallback(event);
+
+				return 0;
+			}
+			break;
 		}
 
 		case WM_SETCURSOR:
@@ -470,9 +538,15 @@ namespace Gravix
 		RECT windowRect = { 0, 0, static_cast<LONG>(m_Data.Width), static_cast<LONG>(m_Data.Height) };
 		AdjustWindowRectEx(&windowRect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_APPWINDOW);
 
-		// Create window
+		// Create window with extended style to prevent flashing in Release mode
+		#ifdef ENGINE_RELEASE
+		DWORD exStyle = WS_EX_APPWINDOW | WS_EX_NOACTIVATE; // Prevent activation flash
+		#else
+		DWORD exStyle = WS_EX_APPWINDOW;
+		#endif
+
 		m_Window = CreateWindowExA(
-			WS_EX_APPWINDOW,
+			exStyle,
 			"EngineWindowClass",
 			m_Data.Title,
 			WS_OVERLAPPEDWINDOW,
@@ -497,13 +571,33 @@ namespace Gravix
 			SendMessage(m_Window, WM_SETICON, ICON_SMALL, (LPARAM)hSmallIcon);
 		}
 
-		ShowWindow(m_Window, SW_SHOW);
-
 		// Enable drag and drop for files
 		DragAcceptFiles(m_Window, TRUE);
 
+		// Ensure window placement is set correctly before device initialization
+		WINDOWPLACEMENT wp = {};
+		wp.length = sizeof(WINDOWPLACEMENT);
+		GetWindowPlacement(m_Window, &wp);
+		#ifdef ENGINE_RELEASE
+		wp.showCmd = SW_HIDE; // Keep hidden in release until Show() is called
+		#else
+		wp.showCmd = SW_SHOWNORMAL; // Normal state in debug
+		#endif
+		wp.flags = 0;
+		SetWindowPlacement(m_Window, &wp);
+
+		#ifndef ENGINE_RELEASE
+		// Only show window immediately in debug builds
+		ShowWindow(m_Window, SW_SHOW);
+		#endif
+		// In release builds, window stays hidden until Show() is called
+
 		m_Device = CreateScope<VulkanDevice>(DeviceProperties{ m_Data.Width, m_Data.Height, m_Window, false });
+
+		#ifndef ENGINE_RELEASE
+		// Only update window in debug mode to prevent flash in release
 		UpdateWindow(m_Window);
+		#endif
 
 		GX_CORE_INFO("Window created successfully with title: '{}'", m_Data.Title);
 	}
@@ -523,6 +617,21 @@ namespace Gravix
 	{
 		SetWindowTextA(m_Window, title.c_str());
 		m_Data.Title = title.c_str();
+	}
+
+	void WindowsWindow::Show()
+	{
+		// Simple, direct approach - just show the window
+		ShowWindow(m_Window, SW_SHOW);
+		BringWindowToTop(m_Window);
+		SetForegroundWindow(m_Window);
+		SetFocus(m_Window);
+		UpdateWindow(m_Window);
+	}
+
+	void WindowsWindow::Hide()
+	{
+		ShowWindow(m_Window, SW_HIDE);
 	}
 
 }
